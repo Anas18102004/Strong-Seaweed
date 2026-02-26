@@ -54,6 +54,11 @@ def parse_args() -> argparse.Namespace:
 def main() -> None:
     ensure_dirs()
     args = parse_args()
+    suffix = f"_{args.release_tag.strip()}" if args.release_tag.strip() else ""
+    master_csv = TABULAR_DIR / (f"master_feature_matrix{suffix}.csv" if suffix else "master_feature_matrix.csv")
+    training_csv = TABULAR_DIR / (f"training_dataset{suffix}.csv" if suffix else "training_dataset.csv")
+    presence_csv = TABULAR_DIR / (f"kappaphycus_presence_snapped_clean{suffix}.csv" if suffix else "kappaphycus_presence_snapped_clean.csv")
+    presence_report = TABULAR_DIR.parent / "reports" / (f"presence_ingestion_report{suffix}.json" if suffix else "presence_ingestion_report.json")
     if args.make_data_plan_template:
         run(["python", "ingest_presence_records.py", "--make_template"])
         print(f"Template created. Fill it and rerun with --data_plan_csv {TABULAR_DIR / 'v1_1_data_plan.csv'}")
@@ -102,6 +107,14 @@ def main() -> None:
             "--require_verified",
             "--species_filter",
             "kappaphycus",
+            "--master_csv",
+            str(master_csv),
+            "--training_csv",
+            str(training_csv),
+            "--out_csv",
+            str(presence_csv),
+            "--out_report",
+            str(presence_report),
         ]
         if args.strict_data_plan:
             cmd.append("--strict_acceptance")
@@ -129,8 +142,12 @@ def main() -> None:
             str(args.max_snap_m),
             "--bg_ratio",
             str(args.bg_ratio),
+            "--feature_csv",
+            str(master_csv),
+            "--presence_csv",
+            str(presence_csv),
             "--output",
-            "training_dataset.csv",
+            str(training_csv),
         ]
     )
     run(["python", "build_site_prior_policy_layers.py"])

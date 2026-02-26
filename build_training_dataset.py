@@ -111,6 +111,18 @@ def snap_presence_to_domain(
 def parse_args() -> argparse.Namespace:
     p = argparse.ArgumentParser(description="Build training dataset from feature matrix + presence points.")
     p.add_argument(
+        "--feature_csv",
+        type=str,
+        default="master_feature_matrix.csv",
+        help="Feature matrix CSV filename under data/tabular (or absolute path).",
+    )
+    p.add_argument(
+        "--presence_csv",
+        type=str,
+        default="kappaphycus_presence_snapped_clean.csv",
+        help="Presence CSV filename under data/tabular (or absolute path).",
+    )
+    p.add_argument(
         "--max_snap_m",
         type=float,
         default=1.0,
@@ -134,9 +146,15 @@ def parse_args() -> argparse.Namespace:
 def main() -> None:
     args = parse_args()
     ensure_dirs()
-    feat_path = TABULAR_DIR / "master_feature_matrix.csv"
-    pres_path = TABULAR_DIR / "kappaphycus_presence_snapped_clean.csv"
-    out_path = TABULAR_DIR / args.output
+    feat_path = Path(args.feature_csv)
+    if not feat_path.is_absolute():
+        feat_path = TABULAR_DIR / feat_path
+    pres_path = Path(args.presence_csv)
+    if not pres_path.is_absolute():
+        pres_path = TABULAR_DIR / pres_path
+    out_path = Path(args.output)
+    if not out_path.is_absolute():
+        out_path = TABULAR_DIR / out_path
 
     if not feat_path.exists() or not pres_path.exists():
         raise FileNotFoundError(

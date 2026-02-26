@@ -5,6 +5,7 @@ import numpy as np
 import rasterio
 from rasterio.transform import from_origin
 from rasterio.warp import Resampling, reproject
+from scipy import ndimage
 import xarray as xr
 from project_paths import NETCDF_DIR, RASTER_DIR, ensure_dirs, with_legacy
 
@@ -27,6 +28,11 @@ def parse_args() -> argparse.Namespace:
         type=str,
         default="",
         help="Optional depth raster path to use as alignment reference (e.g., data/rasters/Depth_v1_1.tif).",
+    )
+    p.add_argument(
+        "--fill_nodata_nearest",
+        action="store_true",
+        help="Fill NaN cells after reprojection with nearest valid value.",
     )
     return p.parse_args()
 
@@ -78,6 +84,7 @@ def reproject_to_depth_grid(
     src_transform,
     dst_profile: dict,
     method: Resampling,
+    fill_nodata_nearest: bool = False,
 ) -> np.ndarray:
     dst_arr = np.full((dst_profile["height"], dst_profile["width"]), np.nan, dtype=np.float32)
     reproject(
@@ -91,6 +98,10 @@ def reproject_to_depth_grid(
         src_nodata=np.nan,
         dst_nodata=np.nan,
     )
+    if fill_nodata_nearest and np.isnan(dst_arr).any() and not np.isnan(dst_arr).all():
+        mask = np.isnan(dst_arr)
+        _, idx = ndimage.distance_transform_edt(mask, return_indices=True)
+        dst_arr[mask] = dst_arr[tuple(i[mask] for i in idx)]
     return dst_arr
 
 
@@ -183,7 +194,9 @@ def main() -> None:
 
         for name, da, src_tx, lat_desc, method in feature_specs:
             src_arr = orient_north_up(to_2d(da), lat_desc)
-            out_arr = reproject_to_depth_grid(src_arr, src_tx, dst_profile, method)
+            out_arr = reproject_to_depth_grid(
+                src_arr, src_tx, dst_profile, method, fill_nodata_nearest=args.fill_nodata_nearest
+            )
             suffix = f"_{args.release_tag.strip()}" if args.release_tag.strip() else ""
             out_path = RASTER_DIR / f"{name}_aligned{suffix}.tif"
             save_raster(out_path, out_arr, dst_profile)

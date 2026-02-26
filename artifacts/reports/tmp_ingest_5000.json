@@ -17,7 +17,7 @@
     "lat_max": 9.777542117897012
   },
   "median_snap_m_before_threshold": 5446.650616006411,
-  "output_csv": "data\\tabular\\kappaphycus_presence_snapped_clean_v1_1.csv",
+  "output_csv": "data\\tabular\\tmp_snapped_5000.csv",
   "master_csv": "data\\tabular\\master_feature_matrix_v1_1.csv",
   "training_csv": "data\\tabular\\training_dataset.csv",
   "require_verified": true,
