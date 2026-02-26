@@ -61,6 +61,18 @@ def parse_args() -> argparse.Namespace:
         default="",
         help="Optional release tag (e.g., v1.1). If set, writes artifacts to releases/<tag>/.",
     )
+    p.add_argument(
+        "--dataset_paths",
+        nargs="*",
+        default=[],
+        help="Optional explicit training dataset CSV paths. Overrides default training_dataset*.csv.",
+    )
+    p.add_argument(
+        "--inference_feature_source",
+        type=str,
+        default="",
+        help="Optional explicit inference feature matrix CSV path.",
+    )
     return p.parse_args()
 
 
@@ -391,8 +403,9 @@ def main() -> None:
         f"min_threshold={min_threshold:.3f} | "
         f"n_iter_single={n_iter_single} | n_iter_ensemble={n_iter_ensemble}"
     )
+    dataset_paths = [Path(p) for p in args.dataset_paths] if args.dataset_paths else DATASETS
     datasets = []
-    for p in DATASETS:
+    for p in dataset_paths:
         if p.exists():
             df = pd.read_csv(p)
             # Final hygiene for training stability.
@@ -403,9 +416,13 @@ def main() -> None:
         raise FileNotFoundError("No training dataset found.")
 
     inference_source = (
-        INFERENCE_FEATURE_SOURCE_AUG
-        if INFERENCE_FEATURE_SOURCE_AUG.exists()
-        else INFERENCE_FEATURE_SOURCE
+        Path(args.inference_feature_source)
+        if args.inference_feature_source.strip()
+        else (
+            INFERENCE_FEATURE_SOURCE_AUG
+            if INFERENCE_FEATURE_SOURCE_AUG.exists()
+            else INFERENCE_FEATURE_SOURCE
+        )
     )
     if not inference_source.exists():
         raise FileNotFoundError(
