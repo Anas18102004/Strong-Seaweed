@@ -231,6 +231,10 @@ def train_dataset(
     groups = spatial_groups(df)
     folds = group_folds(groups, y, min_pos_test=4)
     if len(folds) < 4:
+        folds = group_folds(groups, y, min_pos_test=2)
+    if len(folds) < 4:
+        folds = group_folds(groups, y, min_pos_test=1)
+    if len(folds) < 2:
         raise RuntimeError(f"{name}: insufficient spatial folds ({len(folds)})")
 
     pos = int(y.sum())
