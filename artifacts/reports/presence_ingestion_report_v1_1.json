@@ -1,0 +1,28 @@
+{
+  "inputs": [
+    {
+      "file": "v1_1_data_plan.csv",
+      "rows": 23
+    }
+  ],
+  "raw_rows": 23,
+  "after_quality_filters": 23,
+  "snapped_rows": 1,
+  "max_snap_m": 1500.0,
+  "min_year": 2000,
+  "bounds": {
+    "lon_min": 78.51534596962188,
+    "lon_max": 79.7819705202304,
+    "lat_min": 8.510917567288487,
+    "lat_max": 9.777542117897012
+  },
+  "median_snap_m_before_threshold": 5446.650616006411,
+  "output_csv": "data\\tabular\\kappaphycus_presence_snapped_clean_v1_1.csv",
+  "master_csv": "data\\tabular\\master_feature_matrix_v1_1.csv",
+  "training_csv": "data\\tabular\\training_dataset.csv",
+  "require_verified": true,
+  "strict_acceptance": true,
+  "sources_after_filter": {
+    "v1_1_data_plan.csv": 23
+  }
+}

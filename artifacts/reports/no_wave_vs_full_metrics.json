@@ -1,0 +1,33 @@
+{
+  "full": {
+    "model": "combined_deployable_full",
+    "n_features": 23,
+    "spatial_auc_mean": 0.9288095238095238,
+    "spatial_auc_std": 0.12261419315402192,
+    "spatial_ap_mean": 0.9042251204677676,
+    "spatial_brier_mean": 0.10581134594976901,
+    "oof_auc_calibrated": 0.9201465201465202,
+    "oof_ap_calibrated": 0.8050935333010805,
+    "oof_brier_calibrated": 0.09441737085580826,
+    "threshold": 0.6428571343421936,
+    "precision_at_threshold": 0.75,
+    "recall_at_threshold": 0.8571428571428571
+  },
+  "no_wave": {
+    "model": "combined_deployable_no_wave",
+    "n_features": 20,
+    "spatial_auc_mean": 0.9252380952380953,
+    "spatial_auc_std": 0.12602055046031974,
+    "spatial_ap_mean": 0.8918501204677675,
+    "spatial_brier_mean": 0.10590099059045315,
+    "oof_auc_calibrated": 0.9214285714285715,
+    "oof_ap_calibrated": 0.8081446436193822,
+    "oof_brier_calibrated": 0.09677405655384064,
+    "threshold": 1.0,
+    "precision_at_threshold": 1.0,
+    "recall_at_threshold": 0.37142857142857144
+  },
+  "delta_spatial_auc_mean": -0.0035714285714284477,
+  "delta_spatial_ap_mean": -0.012375000000000136,
+  "delta_oof_ap_calibrated": 0.003051110318301742
+}

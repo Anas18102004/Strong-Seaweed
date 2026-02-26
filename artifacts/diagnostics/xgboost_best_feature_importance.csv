@@ -1,0 +1,16 @@
+feature,importance_gain
+turb_mean,0.17509851
+rain_mean,0.17116539
+distance_to_shore,0.12764944
+wind_std,0.105987154
+wave_mean,0.09754167
+chl_mean,0.06471373
+rain_std,0.058859095
+wave_std,0.053314157
+slope,0.050936963
+wind_mean,0.04222066
+turb_std,0.038177773
+cyclone,0.014335439
+depth,0.0
+extreme_rain,0.0
+chl_std,0.0

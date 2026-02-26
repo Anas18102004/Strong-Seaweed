@@ -1,0 +1,26 @@
+{
+  "inputs": [
+    {
+      "file": "v1_1_data_plan.csv",
+      "rows": 23
+    }
+  ],
+  "raw_rows": 23,
+  "after_quality_filters": 23,
+  "snapped_rows": 1,
+  "max_snap_m": 1500.0,
+  "min_year": 2000,
+  "bounds": {
+    "lon_min": 78.51333070700318,
+    "lon_max": 79.7889384104529,
+    "lat_min": 8.508679181589768,
+    "lat_max": 9.766320579357098
+  },
+  "median_snap_m_before_threshold": 5190.119497731049,
+  "output_csv": "C:\\Users\\Anas\\Desktop\\Strong Seaweed\\data\\tabular\\kappaphycus_presence_snapped_clean.csv",
+  "require_verified": true,
+  "strict_acceptance": false,
+  "sources_after_filter": {
+    "v1_1_data_plan.csv": 23
+  }
+}

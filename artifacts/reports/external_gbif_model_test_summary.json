@@ -1,0 +1,16 @@
+{
+  "source": "GBIF API",
+  "species": "Kappaphycus alvarezii",
+  "species_key": 2668059,
+  "retrieved_india_records": 1,
+  "records_in_study_bbox": 0,
+  "records_scored_after_snap_qc": 0,
+  "model_feature_count_used": 15,
+  "external_pred_mean": null,
+  "external_pred_median": null,
+  "external_pred_max": null,
+  "domain_pred_median": 0.031458958983421326,
+  "share_external_gt_0_7": null,
+  "share_external_gt_0_8": null,
+  "note": "Positive-only external check from web data; not a full independent AUC benchmark."
+}

@@ -1,0 +1,26 @@
+{
+  "inputs": [
+    {
+      "file": "v1_1_data_plan_from_gemini.csv",
+      "rows": 18
+    }
+  ],
+  "raw_rows": 18,
+  "after_quality_filters": 7,
+  "snapped_rows": 1,
+  "max_snap_m": 1200.0,
+  "min_year": 2000,
+  "bounds": {
+    "lon_min": 78.51333070700318,
+    "lon_max": 79.7889384104529,
+    "lat_min": 8.508679181589768,
+    "lat_max": 9.766320579357098
+  },
+  "median_snap_m_before_threshold": 4276.12513426091,
+  "output_csv": "v1_1_seed_accepted_snapped.csv",
+  "require_verified": false,
+  "strict_acceptance": true,
+  "sources_after_filter": {
+    "v1_1_data_plan_from_gemini.csv": 7
+  }
+}

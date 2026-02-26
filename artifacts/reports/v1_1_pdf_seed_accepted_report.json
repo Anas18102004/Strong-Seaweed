@@ -1,0 +1,26 @@
+{
+  "inputs": [
+    {
+      "file": "v1_1_data_plan_seed_from_pdf.csv",
+      "rows": 23
+    }
+  ],
+  "raw_rows": 23,
+  "after_quality_filters": 15,
+  "snapped_rows": 0,
+  "max_snap_m": 1200.0,
+  "min_year": 2000,
+  "bounds": {
+    "lon_min": 78.51333070700318,
+    "lon_max": 79.7889384104529,
+    "lat_min": 8.508679181589768,
+    "lat_max": 9.766320579357098
+  },
+  "median_snap_m_before_threshold": 5190.119623201228,
+  "output_csv": "v1_1_pdf_seed_accepted_snapped.csv",
+  "require_verified": false,
+  "strict_acceptance": true,
+  "sources_after_filter": {
+    "v1_1_data_plan_seed_from_pdf.csv": 15
+  }
+}

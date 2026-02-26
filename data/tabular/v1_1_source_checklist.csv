@@ -1,0 +1,2 @@
+record_id,source_type,source_name,source_reference,citation_url,species,eventDate,year,lon,lat,label,coordinate_precision_km,species_confirmed,confidence_score,is_verified,qa_reviewer,qa_status,rationale,notes
+example_lit_001,literature,example_paper,doi:10.xxxx/xxxxx,https://example.org/paper,Kappaphycus alvarezii,2022-06-15,2022,79.1324556,9.2895528,1,0.5,True,0.9,True,reviewer_name,approved,literature coordinate with confirmed species,replace with real record

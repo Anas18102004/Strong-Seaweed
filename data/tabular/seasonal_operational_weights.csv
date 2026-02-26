@@ -1,0 +1,13 @@
+month,phase,operational_weight
+1,monsoon_caution_window,0.4
+2,active_farming_window,1.0
+3,active_farming_window,1.0
+4,active_farming_window,1.0
+5,active_farming_window,1.0
+6,active_farming_window,1.0
+7,active_farming_window,1.0
+8,active_farming_window,1.0
+9,active_farming_window,1.0
+10,active_farming_window,1.0
+11,monsoon_caution_window,0.4
+12,monsoon_caution_window,0.4
