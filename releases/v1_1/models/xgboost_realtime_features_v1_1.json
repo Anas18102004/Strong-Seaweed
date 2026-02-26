@@ -1,0 +1,23 @@
+[
+  "depth",
+  "slope",
+  "distance_to_shore",
+  "rain_mean",
+  "rain_std",
+  "extreme_rain",
+  "wind_mean",
+  "wind_std",
+  "chl_mean",
+  "chl_std",
+  "turb_mean",
+  "turb_std",
+  "cyclone",
+  "wave_mean",
+  "wave_std",
+  "sal_mean",
+  "sal_std",
+  "current_mean",
+  "sst_mean",
+  "sst_var",
+  "heat_stress_freq"
+]

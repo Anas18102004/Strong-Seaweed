@@ -1,0 +1,146 @@
+{
+  "model_version": "v1_1",
+  "model_name": "Gulf of Mannar Regional Ecological Screening Model",
+  "selected_dataset": "training_dataset_v1_1_deployable",
+  "inference_feature_source": "data\\tabular\\master_feature_matrix_v1_1_augmented.csv",
+  "training_region": {
+    "name": "Gulf of Mannar",
+    "bbox": {
+      "lon_min": 78.1021209389269,
+      "lon_max": 79.7999368259128,
+      "lat_min": 8.44803549740012,
+      "lat_max": 9.705676895167452
+    }
+  },
+  "resolution": {
+    "effective_resolution_km": 22.0,
+    "coarsest_layer": "wave_height (~0.20 degree)",
+    "coarsest_layer_resolution_km": 22.0,
+    "secondary_resolution_km": 9.2
+  },
+  "use_case": {
+    "intended": "regional_screening",
+    "not_valid_for": "micro-site (<5 km) decisions",
+    "notes": "Model predicts ecological suitability, not farm installation decisions."
+  },
+  "selected_metrics": {
+    "n_samples": 108,
+    "n_presence": 18,
+    "n_background": 90,
+    "n_features": 21,
+    "training_mode": "single",
+    "n_ensemble_members": 1,
+    "n_spatial_folds": 3,
+    "best_params": {
+      "subsample": 0.9,
+      "scale_pos_weight": 5.0,
+      "reg_lambda": 1.0,
+      "reg_alpha": 0.0,
+      "n_estimators": 400,
+      "min_child_weight": 1,
+      "max_depth": 2,
+      "learning_rate": 0.05,
+      "gamma": 0.3,
+      "colsample_bytree": 0.5
+    },
+    "spatial_auc_mean": 0.899621212121212,
+    "spatial_auc_std": 0.14195704319275387,
+    "spatial_ap_mean": 0.9022200022200022,
+    "spatial_brier_mean": 0.25390111406644184,
+    "oof_auc_raw": 0.8108974358974359,
+    "oof_auc_calibrated": 0.860042735042735,
+    "oof_ap_raw": 0.7269519006598351,
+    "oof_ap_calibrated": 0.7423371647509579,
+    "oof_brier_raw": 0.24666671454906464,
+    "oof_brier_calibrated": 0.1361832618713379,
+    "threshold": {
+      "threshold": 1.0,
+      "precision": 1.0,
+      "recall": 0.2222222222222222
+    }
+  },
+  "all_datasets": [
+    {
+      "name": "training_dataset_v1_1_deployable",
+      "n_samples": 108,
+      "n_presence": 18,
+      "n_background": 90,
+      "n_features": 21,
+      "training_mode": "single",
+      "n_ensemble_members": 1,
+      "n_spatial_folds": 3,
+      "best_params": {
+        "subsample": 0.9,
+        "scale_pos_weight": 5.0,
+        "reg_lambda": 1.0,
+        "reg_alpha": 0.0,
+        "n_estimators": 400,
+        "min_child_weight": 1,
+        "max_depth": 2,
+        "learning_rate": 0.05,
+        "gamma": 0.3,
+        "colsample_bytree": 0.5
+      },
+      "spatial_auc_mean": 0.899621212121212,
+      "spatial_auc_std": 0.14195704319275387,
+      "spatial_ap_mean": 0.9022200022200022,
+      "spatial_brier_mean": 0.25390111406644184,
+      "oof_auc_raw": 0.8108974358974359,
+      "oof_auc_calibrated": 0.860042735042735,
+      "oof_ap_raw": 0.7269519006598351,
+      "oof_ap_calibrated": 0.7423371647509579,
+      "oof_brier_raw": 0.24666671454906464,
+      "oof_brier_calibrated": 0.1361832618713379,
+      "threshold": {
+        "threshold": 1.0,
+        "precision": 1.0,
+        "recall": 0.2222222222222222
+      }
+    },
+    {
+      "name": "training_dataset_v1_1_augmented_deployable",
+      "n_samples": 108,
+      "n_presence": 18,
+      "n_background": 90,
+      "n_features": 27,
+      "training_mode": "ensemble",
+      "n_ensemble_members": 3,
+      "n_spatial_folds": 3,
+      "best_params": {
+        "subsample": 1.0,
+        "scale_pos_weight": 5.0,
+        "reg_lambda": 2.0,
+        "reg_alpha": 0.5,
+        "n_estimators": 250,
+        "min_child_weight": 2,
+        "max_depth": 4,
+        "learning_rate": 0.03,
+        "gamma": 0.3,
+        "colsample_bytree": 0.8
+      },
+      "spatial_auc_mean": 0.8844696969696969,
+      "spatial_auc_std": 0.163384521410528,
+      "spatial_ap_mean": 0.8830669330669331,
+      "spatial_brier_mean": 0.2001053641239802,
+      "oof_auc_raw": 0.7938034188034188,
+      "oof_auc_calibrated": 0.8418803418803419,
+      "oof_ap_raw": 0.7271641540720488,
+      "oof_ap_calibrated": 0.7348538011695906,
+      "oof_brier_raw": 0.19990520179271698,
+      "oof_brier_calibrated": 0.15096153318881989,
+      "threshold": {
+        "threshold": 1.0,
+        "precision": 1.0,
+        "recall": 0.2222222222222222
+      }
+    }
+  ],
+  "deployment_policy": {
+    "recommended_threshold": 1.0,
+    "production_mode": true,
+    "min_threshold_floor": 0.5,
+    "high_confidence_cutoff": 0.8,
+    "medium_confidence_cutoff": 0.6,
+    "notes": "Use calibrated probabilities. Treat 0.60-0.80 as field-verification priority."
+  }
+}
