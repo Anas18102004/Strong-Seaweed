@@ -1,4 +1,5 @@
 import json
+import argparse
 from pathlib import Path
 
 import numpy as np
@@ -125,22 +126,55 @@ def write_seasonal_weights() -> None:
     pd.DataFrame(rows).to_csv(SEASONAL_OUT, index=False)
 
 
+def parse_args() -> argparse.Namespace:
+    p = argparse.ArgumentParser(description="Add site-prior and policy layers to master/training datasets.")
+    p.add_argument("--master_in", type=str, default=str(MASTER_IN))
+    p.add_argument("--train_in", type=str, default=str(TRAIN_IN))
+    p.add_argument("--master_out", type=str, default=str(MASTER_OUT))
+    p.add_argument("--train_out", type=str, default=str(TRAIN_OUT))
+    p.add_argument("--meta_out", type=str, default=str(META_OUT))
+    p.add_argument("--seasonal_out", type=str, default=str(SEASONAL_OUT))
+    return p.parse_args()
+
+
 def main() -> None:
+    args = parse_args()
     ensure_dirs()
-    if not MASTER_IN.exists() or not TRAIN_IN.exists():
+    master_in = Path(args.master_in)
+    train_in = Path(args.train_in)
+    master_out = Path(args.master_out)
+    train_out = Path(args.train_out)
+    meta_out = Path(args.meta_out)
+    seasonal_out = Path(args.seasonal_out)
+
+    if not master_in.exists() or not train_in.exists():
         raise FileNotFoundError(
             "Expected master_feature_matrix.csv and training_dataset.csv in workspace."
         )
 
-    master = pd.read_csv(MASTER_IN)
-    train = pd.read_csv(TRAIN_IN)
+    master = pd.read_csv(master_in)
+    train = pd.read_csv(train_in)
 
     master_aug = add_site_prior_and_policy(master)
     train_aug = add_site_prior_and_policy(train)
 
-    master_aug.to_csv(MASTER_OUT, index=False)
-    train_aug.to_csv(TRAIN_OUT, index=False)
-    write_seasonal_weights()
+    master_out.parent.mkdir(parents=True, exist_ok=True)
+    train_out.parent.mkdir(parents=True, exist_ok=True)
+    meta_out.parent.mkdir(parents=True, exist_ok=True)
+    seasonal_out.parent.mkdir(parents=True, exist_ok=True)
+    master_aug.to_csv(master_out, index=False)
+    train_aug.to_csv(train_out, index=False)
+    # Keep seasonal defaults but allow tagged output path.
+    rows = []
+    for m in range(1, 13):
+        if 2 <= m <= 10:
+            phase = "active_farming_window"
+            weight = 1.0
+        else:
+            phase = "monsoon_caution_window"
+            weight = 0.4
+        rows.append({"month": m, "phase": phase, "operational_weight": weight})
+    pd.DataFrame(rows).to_csv(seasonal_out, index=False)
 
     metadata = {
         "cluster_count": len(CLUSTERS),
@@ -155,13 +189,13 @@ def main() -> None:
             "Only user-provided coordinates were used for core/invasion anchors.",
         ],
     }
-    with open(META_OUT, "w", encoding="utf-8") as f:
+    with open(meta_out, "w", encoding="utf-8") as f:
         json.dump(metadata, f, indent=2)
 
-    print(f"Saved: {MASTER_OUT}")
-    print(f"Saved: {TRAIN_OUT}")
-    print(f"Saved: {SEASONAL_OUT}")
-    print(f"Saved: {META_OUT}")
+    print(f"Saved: {master_out}")
+    print(f"Saved: {train_out}")
+    print(f"Saved: {seasonal_out}")
+    print(f"Saved: {meta_out}")
     print("Added columns:")
     print(
         "dist_to_known_cluster_km, site_prior_score, dist_to_core_zone_anchor_km, "
