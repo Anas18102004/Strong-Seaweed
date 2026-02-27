@@ -1,0 +1,31 @@
+id,site,lat,lon,species,expected,label_type,source_ref,source_url,snap_km,p_calibrated,pred_label,correct
+T01,TN-01,8.74748333,78.19048611,Kappaphycus alvarezii,1,external_true,doi:10.56042/ijms.v47i06.13600,https://doi.org/10.56042/ijms.v47i06.13600,0.3696163444427632,0.0,0,0
+T02,TN-02,8.74621111,78.18999722,Kappaphycus alvarezii,1,external_true,doi:10.56042/ijms.v47i06.13600,https://doi.org/10.56042/ijms.v47i06.13600,0.28825879283633415,0.0,0,0
+T03,TN-03,8.74586944,78.19485833,Kappaphycus alvarezii,1,external_true,doi:10.56042/ijms.v47i06.13600,https://doi.org/10.56042/ijms.v47i06.13600,0.35505342886612773,0.0,0,0
+T04,TN-04,9.27943333,79.18876111,Kappaphycus alvarezii,1,external_true,doi:10.56042/ijms.v47i06.13600,https://doi.org/10.56042/ijms.v47i06.13600,0.4477602745506462,0.3243243,0,0
+T05,TN-05,9.28743333,79.18615833,Kappaphycus alvarezii,1,external_true,doi:10.56042/ijms.v47i06.13600,https://doi.org/10.56042/ijms.v47i06.13600,0.5436461767616196,0.3243243,0,0
+T06,TN-06,9.28385278,79.18971667,Kappaphycus alvarezii,1,external_true,doi:10.56042/ijms.v47i06.13600,https://doi.org/10.56042/ijms.v47i06.13600,0.08161844458553948,0.3243243,0,0
+T07,TN-07,9.19491667,79.40525,Kappaphycus alvarezii,1,external_true,"MFIS Tech Series 246, 2020",https://eprints.cmfri.org.in/14936/1/MFIS_246_B%20Johnson.pdf,4.415827054229336,0.3243243,0,0
+T08,TN-09,9.317,79.33191667,Kappaphycus alvarezii,1,external_true,"MFIS Tech Series 246, 2020",https://eprints.cmfri.org.in/14936/1/MFIS_246_B%20Johnson.pdf,0.2832609276787991,0.5,1,1
+T09,TN-10,9.3275,79.31530556,Kappaphycus alvarezii,1,external_true,"MFIS Tech Series 246, 2020",https://eprints.cmfri.org.in/14936/1/MFIS_246_B%20Johnson.pdf,0.11005908986695773,0.5,1,1
+T10,TN-11,9.32825,79.31277778,Kappaphycus alvarezii,1,external_true,"MFIS Tech Series 246, 2020",https://eprints.cmfri.org.in/14936/1/MFIS_246_B%20Johnson.pdf,0.22776313404875087,0.5,1,1
+T11,TN-12,9.32283333,79.29994444,Kappaphycus alvarezii,1,external_true,"MFIS Tech Series 246, 2020",https://eprints.cmfri.org.in/14936/1/MFIS_246_B%20Johnson.pdf,0.7002237629717302,0.5,1,1
+T12,TN-13,9.32091667,79.29291667,Kappaphycus alvarezii,1,external_true,"MFIS Tech Series 246, 2020",https://eprints.cmfri.org.in/14936/1/MFIS_246_B%20Johnson.pdf,0.5763747025008965,0.5,1,1
+T13,TN-14,9.29794444,79.27197222,Kappaphycus alvarezii,1,external_true,"MFIS Tech Series 246, 2020",https://eprints.cmfri.org.in/14936/1/MFIS_246_B%20Johnson.pdf,1.271326765405628,0.5,1,1
+T14,TN-20,9.24,79.21,Kappaphycus alvarezii,1,external_true,doi:10.4490/algae.2010.25.4.205,https://doi.org/10.4490/algae.2010.25.4.205,0.3616708716082732,0.25,0,0
+T15,Akkalmadam_cluster,9.29213889,79.23238889,Kappaphycus alvarezii,1,external_true,MFIS Tech Series 246 + farm-site list,https://eprints.cmfri.org.in/14936/1/MFIS_246_B%20Johnson.pdf,1.0433425281929256,0.5,1,1
+F01,Krusadai Island,9.247788,79.208138,Caulerpa racemosa var. corynephora (Mont.) W.V.Bosse,0,external_false,GBIF occurrence,https://www.gbif.org/occurrence/4856558413,0.1229001006988837,0.25,0,1
+F02,"Coral Reef, Krusadai Island Pamban",9.246988,79.210619,Acanthophora spicifera (M.Vahl) Børgesen,0,external_false,GBIF occurrence,https://www.gbif.org/occurrence/1989447374,0.3969960684617061,0.25,0,1
+F03,"Galaxia Reef, Krusadai Island",9.246988,79.210619,Caulerpa racemosa var. corynephora (Mont.) W.V.Bosse,0,external_false,GBIF occurrence,https://www.gbif.org/occurrence/1989360223,0.3969960684617061,0.25,0,1
+F04,"Galaxia Reef, Krusadai Island",9.246988,79.210619,Caulerpa racemosa var. chemnitzia,0,external_false,GBIF occurrence,https://www.gbif.org/occurrence/1989038290,0.3969960684617061,0.25,0,1
+F05,"Krusadai, Pamban",9.247233,79.210688,Caulerpa racemosa var. chemnitzia,0,external_false,GBIF occurrence,https://www.gbif.org/occurrence/1988812287,0.4013247322017449,0.25,0,1
+F06,"Pamban, Krusadai Island",9.247233,79.210688,Hypnea musciformis,0,external_false,GBIF occurrence,https://www.gbif.org/occurrence/1989145528,0.4013247322017449,0.25,0,1
+F07,"Sandy Lagoon, Krusadai Island, Pamban",9.247233,79.210688,Caulerpa racemosa var. corynephora (Mont.) W.V.Bosse,0,external_false,GBIF occurrence,https://www.gbif.org/occurrence/1988991389,0.4013247322017449,0.25,0,1
+F08,Krusadai Island,9.233334,79.21667,Caulerpa corynephora Mont.,0,external_false,GBIF occurrence,https://www.gbif.org/occurrence/90123917,0.422227240861653,0.3243243,0,1
+F09,Krusadai island,9.25,79.219,Ulva lactuca L.,0,external_false,GBIF occurrence,https://www.gbif.org/occurrence/57324539,0.4250402439549789,0.3243243,0,1
+F10,"Krusadai Island, off Rameswaram, southeast India",9.246966,79.210954,Hypnea musciformis,0,external_false,GBIF occurrence,https://www.gbif.org/occurrence/1989068144,0.4337612727145976,0.25,0,1
+F11,"Krusadai Island, off Rameswaram, southeast India",9.246966,79.210954,Turbinaria ornata (Turner) J.Agardh,0,external_false,GBIF occurrence,https://www.gbif.org/occurrence/1989226983,0.4337612727145976,0.25,0,1
+F12,"Krusadai Island, off Rameswaram, South India",9.246966,79.210954,Acanthophora spicifera (M.Vahl) Børgesen,0,external_false,GBIF occurrence,https://www.gbif.org/occurrence/1989173909,0.4337612727145976,0.25,0,1
+F13,Krusadai Island,9.246966,79.210954,Caulerpa racemosa var. corynephora (Mont.) W.V.Bosse,0,external_false,GBIF occurrence,https://www.gbif.org/occurrence/1989299460,0.4337612727145976,0.25,0,1
+F14,"Krusadai Island, off Rameswaram, southeast India",9.246966,79.210954,Caulerpa racemosa (Forssk.) J.Agardh,0,external_false,GBIF occurrence,https://www.gbif.org/occurrence/1988900261,0.4337612727145976,0.25,0,1
+F15,Pamoan and Krusadai,9.245416,79.210884,Caulerpa racemosa (Forssk.) J.Agardh,0,external_false,GBIF occurrence,https://www.gbif.org/occurrence/4856592639,0.4823109044165893,0.25,0,1

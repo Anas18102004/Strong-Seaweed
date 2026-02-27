@@ -1,0 +1,13 @@
+{
+  "n_total": 30,
+  "TP": 7,
+  "TN": 15,
+  "FP": 0,
+  "FN": 8,
+  "accuracy": 0.7333333333333333,
+  "precision": 1.0,
+  "recall": 0.4666666666666667,
+  "specificity": 1.0,
+  "threshold": 0.5,
+  "max_snap_km": 4.415827054229336
+}

@@ -1,4 +1,4 @@
-# Model Card: Gulf of Mannar Regional Ecological Screening Model (v1.1)
+# Model Card: Gulf of Mannar Regional Ecological Screening Model (v1.0)
 
 ## Scope
 - Region: Gulf of Mannar
@@ -26,9 +26,9 @@
 - OOF calibrated Brier: 0.1803
 
 ## Deployment Policy
-- Threshold: 0.255000
-- Precision at threshold (hard 30-pt set): 0.8462
-- Recall at threshold (hard 30-pt set): 0.7333
+- Threshold: 0.500000
+- Precision at threshold: 0.5000
+- Recall at threshold: 0.1111
 - Priority policy: high >= 0.80, medium >= 0.60
 
 ## Known Limitations

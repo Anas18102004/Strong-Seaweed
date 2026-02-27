@@ -1,5 +1,6 @@
 import argparse
 import json
+import re
 from pathlib import Path
 
 import numpy as np
@@ -76,6 +77,30 @@ def parse_args() -> argparse.Namespace:
         "--strict_acceptance",
         action="store_true",
         help="Apply v1.1 QA acceptance rules for positive ingestion.",
+    )
+    p.add_argument(
+        "--strict_min_confidence",
+        type=float,
+        default=0.85,
+        help="Minimum confidence_score required in strict mode.",
+    )
+    p.add_argument(
+        "--strict_min_verified_dates",
+        type=int,
+        default=2,
+        help="Minimum distinct verified dates required from notes in strict mode.",
+    )
+    p.add_argument(
+        "--strict_depth_max_m",
+        type=float,
+        default=8.0,
+        help="Maximum snapped-cell depth allowed in strict mode.",
+    )
+    p.add_argument(
+        "--strict_distance_to_shore_max_m",
+        type=float,
+        default=2000.0,
+        help="Maximum snapped-cell distance_to_shore allowed in strict mode.",
     )
     return p.parse_args()
 
@@ -191,14 +216,34 @@ def write_v11_template(path: Path) -> None:
         "qa_reviewer": "reviewer_name",
         "qa_status": "approved",
         "rationale": "literature coordinate with confirmed species",
-        "notes": "replace with your real record",
+        "notes": "verified_dates=2023-01-10;2023-03-20;2023-06-05",
     }
     path.parent.mkdir(parents=True, exist_ok=True)
     pd.DataFrame([sample], columns=cols).to_csv(path, index=False)
 
 
+def _extract_verified_dates_count(notes: str) -> int:
+    if not isinstance(notes, str):
+        return 0
+    m = re.search(r"verified_dates\s*=\s*([^|]+)", notes, flags=re.IGNORECASE)
+    if not m:
+        return 0
+    raw = m.group(1).strip()
+    parts = [p.strip() for p in raw.split(";") if p.strip()]
+    # Expect ISO-like date tokens; keep unique normalized tokens.
+    uniq = {p for p in parts}
+    return len(uniq)
+
+
 def apply_strict_acceptance_rules(
-    q: pd.DataFrame, master: pd.DataFrame, training_csv: Path
+    q: pd.DataFrame,
+    master: pd.DataFrame,
+    training_csv: Path,
+    max_snap_m: float,
+    min_confidence: float,
+    min_verified_dates: int,
+    depth_max_m: float,
+    distance_to_shore_max_m: float,
 ) -> pd.DataFrame:
     required_cols = [
         "source_type",
@@ -229,6 +274,16 @@ def apply_strict_acceptance_rules(
     q = q[q["is_verified"].astype(str).str.strip().str.lower().isin(true_set)].copy()
     q = q[q["qa_status"].astype(str).str.strip().str.lower().isin({"approved", "verified", "accepted"})].copy()
 
+    # 4b) confidence floor
+    q = q[q["confidence_score"].notna() & (q["confidence_score"] >= float(min_confidence))].copy()
+
+    # 4c) minimum verified dates evidence from notes.
+    if "notes" in q.columns:
+        q["_verified_dates_count"] = q["notes"].astype(str).apply(_extract_verified_dates_count)
+        q = q[q["_verified_dates_count"] >= int(min_verified_dates)].copy()
+    else:
+        q = q.iloc[0:0].copy()
+
     # 5) not within 1km of existing positives (when training data available)
     if training_csv.exists():
         tr = pd.read_csv(training_csv)
@@ -241,7 +296,7 @@ def apply_strict_acceptance_rules(
             d_m, _ = tree.query(np.c_[qx, qy], k=1)
             q = q[d_m > 1000.0].copy()
 
-    # 6) not snapped to same 1km grid cell as existing positives
+    # 6) snapped-cell environmental gates + avoid same positive cell
     if training_csv.exists() and not q.empty:
         tr = pd.read_csv(training_csv)
         pos = tr[tr["label"] == 1][["lon", "lat"]].drop_duplicates()
@@ -250,11 +305,24 @@ def apply_strict_acceptance_rules(
         mx, my = transformer.transform(master["lon"].to_numpy(), master["lat"].to_numpy())
         qx, qy = transformer.transform(q["lon"].to_numpy(), q["lat"].to_numpy())
         tree = cKDTree(np.c_[mx, my])
-        _, idx = tree.query(np.c_[qx, qy], k=1)
+        d_m, idx = tree.query(np.c_[qx, qy], k=1)
         snapped = master.iloc[idx][["lon", "lat"]].reset_index(drop=True)
+        # Also ensure strict snapping distance.
+        snap_ok = d_m <= float(max_snap_m)
+        env_ok = np.ones(len(snapped), dtype=bool)
+        if "depth" in master.columns:
+            env_ok &= master.iloc[idx]["depth"].to_numpy(dtype=float) <= float(depth_max_m)
+        if "distance_to_shore" in master.columns:
+            env_ok &= master.iloc[idx]["distance_to_shore"].to_numpy(dtype=float) <= float(
+                distance_to_shore_max_m
+            )
+        if "shallow_mask" in master.columns:
+            env_ok &= master.iloc[idx]["shallow_mask"].to_numpy(dtype=float) >= 1.0
         keep = [
-            (round(lon, 8), round(lat, 8)) not in pos_set
-            for lon, lat in zip(snapped["lon"], snapped["lat"])
+            bool(snap_ok[i])
+            and bool(env_ok[i])
+            and ((round(lon, 8), round(lat, 8)) not in pos_set)
+            for i, (lon, lat) in enumerate(zip(snapped["lon"], snapped["lat"]))
         ]
         q = q[np.asarray(keep, dtype=bool)].copy()
 
@@ -341,7 +409,16 @@ def main() -> None:
             q = q[status_mask].copy()
 
     if args.strict_acceptance:
-        q = apply_strict_acceptance_rules(q, master, args.training_csv)
+        q = apply_strict_acceptance_rules(
+            q=q,
+            master=master,
+            training_csv=args.training_csv,
+            max_snap_m=float(args.max_snap_m),
+            min_confidence=float(args.strict_min_confidence),
+            min_verified_dates=int(args.strict_min_verified_dates),
+            depth_max_m=float(args.strict_depth_max_m),
+            distance_to_shore_max_m=float(args.strict_distance_to_shore_max_m),
+        )
 
     # Pre-snap dedup.
     q["lon_r"] = q["lon"].round(args.dedup_decimals)
@@ -370,6 +447,10 @@ def main() -> None:
         "training_csv": str(args.training_csv),
         "require_verified": bool(args.require_verified),
         "strict_acceptance": bool(args.strict_acceptance),
+        "strict_min_confidence": float(args.strict_min_confidence),
+        "strict_min_verified_dates": int(args.strict_min_verified_dates),
+        "strict_depth_max_m": float(args.strict_depth_max_m),
+        "strict_distance_to_shore_max_m": float(args.strict_distance_to_shore_max_m),
         "sources_after_filter": q["source_file"].value_counts().to_dict(),
     }
     args.out_report.write_text(json.dumps(report, indent=2), encoding="utf-8")

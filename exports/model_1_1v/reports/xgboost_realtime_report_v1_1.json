@@ -173,11 +173,11 @@
     }
   ],
   "deployment_policy": {
-    "recommended_threshold": 0.255,
+    "recommended_threshold": 0.5,
     "production_mode": true,
     "min_threshold_floor": 0.5,
     "high_confidence_cutoff": 0.8,
     "medium_confidence_cutoff": 0.6,
-    "notes": "Use calibrated probabilities. Threshold tuned via artifacts/reports/v1_1_threshold_sweep_report.json. Treat 0.60-0.80 as field-verification priority."
+    "notes": "Use calibrated probabilities. Treat 0.60-0.80 as field-verification priority."
   }
 }

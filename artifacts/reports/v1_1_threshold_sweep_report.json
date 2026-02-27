@@ -1,0 +1,46 @@
+{
+  "inputs": {
+    "oof_csv": "releases\\v1_1\\reports\\xgboost_realtime_oof_predictions_v1_1.csv",
+    "hard_csv": "C:\\Users\\Anas\\Desktop\\Strong Seaweed\\artifacts\\experiments\\v1_1_hard_test_30pts_web_in_domain_scored.csv",
+    "n_oof": 165,
+    "n_hard": 30,
+    "min_precision_target": 0.8,
+    "min_recall_target": 0.7
+  },
+  "recommended_threshold": 0.255,
+  "recommended_metrics": {
+    "oof_precision": 0.3359375,
+    "oof_recall": 0.9555555555555556,
+    "oof_f1": 0.4971098265895953,
+    "hard_precision": 0.8461538461538461,
+    "hard_recall": 0.7333333333333333,
+    "hard_f1": 0.7857142857142856,
+    "hard_specificity": 0.8666666666666667,
+    "hard_accuracy": 0.8
+  },
+  "best_hard_f1": {
+    "threshold": 0.255,
+    "oof_precision": 0.3359375,
+    "oof_recall": 0.9555555555555556,
+    "oof_f1": 0.4971098265895953,
+    "oof_specificity": 0.2916666666666667,
+    "hard_precision": 0.8461538461538461,
+    "hard_recall": 0.7333333333333333,
+    "hard_f1": 0.7857142857142856,
+    "hard_specificity": 0.8666666666666667,
+    "hard_accuracy": 0.8
+  },
+  "best_oof_f1": {
+    "threshold": 0.21,
+    "oof_precision": 0.33088235294117646,
+    "oof_recall": 1.0,
+    "oof_f1": 0.4972375690607735,
+    "oof_specificity": 0.24166666666666667,
+    "hard_precision": 0.4444444444444444,
+    "hard_recall": 0.8,
+    "hard_f1": 0.5714285714285714,
+    "hard_specificity": 0.0,
+    "hard_accuracy": 0.4
+  },
+  "note": "Recommendation prioritizes hard-test feasibility under precision/recall targets, then F1."
+}
