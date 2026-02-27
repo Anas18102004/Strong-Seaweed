@@ -36,7 +36,7 @@ PRED_PATH = DIAGNOSTICS_DIR / "xgboost_realtime_oof_predictions.csv"
 RANDOM_STATE = 42
 ENSEMBLE_SEEDS = [42, 52, 62]
 SINGLE_SEEDS = [42]
-MODEL_VERSION = "v1.0"
+BASE_MODEL_VERSION = "v1.0"
 
 
 def log(msg: str) -> None:
@@ -86,8 +86,8 @@ def resolve_output_paths(release_tag: str) -> dict[str, Path]:
             "features": FEATURES_PATH,
             "report": REPORT_PATH,
             "pred": PRED_PATH,
-            "model_card": DOCS_DIR / f"MODEL_CARD_{MODEL_VERSION}.md",
-            "version": MODEL_VERSION,
+            "model_card": DOCS_DIR / f"MODEL_CARD_{BASE_MODEL_VERSION}.md",
+            "version": BASE_MODEL_VERSION,
         }
 
     safe = tag.replace("/", "_").replace("\\", "_").replace(" ", "_")
@@ -504,7 +504,8 @@ def main() -> None:
     REPORT_PATH_USED.write_text(json.dumps(report, indent=2), encoding="utf-8")
 
     model_card_path = out_paths["model_card"]
-    model_card = f"""# Model Card: {report['model_name']} ({MODEL_VERSION})
+    model_card_version = out_paths["version"]
+    model_card = f"""# Model Card: {report['model_name']} ({model_card_version})
 
 ## Scope
 - Region: {report['training_region']['name']}

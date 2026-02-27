@@ -156,11 +156,20 @@ def main() -> None:
         train_cmd.extend(["--release_tag", args.release_tag.strip()])
     run(train_cmd)
 
+    score_input = TABULAR_DIR / "master_feature_matrix_augmented.csv"
+    if args.release_tag.strip():
+        # Prefer release-specific augmented matrix first, then release base matrix.
+        candidate_aug = master_csv.with_name(f"{master_csv.stem}_augmented.csv")
+        if candidate_aug.exists():
+            score_input = candidate_aug
+        elif master_csv.exists():
+            score_input = master_csv
+
     score_cmd = [
         "python",
         "score_realtime_production.py",
         "--input",
-        str(TABULAR_DIR / "master_feature_matrix_augmented.csv"),
+        str(score_input),
         "--output",
         str(OUTPUTS_DIR / "realtime_ranked_candidates.csv"),
     ]

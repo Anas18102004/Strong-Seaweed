@@ -1,0 +1,16 @@
+{
+  "threshold": 0.285,
+  "n_total": 50,
+  "TP": 18,
+  "TN": 24,
+  "FP": 1,
+  "FN": 7,
+  "precision": 0.9473684210526315,
+  "recall": 0.72,
+  "specificity": 0.96,
+  "accuracy": 0.84,
+  "f1": 0.8181818181818181,
+  "median_snap_km": 0.6518016818458259,
+  "max_snap_km": 76.88448228958781,
+  "gt5km_snaps": 1
+}

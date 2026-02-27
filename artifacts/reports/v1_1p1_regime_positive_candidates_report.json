@@ -1,0 +1,27 @@
+{
+  "input_grid_rows": 1901,
+  "after_excluding_existing_positives": 1855,
+  "after_filters": 4,
+  "selected_count": 4,
+  "selected_regime_bins": 4,
+  "selected_subregions": 4,
+  "mean_p_calibrated": 0.535646465,
+  "mean_dist_to_pos_km": 1.5437358535584997,
+  "min_dist_to_pos_km": 1.3997931670545714,
+  "max_dist_to_pos_km": 1.9747785822213864,
+  "output_csv": "artifacts\\experiments\\v1_1p1_regime_positive_candidates.csv",
+  "params": {
+    "grid_csv": "data\\tabular\\master_feature_matrix_v1_1_augmented.csv",
+    "pred_csv": "outputs\\realtime_ranked_candidates_v1_1p1.csv",
+    "training_csv": "data\\tabular\\training_dataset_v1_1_merged46_plus_hn30_augmented.csv",
+    "output_csv": "artifacts\\experiments\\v1_1p1_regime_positive_candidates.csv",
+    "output_report": "artifacts\\reports\\v1_1p1_regime_positive_candidates_report.json",
+    "target_count": 60,
+    "min_dist_km_from_pos": 1.0,
+    "max_dist_km_from_pos": 80.0,
+    "p_cal_min": 0.3,
+    "p_cal_max": 0.95,
+    "max_per_regime_bin": 3,
+    "max_per_subregion": 10
+  }
+}

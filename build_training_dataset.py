@@ -125,7 +125,7 @@ def parse_args() -> argparse.Namespace:
     p.add_argument(
         "--max_snap_m",
         type=float,
-        default=1.0,
+        default=1500.0,
         help="Maximum snap distance (meters) from raw presence point to nearest valid grid pixel.",
     )
     p.add_argument(
