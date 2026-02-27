@@ -1,0 +1,27 @@
+{
+  "passed": false,
+  "failed_checks": [
+    "benchmark_precision",
+    "benchmark_gt5km_snaps"
+  ],
+  "inputs": {
+    "report_json": "releases\\v1_2_pu\\reports\\xgboost_realtime_report_v1_2_pu.json",
+    "benchmark_json": "artifacts\\reports\\v1_2_pu_hard_test_50_web_v2_summary.json"
+  },
+  "thresholds": {
+    "min_spatial_auc": 0.75,
+    "max_spatial_auc_std": 0.08,
+    "min_oof_ap_calibrated": 0.5,
+    "min_benchmark_precision": 0.8,
+    "min_benchmark_recall": 0.8,
+    "max_benchmark_gt5km_snaps": 0
+  },
+  "metrics": {
+    "spatial_auc_mean": 0.976202293417367,
+    "spatial_auc_std": 0.02284296502116278,
+    "oof_ap_calibrated": 0.9051872226189719,
+    "benchmark_precision": 0.6111111111111112,
+    "benchmark_recall": 0.88,
+    "benchmark_gt5km_snaps": 1
+  }
+}

@@ -1,0 +1,9 @@
+{
+  "selected_count":3,
+  "unique_regime_bins":3,
+  "unique_subregions":3,
+  "mean_p_calibrated":0.6666667,
+  "min_dist_to_pos_km":2.2190808372,
+  "max_dist_to_pos_km":3.5755366978,
+  "output_csv":"artifacts\\experiments\\v1_2_positive_candidates_40.csv"
+}

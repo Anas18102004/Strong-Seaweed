@@ -1,0 +1,19 @@
+{
+  "release": "v1.1r_plus35provisional",
+  "n": 50,
+  "positives": 25,
+  "negatives": 25,
+  "threshold": 0.7142857313156128,
+  "accuracy": 0.72,
+  "precision": 1.0,
+  "recall": 0.44,
+  "f1": 0.6111111111111112,
+  "roc_auc": 0.9288,
+  "avg_precision": 0.9076920593094506,
+  "confusion_matrix": {
+    "tn": 25,
+    "fp": 0,
+    "fn": 14,
+    "tp": 11
+  }
+}

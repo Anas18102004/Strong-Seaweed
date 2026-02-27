@@ -1,0 +1,32 @@
+[
+  {
+    "dataset":"v1_1_hard_test_50_web_with_features.csv",
+    "n":50,
+    "pos":25,
+    "neg":25,
+    "threshold":0.75,
+    "acc":0.74,
+    "precision":0.7727272727,
+    "recall":0.68,
+    "f1":0.7234042553,
+    "auc":0.8192,
+    "ap":0.7556439107,
+    "tn":20,
+    "fp":5,
+    "fn":8,
+    "tp":17,
+    "nonoverlap_n":12,
+    "nonoverlap_pos":1,
+    "nonoverlap_neg":11,
+    "nonoverlap_acc":0.9166666667,
+    "nonoverlap_precision":0.0,
+    "nonoverlap_recall":0.0,
+    "nonoverlap_f1":0.0,
+    "nonoverlap_auc":0.2272727273,
+    "nonoverlap_ap":0.1,
+    "nonoverlap_tn":11,
+    "nonoverlap_fp":0,
+    "nonoverlap_fn":1,
+    "nonoverlap_tp":0
+  }
+]

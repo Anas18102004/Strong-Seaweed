@@ -203,7 +203,28 @@ def main() -> None:
 
     snapped = snap_to_master(raw, master, max_snap_m=float(args.max_snap_m))
     if snapped.empty:
-        raise RuntimeError("No occurrences snapped within max_snap_m.")
+        args.output_snapped_csv.parent.mkdir(parents=True, exist_ok=True)
+        pd.DataFrame().to_csv(args.output_snapped_csv, index=False)
+        report = {
+            "bbox": bbox,
+            "raw_total": int(len(rows)),
+            "raw_kappaphycus_unique": int(len(raw)),
+            "snapped_within_max_snap_m": 0,
+            "new_unique_positive_cells": 0,
+            "max_snap_m": float(args.max_snap_m),
+            "median_snap_km": None,
+            "sources": raw["source_api"].value_counts().to_dict(),
+            "output_raw_csv": str(args.output_raw_csv),
+            "output_snapped_csv": str(args.output_snapped_csv),
+            "note": "No web occurrences snapped within max_snap_m to current feature grid.",
+        }
+        args.output_report.parent.mkdir(parents=True, exist_ok=True)
+        args.output_report.write_text(json.dumps(report, indent=2), encoding="utf-8")
+        print(f"Saved raw: {args.output_raw_csv}")
+        print(f"Saved empty snapped file: {args.output_snapped_csv}")
+        print(f"Saved report: {args.output_report}")
+        print("raw_unique={} snapped=0 new_cells=0".format(report["raw_kappaphycus_unique"]))
+        return
 
     # Keep only new positive cells not already in training positives.
     pos = train[train["label"] == 1][["lon", "lat"]].drop_duplicates()

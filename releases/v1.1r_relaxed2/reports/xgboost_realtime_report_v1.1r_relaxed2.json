@@ -1,0 +1,109 @@
+{
+  "model_version": "v1.1r_relaxed2",
+  "model_name": "Gulf of Mannar Regional Ecological Screening Model",
+  "selected_dataset": "training_dataset_v1_1_merged46_plus_hn30_augmented_plus_research_relaxed2_deployable",
+  "inference_feature_source": "data\\tabular\\master_feature_matrix_v1_1_augmented.csv",
+  "training_region": {
+    "name": "Gulf of Mannar",
+    "bbox": {
+      "lon_min": 78.07517148040331,
+      "lon_max": 79.7999368259128,
+      "lat_min": 8.403119733194146,
+      "lat_max": 9.786525270738208
+    }
+  },
+  "resolution": {
+    "effective_resolution_km": 22.0,
+    "coarsest_layer": "wave_height (~0.20 degree)",
+    "coarsest_layer_resolution_km": 22.0,
+    "secondary_resolution_km": 9.2
+  },
+  "use_case": {
+    "intended": "regional_screening",
+    "not_valid_for": "micro-site (<5 km) decisions",
+    "notes": "Model predicts ecological suitability, not farm installation decisions."
+  },
+  "selected_metrics": {
+    "n_samples": 307,
+    "n_presence": 48,
+    "n_background": 259,
+    "n_features": 29,
+    "training_mode": "ensemble",
+    "n_ensemble_members": 3,
+    "n_spatial_folds": 5,
+    "best_params": {
+      "subsample": 0.8,
+      "scale_pos_weight": 5.395833333333333,
+      "reg_lambda": 10.0,
+      "reg_alpha": 0.1,
+      "n_estimators": 150,
+      "min_child_weight": 4,
+      "max_depth": 2,
+      "learning_rate": 0.03,
+      "gamma": 0.3,
+      "colsample_bytree": 0.5
+    },
+    "spatial_auc_mean": 0.6145762618103043,
+    "spatial_auc_std": 0.18151614495886573,
+    "spatial_ap_mean": 0.42547691717401026,
+    "spatial_brier_mean": 0.26406658738851546,
+    "oof_auc_raw": 0.5521072796934866,
+    "oof_auc_calibrated": 0.6177011494252873,
+    "oof_ap_raw": 0.2442450039129962,
+    "oof_ap_calibrated": 0.2904996487105569,
+    "oof_brier_raw": 0.2905566096305847,
+    "oof_brier_calibrated": 0.1716233342885971,
+    "threshold": {
+      "threshold": 0.21875,
+      "precision": 0.27564102564102566,
+      "recall": 0.9555555555555556
+    }
+  },
+  "all_datasets": [
+    {
+      "name": "training_dataset_v1_1_merged46_plus_hn30_augmented_plus_research_relaxed2_deployable",
+      "n_samples": 307,
+      "n_presence": 48,
+      "n_background": 259,
+      "n_features": 29,
+      "training_mode": "ensemble",
+      "n_ensemble_members": 3,
+      "n_spatial_folds": 5,
+      "best_params": {
+        "subsample": 0.8,
+        "scale_pos_weight": 5.395833333333333,
+        "reg_lambda": 10.0,
+        "reg_alpha": 0.1,
+        "n_estimators": 150,
+        "min_child_weight": 4,
+        "max_depth": 2,
+        "learning_rate": 0.03,
+        "gamma": 0.3,
+        "colsample_bytree": 0.5
+      },
+      "spatial_auc_mean": 0.6145762618103043,
+      "spatial_auc_std": 0.18151614495886573,
+      "spatial_ap_mean": 0.42547691717401026,
+      "spatial_brier_mean": 0.26406658738851546,
+      "oof_auc_raw": 0.5521072796934866,
+      "oof_auc_calibrated": 0.6177011494252873,
+      "oof_ap_raw": 0.2442450039129962,
+      "oof_ap_calibrated": 0.2904996487105569,
+      "oof_brier_raw": 0.2905566096305847,
+      "oof_brier_calibrated": 0.1716233342885971,
+      "threshold": {
+        "threshold": 0.21875,
+        "precision": 0.27564102564102566,
+        "recall": 0.9555555555555556
+      }
+    }
+  ],
+  "deployment_policy": {
+    "recommended_threshold": 0.21875,
+    "production_mode": true,
+    "min_threshold_floor": 0.5,
+    "high_confidence_cutoff": 0.8,
+    "medium_confidence_cutoff": 0.6,
+    "notes": "Use calibrated probabilities. Treat 0.60-0.80 as field-verification priority."
+  }
+}

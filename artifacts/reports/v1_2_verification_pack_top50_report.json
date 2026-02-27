@@ -1,0 +1,10 @@
+{
+  "selected_count":50,
+  "unique_regime_bins":42,
+  "unique_subregions":6,
+  "mean_p_calibrated":0.3713596572,
+  "min_dist_to_pos_km":1.3994609257,
+  "max_dist_to_pos_km":58.6082817967,
+  "pack_csv":"artifacts\\experiments\\v1_2_verification_pack_top50.csv",
+  "ready_csv":"data\\tabular\\v1_2_ready_for_strict_ingestion.csv"
+}

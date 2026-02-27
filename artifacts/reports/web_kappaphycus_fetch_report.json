@@ -1,0 +1,20 @@
+{
+  "bbox": {
+    "lon_min": 78.07517148040331,
+    "lon_max": 79.7999368259128,
+    "lat_min": 8.403119733194146,
+    "lat_max": 9.795508423579404
+  },
+  "raw_total": 4,
+  "raw_kappaphycus_unique": 1,
+  "snapped_within_max_snap_m": 0,
+  "new_unique_positive_cells": 0,
+  "max_snap_m": 1500.0,
+  "median_snap_km": null,
+  "sources": {
+    "obis": 1
+  },
+  "output_raw_csv": "artifacts\\experiments\\web_kappaphycus_raw_occurrences.csv",
+  "output_snapped_csv": "artifacts\\experiments\\web_kappaphycus_snapped_new_cells.csv",
+  "note": "No web occurrences snapped within max_snap_m to current feature grid."
+}
