@@ -1,0 +1,2 @@
+source_api,record_id,species,lat,lon,source_url,source_ref
+obis,obis-4694876b-ee93-4eb8-a9a4-66fe3d3b7133,Kappaphycus alvarezii,8.9532,78.8867,https://api.obis.org/v3/occurrence,OBIS occurrence (Kappaphycus)
