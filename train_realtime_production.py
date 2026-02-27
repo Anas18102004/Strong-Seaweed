@@ -73,6 +73,18 @@ def parse_args() -> argparse.Namespace:
         default="",
         help="Optional explicit inference feature matrix CSV path.",
     )
+    p.add_argument(
+        "--exclude_feature_regex",
+        type=str,
+        default="",
+        help="Optional regex to exclude features (e.g. 'policy_|site_prior|dist_to_known').",
+    )
+    p.add_argument(
+        "--min_recall_at_threshold",
+        type=float,
+        default=0.0,
+        help="Minimum recall constraint when selecting deployment threshold.",
+    )
     return p.parse_args()
 
 
@@ -189,6 +201,7 @@ def pick_threshold(
     y_prob: np.ndarray,
     min_precision: float = 0.75,
     min_threshold: float = 0.0,
+    min_recall: float = 0.0,
 ) -> dict:
     precision, recall, thresholds = precision_recall_curve(y_true, y_prob)
     # precision/recall has one extra element; align to thresholds.
@@ -196,7 +209,11 @@ def pick_threshold(
     recall = recall[:-1]
     thresholds = thresholds
 
-    valid = np.where((precision >= min_precision) & (thresholds >= min_threshold))[0]
+    valid = np.where(
+        (precision >= min_precision)
+        & (recall >= min_recall)
+        & (thresholds >= min_threshold)
+    )[0]
     if len(valid) > 0:
         i = valid[np.argmax(recall[valid])]
     else:
@@ -220,6 +237,7 @@ def train_dataset(
     n_iter_single: int,
     n_iter_ensemble: int,
     min_threshold: float,
+    min_recall_at_threshold: float,
 ) -> dict:
     feat_cols = [c for c in feat_cols if c in df.columns]
     feat_cols = [c for c in feat_cols if df[c].nunique(dropna=True) > 1]
@@ -311,6 +329,7 @@ def train_dataset(
         cal_oof,
         min_precision=0.75,
         min_threshold=min_threshold,
+        min_recall=min_recall_at_threshold,
     )
 
     final_models = fit_ensemble(X, y, best["params"], best["seeds"])
@@ -361,13 +380,20 @@ def train_dataset(
 def build_training_configs(
     datasets: list[tuple[str, pd.DataFrame]],
     deployable_columns: set[str],
+    exclude_regex: str,
 ) -> list[tuple[str, pd.DataFrame, list[str]]]:
+    import re
+
+    rx = re.compile(exclude_regex) if exclude_regex.strip() else None
+
     configs: list[tuple[str, pd.DataFrame, list[str]]] = []
 
     # Per-dataset deployable configs
     for name, df in datasets:
         base_features = [c for c in df.columns if c not in {"label", "lon", "lat"}]
         deployable_features = [c for c in base_features if c in deployable_columns]
+        if rx is not None:
+            deployable_features = [c for c in deployable_features if not rx.search(c)]
         if len(deployable_features) >= 8:
             configs.append((f"{name}_deployable", df.copy(), deployable_features))
 
@@ -377,6 +403,8 @@ def build_training_configs(
         for _, df in datasets:
             common &= set(df.columns)
         common -= {"label", "lon", "lat"}
+        if rx is not None:
+            common = {c for c in common if not rx.search(c)}
 
         if len(common) >= 8:
             merged_parts = []
@@ -400,11 +428,13 @@ def main() -> None:
     n_iter_single = args.n_iter_single if args.n_iter_single is not None else (20 if args.fast else 45)
     n_iter_ensemble = args.n_iter_ensemble if args.n_iter_ensemble is not None else (10 if args.fast else 25)
     min_threshold = float(args.min_threshold) if args.production else 0.0
+    min_recall_at_threshold = float(args.min_recall_at_threshold)
 
     log(
         "Starting training | "
         f"fast={args.fast} | production={args.production} | "
         f"min_threshold={min_threshold:.3f} | "
+        f"min_recall_at_threshold={min_recall_at_threshold:.3f} | "
         f"n_iter_single={n_iter_single} | n_iter_ensemble={n_iter_ensemble}"
     )
     dataset_paths = [Path(p) for p in args.dataset_paths] if args.dataset_paths else DATASETS
@@ -435,13 +465,21 @@ def main() -> None:
     deployable_columns = set(pd.read_csv(inference_source, nrows=5).columns)
     deployable_columns -= {"lon", "lat", "label"}
 
-    configs = build_training_configs(datasets, deployable_columns)
+    configs = build_training_configs(datasets, deployable_columns, args.exclude_feature_regex)
     if not configs:
         raise RuntimeError("No deployable training configuration found.")
 
     log(f"Found {len(configs)} deployable training configs.")
     results = [
-        train_dataset(df, name, feat_cols, n_iter_single, n_iter_ensemble, min_threshold)
+        train_dataset(
+            df,
+            name,
+            feat_cols,
+            n_iter_single,
+            n_iter_ensemble,
+            min_threshold,
+            min_recall_at_threshold,
+        )
         for name, df, feat_cols in configs
     ]
     best = max(results, key=lambda r: r["metrics"]["spatial_auc_mean"])
