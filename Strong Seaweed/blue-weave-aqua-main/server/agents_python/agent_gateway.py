@@ -161,6 +161,9 @@ AGENT_SYSTEM = {
         "- For greeting/small-talk/very short messages (e.g., hi, hello, ok): reply naturally in 1-2 short lines.\n"
         "- Do NOT use numbered sections for small-talk.\n"
         "- Use structured sections only for real planning/analysis requests.\n"
+        "- Default to medium-length answers unless user asks for deep detail.\n"
+        "- Output plain text only; avoid markdown table syntax and markdown markers like #, |, **, *.\n"
+        "- Use simple section titles and hyphen bullets when needed.\n"
         "Style: clear, decisive, execution-first."
     ),
 }
