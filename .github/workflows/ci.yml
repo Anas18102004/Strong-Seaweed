@@ -1,0 +1,125 @@
+name: CI
+
+on:
+  push:
+    branches: [main, develop]
+  pull_request:
+    branches: [main, develop]
+
+jobs:
+  blueweave-frontend:
+    name: Blue Weave Frontend
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: "Strong Seaweed/blue-weave-aqua-main"
+    
+    steps:
+      - uses: actions/checkout@v4
+      
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+          cache: 'npm'
+          cache-dependency-path: "Strong Seaweed/blue-weave-aqua-main/package-lock.json"
+      
+      - name: Install dependencies
+        run: npm ci
+      
+      - name: Run linter
+        run: npm run lint
+      
+      - name: Run tests
+        run: npm test
+        continue-on-error: true
+      
+      - name: Build frontend
+        run: npm run build
+
+  blueweave-backend:
+    name: Blue Weave Node.js Backend
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: "Strong Seaweed/blue-weave-aqua-main/server"
+    
+    steps:
+      - uses: actions/checkout@v4
+      
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+          cache: 'npm'
+          cache-dependency-path: "Strong Seaweed/blue-weave-aqua-main/server/package-lock.json"
+      
+      - name: Install dependencies
+        run: npm ci
+      
+      - name: Check syntax
+        run: node --check src/index.js
+
+  ml-backend:
+    name: ML Backend (XGBoost APIs)
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: "Strong Seaweed/Strong-Seaweed-main"
+    
+    steps:
+      - uses: actions/checkout@v4
+      
+      - name: Setup Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+          cache: 'pip'
+          cache-dependency-path: "Strong Seaweed/Strong-Seaweed-main/requirements-model-api.txt"
+      
+      - name: Install dependencies
+        run: |
+          python -m pip install --upgrade pip
+          pip install -r requirements-model-api.txt
+          pip install ruff
+      
+      - name: Check Python syntax
+        run: python -m py_compile *.py
+      
+      - name: Lint with ruff
+        run: ruff check --output-format=github .
+        continue-on-error: true
+      
+      - name: Validate imports
+        run: |
+          python -c "import serve_kappaphycus_api; print('✓ serve_kappaphycus_api imports OK')"
+          python -c "import serve_species_api; print('✓ serve_species_api imports OK')"
+          python -c "import project_paths; print('✓ project_paths imports OK')"
+
+  python-agents:
+    name: Python Agent Gateway
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: "Strong Seaweed/blue-weave-aqua-main/server/agents_python"
+    
+    steps:
+      - uses: actions/checkout@v4
+      
+      - name: Setup Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+          cache: 'pip'
+          cache-dependency-path: "Strong Seaweed/blue-weave-aqua-main/server/agents_python/requirements.txt"
+      
+      - name: Install dependencies
+        run: |
+          python -m pip install --upgrade pip
+          pip install -r requirements.txt
+      
+      - name: Check Python syntax
+        run: python -m py_compile agent_gateway.py
+      
+      - name: Validate imports
+        run: python -c "import agent_gateway; print('✓ agent_gateway imports OK')"

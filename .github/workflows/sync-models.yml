@@ -1,0 +1,96 @@
+name: Sync Models to AWS
+
+on:
+  workflow_dispatch:
+    inputs:
+      release_tag:
+        description: 'Release tag to sync (e.g., kappa_india_gulf_v2_prod_ready_v4_with_v2labels)'
+        required: true
+        type: string
+
+jobs:
+  sync-models:
+    name: Upload Models to AWS
+    runs-on: ubuntu-latest
+    
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          lfs: true
+      
+      - name: Setup SSH key
+        run: |
+          mkdir -p ~/.ssh
+          echo "${{ secrets.AWS_SSH_KEY }}" > ~/.ssh/deploy_key
+          chmod 600 ~/.ssh/deploy_key
+          ssh-keyscan -H ${{ secrets.AWS_HOST }} >> ~/.ssh/known_hosts
+      
+      - name: Sync model files via rsync
+        env:
+          AWS_HOST: ${{ secrets.AWS_HOST }}
+          AWS_USER: ${{ secrets.AWS_USER }}
+          DEPLOY_PATH: ${{ secrets.DEPLOY_PATH }}
+          RELEASE_TAG: ${{ inputs.release_tag }}
+        run: |
+          echo "📦 Syncing release: ${RELEASE_TAG}"
+          
+          # Check if release exists locally
+          if [ ! -d "Strong Seaweed/Strong-Seaweed-main/releases/${RELEASE_TAG}" ]; then
+            echo "❌ Release ${RELEASE_TAG} not found locally"
+            exit 1
+          fi
+          
+          # Sync the entire release folder
+          rsync -avz --progress \
+            -e "ssh -i ~/.ssh/deploy_key" \
+            "Strong Seaweed/Strong-Seaweed-main/releases/${RELEASE_TAG}/" \
+            ${AWS_USER}@${AWS_HOST}:${DEPLOY_PATH}/"Strong Seaweed/Strong-Seaweed-main/releases/${RELEASE_TAG}/"
+          
+          echo "✅ Model sync complete"
+      
+      - name: Sync required data files
+        env:
+          AWS_HOST: ${{ secrets.AWS_HOST }}
+          AWS_USER: ${{ secrets.AWS_USER }}
+          DEPLOY_PATH: ${{ secrets.DEPLOY_PATH }}
+        run: |
+          echo "📊 Syncing essential data files..."
+          
+          # Sync netcdf files (needed by serve_species_api.py)
+          rsync -avz --progress \
+            -e "ssh -i ~/.ssh/deploy_key" \
+            --include='india_physics_2025w01.nc' \
+            --include='india_waves_2025w01.nc' \
+            --exclude='*' \
+            "Strong Seaweed/Strong-Seaweed-main/data/netcdf/" \
+            ${AWS_USER}@${AWS_HOST}:${DEPLOY_PATH}/"Strong Seaweed/Strong-Seaweed-main/data/netcdf/" || true
+          
+          # Sync master feature matrix
+          rsync -avz --progress \
+            -e "ssh -i ~/.ssh/deploy_key" \
+            --include='master_feature_matrix_kappa_india_gulf_v2_hardmerge4_augmented.csv' \
+            --exclude='*' \
+            "Strong Seaweed/Strong-Seaweed-main/data/tabular/" \
+            ${AWS_USER}@${AWS_HOST}:${DEPLOY_PATH}/"Strong Seaweed/Strong-Seaweed-main/data/tabular/" || true
+          
+          echo "✅ Data sync complete"
+      
+      - name: Verify deployment
+        env:
+          AWS_HOST: ${{ secrets.AWS_HOST }}
+          AWS_USER: ${{ secrets.AWS_USER }}
+          DEPLOY_PATH: ${{ secrets.DEPLOY_PATH }}
+          RELEASE_TAG: ${{ inputs.release_tag }}
+        run: |
+          ssh -i ~/.ssh/deploy_key ${AWS_USER}@${AWS_HOST} << EOF
+            cd ${DEPLOY_PATH}/"Strong Seaweed/Strong-Seaweed-main"
+            
+            echo "🔍 Verifying release files..."
+            if [ -d "releases/${RELEASE_TAG}" ]; then
+              echo "✅ Release ${RELEASE_TAG} found"
+              ls -lh "releases/${RELEASE_TAG}/models/" | head -10
+            else
+              echo "❌ Release ${RELEASE_TAG} not found"
+              exit 1
+            fi
+          EOF

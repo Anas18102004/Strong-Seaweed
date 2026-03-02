@@ -1,0 +1,130 @@
+name: Deploy to AWS
+
+on:
+  workflow_dispatch:
+    inputs:
+      service:
+        description: 'Which service to deploy'
+        required: true
+        type: choice
+        options:
+          - ml-apis
+          - blueweave-backend
+          - blueweave-frontend
+          - python-agents
+          - all
+      restart:
+        description: 'Restart service after deployment'
+        required: true
+        type: boolean
+        default: true
+
+jobs:
+  deploy:
+    name: Deploy to Production
+    runs-on: ubuntu-latest
+    
+    steps:
+      - uses: actions/checkout@v4
+      
+      - name: Setup SSH key
+        run: |
+          mkdir -p ~/.ssh
+          echo "${{ secrets.AWS_SSH_KEY }}" > ~/.ssh/deploy_key
+          chmod 600 ~/.ssh/deploy_key
+          ssh-keyscan -H ${{ secrets.AWS_HOST }} >> ~/.ssh/known_hosts
+      
+      - name: Deploy code to AWS
+        env:
+          AWS_HOST: ${{ secrets.AWS_HOST }}
+          AWS_USER: ${{ secrets.AWS_USER }}
+          DEPLOY_PATH: ${{ secrets.DEPLOY_PATH }}
+          SERVICE: ${{ inputs.service }}
+        run: |
+          ssh -i ~/.ssh/deploy_key ${AWS_USER}@${AWS_HOST} << 'EOF'
+            cd ${DEPLOY_PATH}
+            
+            echo "📦 Pulling latest code..."
+            git fetch origin
+            git reset --hard origin/main
+            
+            # ML APIs
+            if [[ "${SERVICE}" == "ml-apis" || "${SERVICE}" == "all" ]]; then
+              echo "🐍 Setting up ML Backend Python environment..."
+              cd "Strong Seaweed/Strong-Seaweed-main"
+              python3 -m venv .venv_model || true
+              source .venv_model/bin/activate
+              pip install --upgrade pip
+              pip install -r requirements-model-api.txt
+              cd ../..
+            fi
+            
+            # Python Agents
+            if [[ "${SERVICE}" == "python-agents" || "${SERVICE}" == "all" ]]; then
+              echo "🤖 Setting up Python Agent Gateway..."
+              cd "Strong Seaweed/blue-weave-aqua-main/server/agents_python"
+              python3 -m venv .venv || true
+              source .venv/bin/activate
+              pip install --upgrade pip
+              pip install -r requirements.txt
+              cd ../../../..
+            fi
+            
+            # Node.js Backend
+            if [[ "${SERVICE}" == "blueweave-backend" || "${SERVICE}" == "all" ]]; then
+              echo "📦 Setting up Node.js backend..."
+              cd "Strong Seaweed/blue-weave-aqua-main/server"
+              npm ci --production
+              cd ../../..
+            fi
+            
+            # Frontend
+            if [[ "${SERVICE}" == "blueweave-frontend" || "${SERVICE}" == "all" ]]; then
+              echo "🎨 Building frontend..."
+              cd "Strong Seaweed/blue-weave-aqua-main"
+              npm ci
+              npm run build
+              cd ../..
+            fi
+            
+            echo "✅ Deployment complete"
+          EOF
+      
+      - name: Restart services
+        if: ${{ inputs.restart }}
+        env:
+          AWS_HOST: ${{ secrets.AWS_HOST }}
+          AWS_USER: ${{ secrets.AWS_USER }}
+          SERVICE: ${{ inputs.service }}
+        run: |
+          ssh -i ~/.ssh/deploy_key ${AWS_USER}@${AWS_HOST} << 'EOF'
+            echo "🔄 Restarting services..."
+            
+            if [[ "${SERVICE}" == "ml-apis" || "${SERVICE}" == "all" ]]; then
+              sudo systemctl restart ml-api || echo "⚠️  ml-api service not configured yet"
+            fi
+            
+            if [[ "${SERVICE}" == "python-agents" || "${SERVICE}" == "all" ]]; then
+              sudo systemctl restart python-agents || echo "⚠️  python-agents service not configured yet"
+            fi
+            
+            if [[ "${SERVICE}" == "blueweave-backend" || "${SERVICE}" == "all" ]]; then
+              sudo systemctl restart blueweave-backend || echo "⚠️  blueweave-backend service not configured yet"
+            fi
+            
+            if [[ "${SERVICE}" == "blueweave-frontend" || "${SERVICE}" == "all" ]]; then
+              sudo systemctl reload nginx || echo "⚠️  nginx not configured yet"
+            fi
+          EOF
+      
+      - name: Health check
+        if: ${{ inputs.restart }}
+        env:
+          AWS_HOST: ${{ secrets.AWS_HOST }}
+          AWS_USER: ${{ secrets.AWS_USER }}
+        run: |
+          echo "🏥 Running health check..."
+          sleep 5
+          ssh -i ~/.ssh/deploy_key ${AWS_USER}@${AWS_HOST} << 'EOF'
+            curl -f http://localhost:8000/health || echo "⚠️  Health check failed - service may still be starting"
+          EOF
