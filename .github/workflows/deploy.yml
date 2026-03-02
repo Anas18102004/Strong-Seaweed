@@ -80,7 +80,7 @@ jobs:
           AWS_HOST: ${{ secrets.AWS_HOST }}
           AWS_USER: ${{ secrets.AWS_USER }}
           DEPLOY_PATH: ${{ secrets.DEPLOY_PATH }}
-          SERVICE: ${{ github.event.inputs.service || 'all' }}
+          SERVICE: ${{ (github.event_name == 'workflow_run' && 'blueweave-frontend') || github.event.inputs.service || 'all' }}
         run: |
           ssh -i ~/.ssh/deploy_key "${AWS_USER}@${AWS_HOST}" "DEPLOY_PATH='${DEPLOY_PATH}' SERVICE='${SERVICE}' bash -s" << 'EOF'
             set -euo pipefail
@@ -146,7 +146,7 @@ jobs:
         env:
           AWS_HOST: ${{ secrets.AWS_HOST }}
           AWS_USER: ${{ secrets.AWS_USER }}
-          SERVICE: ${{ github.event.inputs.service || 'all' }}
+          SERVICE: ${{ (github.event_name == 'workflow_run' && 'blueweave-frontend') || github.event.inputs.service || 'all' }}
         run: |
           ssh -i ~/.ssh/deploy_key "${AWS_USER}@${AWS_HOST}" "SERVICE='${SERVICE}' bash -s" << 'EOF'
             echo "Restarting services..."
@@ -173,7 +173,7 @@ jobs:
         env:
           AWS_HOST: ${{ secrets.AWS_HOST }}
           AWS_USER: ${{ secrets.AWS_USER }}
-          SERVICE: ${{ github.event.inputs.service || 'all' }}
+          SERVICE: ${{ (github.event_name == 'workflow_run' && 'blueweave-frontend') || github.event.inputs.service || 'all' }}
         run: |
           echo "Running health check..."
           sleep 5
