@@ -81,27 +81,30 @@ ubuntu
 
 **What it is:** MongoDB connection string for the Node.js backend database
 
-**Option A: Local MongoDB (Install on AWS)**
-```
-mongodb://127.0.0.1:27017/blueweave
-```
-
-**Option B: MongoDB Atlas (Cloud - Recommended)**
+**Using MongoDB Atlas (Cloud - Recommended) ✅**
 
 1. Go to https://www.mongodb.com/cloud/atlas
 2. Create free account
-3. Create a cluster
-4. Get connection string (looks like):
+3. Create a cluster (free tier available)
+4. In "Database" section, click "Connect"
+5. Select "Drivers" → Choose your language
+6. Copy the connection string (looks like):
    ```
    mongodb+srv://username:password@cluster0.xxxxx.mongodb.net/blueweave?retryWrites=true&w=majority
    ```
+7. Replace `username` and `password` with your Atlas credentials
+8. Replace `cluster0` with your actual cluster name
 
-**Use Option B connection string** if you have MongoDB Atlas account
+**Example Atlas URI:**
+```
+mongodb+srv://myuser:mypassword@cluster0.abc123.mongodb.net/blueweave?retryWrites=true&w=majority
+```
 
-Default for testing:
-```
-mongodb://127.0.0.1:27017/blueweave
-```
+**⚠️ Important:**
+- Keep your credentials secure
+- Never commit this URI to git
+- Change password annually
+- Set IP whitelist to allow your AWS server IP (13.48.123.136)
 
 ---
 
@@ -141,7 +144,7 @@ aB3cDeFgHiJkLmNoPqRsTuVwXyZ0123456789!@#$%^&*
 | 2 | `AWS_HOST` | 13.48.123.136 | ❌ TODO |
 | 3 | `AWS_USER` | ubuntu | ❌ TODO |
 | 4 | `DEPLOY_PATH` | /home/ubuntu/Strong Seaweed | ❌ TODO |
-| 5 | `MONGODB_URI` | mongodb://127.0.0.1:27017/blueweave | ❌ TODO |
+| 5 | `MONGODB_URI` | mongodb+srv://user:pass@cluster.mongodb.net/blueweave | ❌ TODO |
 | 6 | `JWT_SECRET` | [Generate strong random string] | ❌ TODO |
 
 ---
@@ -184,18 +187,18 @@ Name: DEPLOY_PATH
 Secret: /home/ubuntu/Strong Seaweed
 ```
 
-### Step 5: Set MongoDB URI
+### Step 5: Set MongoDB URI (MongoDB Atlas)
 
-**For local MongoDB (Default for now):**
-```
-Name: MONGODB_URI
-Secret: mongodb://127.0.0.1:27017/blueweave
-```
-
-**OR for MongoDB Atlas:**
+**From your MongoDB Atlas connection string:**
 ```
 Name: MONGODB_URI
 Secret: mongodb+srv://your_username:your_password@cluster0.xxxxx.mongodb.net/blueweave?retryWrites=true&w=majority
+```
+
+**Example:**
+```
+Name: MONGODB_URI
+Secret: mongodb+srv://anas:mySecurePassword123@seaweed-cluster.abc123.mongodb.net/blueweave?retryWrites=true&w=majority
 ```
 
 ### Step 6: Set JWT Secret
