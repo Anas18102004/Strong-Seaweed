@@ -5,14 +5,11 @@ After=network.target mongodb.service
 [Service]
 Type=simple
 User=ubuntu
-WorkingDirectory=/home/ubuntu/Strong Seaweed/Strong Seaweed/blue-weave-aqua-main/server
-Environment="NODE_ENV=production"
-Environment="PATH=/usr/bin:/usr/local/bin"
-ExecStart=/usr/bin/node src/index.js
+ExecStart=/usr/local/bin/start-blueweave-backend.sh
 Restart=always
 RestartSec=10
-StandardOutput=file:/home/ubuntu/Strong Seaweed/Strong Seaweed/blue-weave-aqua-main/server/_backend_stdout.log
-StandardError=file:/home/ubuntu/Strong Seaweed/Strong Seaweed/blue-weave-aqua-main/server/_backend_stderr.log
+StandardOutput=journal
+StandardError=journal
 
 [Install]
 WantedBy=multi-user.target

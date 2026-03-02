@@ -5,13 +5,11 @@ After=network.target
 [Service]
 Type=simple
 User=ubuntu
-WorkingDirectory=/home/ubuntu/Strong Seaweed/Strong Seaweed/blue-weave-aqua-main/server/agents_python
-Environment="PATH=/home/ubuntu/Strong Seaweed/Strong Seaweed/blue-weave-aqua-main/server/agents_python/.venv/bin:/usr/bin"
-ExecStart=/home/ubuntu/Strong Seaweed/Strong Seaweed/blue-weave-aqua-main/server/agents_python/.venv/bin/uvicorn agent_gateway:app --host 0.0.0.0 --port 8101
+ExecStart=/usr/local/bin/start-python-agents.sh
 Restart=always
 RestartSec=10
-StandardOutput=file:/home/ubuntu/Strong Seaweed/Strong Seaweed/blue-weave-aqua-main/server/agents_python/_agent_gateway_stdout.log
-StandardError=file:/home/ubuntu/Strong Seaweed/Strong Seaweed/blue-weave-aqua-main/server/agents_python/_agent_gateway_stderr.log
+StandardOutput=journal
+StandardError=journal
 
 [Install]
 WantedBy=multi-user.target

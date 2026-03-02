@@ -5,13 +5,11 @@ After=network.target
 [Service]
 Type=simple
 User=ubuntu
-WorkingDirectory=/home/ubuntu/Strong Seaweed/Strong Seaweed/Strong-Seaweed-main
-Environment="PATH=/home/ubuntu/Strong Seaweed/Strong Seaweed/Strong-Seaweed-main/.venv_model/bin:/usr/bin"
-ExecStart=/home/ubuntu/Strong Seaweed/Strong Seaweed/Strong-Seaweed-main/.venv_model/bin/python serve_species_api.py
+ExecStart=/usr/local/bin/start-ml-api.sh
 Restart=always
 RestartSec=10
-StandardOutput=file:/home/ubuntu/Strong Seaweed/Strong Seaweed/Strong-Seaweed-main/_ml_api_stdout.log
-StandardError=file:/home/ubuntu/Strong Seaweed/Strong Seaweed/Strong-Seaweed-main/_ml_api_stderr.log
+StandardOutput=journal
+StandardError=journal
 
 [Install]
 WantedBy=multi-user.target
