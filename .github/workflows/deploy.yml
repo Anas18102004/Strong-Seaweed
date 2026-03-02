@@ -95,6 +95,12 @@ jobs:
               npm ci
               npm run build
               cd ../..
+              echo "Fixing frontend file permissions for nginx..."
+              sudo chmod o+rx /home/ubuntu || true
+              sudo chmod o+rx "/home/ubuntu/Strong Seaweed" || true
+              sudo chmod o+rx "/home/ubuntu/Strong Seaweed/Strong Seaweed" || true
+              sudo chmod o+rx "/home/ubuntu/Strong Seaweed/Strong Seaweed/blue-weave-aqua-main" || true
+              sudo chmod -R o+rX "/home/ubuntu/Strong Seaweed/Strong Seaweed/blue-weave-aqua-main/dist" || true
             fi
 
             echo "Deployment complete."
