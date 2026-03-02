@@ -32,14 +32,9 @@ sudo apt update
 sudo apt install -y python3.11 python3.11-venv python3.11-dev python3-pip
 sudo update-alternatives --install /usr/bin/python3 python3 /usr/bin/python3.11 1
 
-# Step 4: Install MongoDB
-echo -e "${BLUE}[4/8] Installing MongoDB...${NC}"
-curl -fsSL https://www.mongodb.org/static/pgp/server-7.0.asc | sudo apt-key add -
-echo "deb [ arch=amd64,arm64 ] https://repo.mongodb.org/apt/ubuntu focal/mongodb-org/7.0 multiverse" | sudo tee /etc/apt/sources.list.d/mongodb-org-7.0.list
-sudo apt update
-sudo apt install -y mongodb-org
-sudo systemctl start mongod
-sudo systemctl enable mongod
+# Step 4: Skip MongoDB (using MongoDB Atlas cloud)
+echo -e "${BLUE}[4/8] Skipping MongoDB (using MongoDB Atlas)...${NC}"
+echo "ℹ️  Using MongoDB Atlas - ensure MONGODB_URI is set in GitHub secrets"
 
 # Step 5: Install Nginx
 echo -e "${BLUE}[5/8] Installing Nginx...${NC}"
@@ -66,20 +61,30 @@ git pull origin beta
 
 # Step 7: Copy systemd services
 echo -e "${BLUE}[7/8] Setting up systemd services...${NC}"
-sudo cp "Strong Seaweed/Strong-Seaweed-main/.systemd/ml-api.service" /etc/systemd/system/ 2>/dev/null || true
-sudo cp "Strong Seaweed/blue-weave-aqua-main/.systemd/python-agents.service" /etc/systemd/system/ 2>/dev/null || true
-sudo cp "Strong Seaweed/blue-weave-aqua-main/.systemd/blueweave-backend.service" /etc/systemd/system/ 2>/dev/null || true
+sudo cp "Strong Seaweed/Strong-Seaweed-main/.systemd/ml-api.service" /etc/systemd/system/ 2>/dev/null || echo "⚠️  ml-api.service not found"
+sudo cp "Strong Seaweed/blue-weave-aqua-main/server/.systemd/python-agents.service" /etc/systemd/system/ 2>/dev/null || echo "⚠️  python-agents.service not found"
+sudo cp "Strong Seaweed/blue-weave-aqua-main/server/.systemd/blueweave-backend.service" /etc/systemd/system/ 2>/dev/null || echo "⚠️  blueweave-backend.service not found"
 
 sudo systemctl daemon-reload
-sudo systemctl enable ml-api python-agents blueweave-backend 2>/dev/null || true
+sudo systemctl enable ml-api python-agents blueweave-backend 2>/dev/null || echo "⚠️  Some services not enabled (will be configured on first deploy)"
 
 # Step 8: Setup Nginx
 echo -e "${BLUE}[8/8] Configuring Nginx...${NC}"
-sudo cp "Strong Seaweed/blue-weave-aqua-main/.nginx/blueweave.conf" /etc/nginx/sites-available/ 2>/dev/null || true
-sudo ln -sf /etc/nginx/sites-available/blueweave.conf /etc/nginx/sites-enabled/blueweave.conf
-sudo rm -f /etc/nginx/sites-enabled/default
-sudo nginx -t
-sudo systemctl restart nginx
+if [ -f "Strong Seaweed/blue-weave-aqua-main/.nginx/blueweave.conf" ]; then
+  sudo cp "Strong Seaweed/blue-weave-aqua-main/.nginx/blueweave.conf" /etc/nginx/sites-available/
+  sudo ln -sf /etc/nginx/sites-available/blueweave.conf /etc/nginx/sites-enabled/blueweave.conf
+  sudo rm -f /etc/nginx/sites-enabled/default
+  
+  # Test nginx config
+  if sudo nginx -t 2>/dev/null; then
+    sudo systemctl restart nginx
+    echo "✅ Nginx configured successfully"
+  else
+    echo "⚠️  Nginx config test failed - check /etc/nginx/sites-available/blueweave.conf"
+  fi
+else
+  echo "⚠️  Nginx config not found - will be configured on first deploy"
+fi
 
 # Summary
 echo ""
