@@ -1,0 +1,19 @@
+{
+  "release": "v1.2_internal_holdout50_fix1",
+  "n": 50,
+  "positives": 25,
+  "negatives": 25,
+  "threshold": 0.5,
+  "accuracy": 0.5,
+  "precision": 0.5,
+  "recall": 0.88,
+  "f1": 0.6376811594202898,
+  "roc_auc": 0.5232,
+  "avg_precision": 0.5745983504512916,
+  "confusion_matrix": {
+    "tn": 3,
+    "fp": 22,
+    "fn": 3,
+    "tp": 22
+  }
+}

@@ -1,0 +1,28 @@
+{
+  "passed": false,
+  "failed_checks": [
+    "benchmark_precision",
+    "benchmark_recall",
+    "benchmark_gt5km_snaps"
+  ],
+  "inputs": {
+    "report_json": "releases\\kappa_india_gulf_v2_hardmerge4_smoke\\reports\\xgboost_realtime_report_kappa_india_gulf_v2_hardmerge4_smoke.json",
+    "benchmark_json": "artifacts\\reports\\active_model_web_20x20_eval_for_gate.json"
+  },
+  "thresholds": {
+    "min_spatial_auc": 0.75,
+    "max_spatial_auc_std": 0.08,
+    "min_oof_ap_calibrated": 0.5,
+    "min_benchmark_precision": 0.8,
+    "min_benchmark_recall": 0.8,
+    "max_benchmark_gt5km_snaps": 0
+  },
+  "metrics": {
+    "spatial_auc_mean": 0.7928346082022553,
+    "spatial_auc_std": 0.07956852122830413,
+    "oof_ap_calibrated": 0.5865684745712645,
+    "benchmark_precision": 0.0,
+    "benchmark_recall": 0.0,
+    "benchmark_gt5km_snaps": 1
+  }
+}

@@ -1,0 +1,46 @@
+{
+  "inputs": {
+    "oof_csv": "releases\\kappa_india_gulf_v2_hardmerge4_smoke\\reports\\xgboost_realtime_oof_predictions_kappa_india_gulf_v2_hardmerge4_smoke.csv",
+    "hard_csv": "artifacts\\experiments\\kappa_india_gulf_v2_hardmerge4_smoke_hard50_eval.csv",
+    "n_oof": 338,
+    "n_hard": 50,
+    "min_precision_target": 0.8,
+    "min_recall_target": 0.4
+  },
+  "recommended_threshold": 0.545,
+  "recommended_metrics": {
+    "oof_precision": 0.6666666666666666,
+    "oof_recall": 0.20168067226890757,
+    "oof_f1": 0.30967741935483867,
+    "hard_precision": 0.9,
+    "hard_recall": 0.72,
+    "hard_f1": 0.7999999999999999,
+    "hard_specificity": 0.92,
+    "hard_accuracy": 0.82
+  },
+  "best_hard_f1": {
+    "threshold": 0.59,
+    "oof_precision": 0.6666666666666666,
+    "oof_recall": 0.20168067226890757,
+    "oof_f1": 0.30967741935483867,
+    "oof_specificity": 0.9452054794520548,
+    "hard_precision": 0.9,
+    "hard_recall": 0.72,
+    "hard_f1": 0.7999999999999999,
+    "hard_specificity": 0.92,
+    "hard_accuracy": 0.82
+  },
+  "best_oof_f1": {
+    "threshold": 0.375,
+    "oof_precision": 0.5609756097560976,
+    "oof_recall": 0.773109243697479,
+    "oof_f1": 0.6501766784452297,
+    "oof_specificity": 0.6712328767123288,
+    "hard_precision": 0.6388888888888888,
+    "hard_recall": 0.92,
+    "hard_f1": 0.7540983606557377,
+    "hard_specificity": 0.48,
+    "hard_accuracy": 0.7
+  },
+  "note": "Recommendation prioritizes hard-test feasibility under precision/recall targets, then F1."
+}

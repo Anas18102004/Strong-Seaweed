@@ -1,0 +1,30 @@
+{
+  "input_grid_rows": 1901,
+  "after_exclude_existing_positive": 1883,
+  "after_boundary_filters": 111,
+  "final_selected": 12,
+  "mean_p_calibrated": 0.6209737062454224,
+  "mean_p_raw_std": 0.0,
+  "min_dist_to_pos_km": 4.420402371992156,
+  "max_dist_to_pos_km": 12.559551324401397,
+  "output_csv": "C:\\Users\\Anas\\Desktop\\Strong Seaweed\\artifacts\\experiments\\v1_1_boundary_positive_candidates.csv",
+  "params": {
+    "grid_csv": "C:\\Users\\Anas\\Desktop\\Strong Seaweed\\data\\tabular\\master_feature_matrix_v1_1_augmented.csv",
+    "training_csv": "C:\\Users\\Anas\\Desktop\\Strong Seaweed\\data\\tabular\\training_dataset_v1_1_optimized_plus_hn.csv",
+    "model_bundle": "releases\\v1_1\\models\\xgboost_realtime_ensemble_v1_1.pkl",
+    "calibrator": "releases\\v1_1\\models\\xgboost_realtime_calibrator_v1_1.pkl",
+    "feature_json": "releases\\v1_1\\models\\xgboost_realtime_features_v1_1.json",
+    "output_csv": "C:\\Users\\Anas\\Desktop\\Strong Seaweed\\artifacts\\experiments\\v1_1_boundary_positive_candidates.csv",
+    "output_report": "C:\\Users\\Anas\\Desktop\\Strong Seaweed\\artifacts\\reports\\v1_1_boundary_positive_candidates_report.json",
+    "target_count": 40,
+    "p_cal_min": 0.5,
+    "p_cal_max": 0.995,
+    "p_raw_std_min": 0.0,
+    "min_dist_km_from_pos": 1.5,
+    "max_dist_km_from_pos": 35.0,
+    "geo_eps_km": 6.0,
+    "max_per_geo_cluster": 4,
+    "max_per_subregion": 8,
+    "max_per_feature_bin": 3
+  }
+}

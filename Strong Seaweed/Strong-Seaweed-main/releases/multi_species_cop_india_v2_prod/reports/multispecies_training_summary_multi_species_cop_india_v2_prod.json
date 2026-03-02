@@ -1,0 +1,111 @@
+{
+  "release_tag": "multi_species_cop_india_v2_prod",
+  "species": [
+    {
+      "species_id": "gracilaria_spp",
+      "status": "trained",
+      "rows": 1265,
+      "pos": 65,
+      "model_json": "releases\\multi_species_cop_india_v2_prod\\models\\xgb_gracilaria_spp_multi_species_cop_india_v2_prod.json",
+      "model_pkl": "releases\\multi_species_cop_india_v2_prod\\models\\xgb_gracilaria_spp_multi_species_cop_india_v2_prod.pkl",
+      "calibrator_pkl": "releases\\multi_species_cop_india_v2_prod\\models\\calibrator_gracilaria_spp_multi_species_cop_india_v2_prod.pkl",
+      "features_json": "releases\\multi_species_cop_india_v2_prod\\models\\features_gracilaria_spp_multi_species_cop_india_v2_prod.json",
+      "report_json": "releases\\multi_species_cop_india_v2_prod\\reports\\report_gracilaria_spp_multi_species_cop_india_v2_prod.json",
+      "metrics": {
+        "n_rows": 1265,
+        "n_positive": 65,
+        "n_negative": 1200,
+        "n_features": 7,
+        "n_folds": 6,
+        "spatial_auc_mean": 0.8106826212114157,
+        "spatial_auc_std": 0.08127055420729892,
+        "spatial_ap_mean": 0.3646800737362093,
+        "spatial_brier_mean": 0.09589706033851524,
+        "oof_auc_raw": 0.7502198164532615,
+        "oof_auc_calibrated": 0.7740561631038084,
+        "oof_ap_raw": 0.23673014855504845,
+        "oof_ap_calibrated": 0.24882507937484583,
+        "oof_brier_raw": 0.09150835325123997,
+        "oof_brier_calibrated": 0.07760535582392777,
+        "threshold": {
+          "threshold": 0.25,
+          "precision": 0.3333333333333333,
+          "recall": 0.3225806451612903
+        }
+      }
+    },
+    {
+      "species_id": "kappaphycus_alvarezii",
+      "status": "skipped",
+      "reason": "insufficient_data",
+      "rows": 1205,
+      "pos": 5
+    },
+    {
+      "species_id": "sargassum_spp",
+      "status": "trained",
+      "rows": 1264,
+      "pos": 64,
+      "model_json": "releases\\multi_species_cop_india_v2_prod\\models\\xgb_sargassum_spp_multi_species_cop_india_v2_prod.json",
+      "model_pkl": "releases\\multi_species_cop_india_v2_prod\\models\\xgb_sargassum_spp_multi_species_cop_india_v2_prod.pkl",
+      "calibrator_pkl": "releases\\multi_species_cop_india_v2_prod\\models\\calibrator_sargassum_spp_multi_species_cop_india_v2_prod.pkl",
+      "features_json": "releases\\multi_species_cop_india_v2_prod\\models\\features_sargassum_spp_multi_species_cop_india_v2_prod.json",
+      "report_json": "releases\\multi_species_cop_india_v2_prod\\reports\\report_sargassum_spp_multi_species_cop_india_v2_prod.json",
+      "metrics": {
+        "n_rows": 1264,
+        "n_positive": 64,
+        "n_negative": 1200,
+        "n_features": 7,
+        "n_folds": 7,
+        "spatial_auc_mean": 0.7779664556607999,
+        "spatial_auc_std": 0.12532756736785935,
+        "spatial_ap_mean": 0.35532841081186256,
+        "spatial_brier_mean": 0.08717150445046402,
+        "oof_auc_raw": 0.7178370920163669,
+        "oof_auc_calibrated": 0.7508326196593396,
+        "oof_ap_raw": 0.20495336844724812,
+        "oof_ap_calibrated": 0.21557788686331922,
+        "oof_brier_raw": 0.08171797015122771,
+        "oof_brier_calibrated": 0.0687689454792973,
+        "threshold": {
+          "threshold": 0.1904761791229248,
+          "precision": 0.2857142857142857,
+          "recall": 0.5161290322580645
+        }
+      }
+    },
+    {
+      "species_id": "ulva_spp",
+      "status": "trained",
+      "rows": 1285,
+      "pos": 85,
+      "model_json": "releases\\multi_species_cop_india_v2_prod\\models\\xgb_ulva_spp_multi_species_cop_india_v2_prod.json",
+      "model_pkl": "releases\\multi_species_cop_india_v2_prod\\models\\xgb_ulva_spp_multi_species_cop_india_v2_prod.pkl",
+      "calibrator_pkl": "releases\\multi_species_cop_india_v2_prod\\models\\calibrator_ulva_spp_multi_species_cop_india_v2_prod.pkl",
+      "features_json": "releases\\multi_species_cop_india_v2_prod\\models\\features_ulva_spp_multi_species_cop_india_v2_prod.json",
+      "report_json": "releases\\multi_species_cop_india_v2_prod\\reports\\report_ulva_spp_multi_species_cop_india_v2_prod.json",
+      "metrics": {
+        "n_rows": 1285,
+        "n_positive": 85,
+        "n_negative": 1200,
+        "n_features": 7,
+        "n_folds": 7,
+        "spatial_auc_mean": 0.7749342967604423,
+        "spatial_auc_std": 0.08142627642139262,
+        "spatial_ap_mean": 0.35013064816076295,
+        "spatial_brier_mean": 0.09625270263038026,
+        "oof_auc_raw": 0.8003086419753087,
+        "oof_auc_calibrated": 0.8255555555555555,
+        "oof_ap_raw": 0.3037106434833505,
+        "oof_ap_calibrated": 0.3160006487231807,
+        "oof_brier_raw": 0.09506616985429306,
+        "oof_brier_calibrated": 0.07811725458799064,
+        "threshold": {
+          "threshold": 0.25,
+          "precision": 0.33098591549295775,
+          "recall": 0.5802469135802469
+        }
+      }
+    }
+  ]
+}

@@ -1,0 +1,183 @@
+{
+  "model_version": "kappa_india_gulf_v2_prod_ready_v4_with_v2labels",
+  "model_name": "Gulf of Mannar Regional Ecological Screening Model",
+  "selected_dataset": "training_dataset_kappa_india_gulf_v2_hardmerge4_augmented_plus_v2labels_2026_02_28_deployable",
+  "inference_feature_source": "d:\\Strong Seaweed\\Strong-Seaweed-main\\data\\tabular\\master_feature_matrix_kappa_india_gulf_v2_hardmerge4_augmented.csv",
+  "training_region": {
+    "name": "Gulf of Mannar",
+    "bbox": {
+      "lon_min": 78.47941335825709,
+      "lon_max": 79.7999368259128,
+      "lat_min": 8.430069191717731,
+      "lat_max": 9.768558965055815
+    }
+  },
+  "resolution": {
+    "effective_resolution_km": 22.0,
+    "coarsest_layer": "wave_height (~0.20 degree)",
+    "coarsest_layer_resolution_km": 22.0,
+    "secondary_resolution_km": 9.2
+  },
+  "use_case": {
+    "intended": "regional_screening",
+    "not_valid_for": "micro-site (<5 km) decisions",
+    "notes": "Model predicts ecological suitability, not farm installation decisions."
+  },
+  "selected_metrics": {
+    "n_samples": 450,
+    "n_presence": 124,
+    "n_background": 326,
+    "n_features": 29,
+    "training_mode": "single",
+    "n_ensemble_members": 1,
+    "n_spatial_folds": 8,
+    "best_params": {
+      "subsample": 0.7,
+      "scale_pos_weight": 2.629032258064516,
+      "reg_lambda": 10.0,
+      "reg_alpha": 0.1,
+      "n_estimators": 250,
+      "min_child_weight": 6,
+      "max_depth": 2,
+      "learning_rate": 0.02,
+      "gamma": 0.0,
+      "colsample_bytree": 0.7
+    },
+    "spatial_auc_mean": 0.7823702179492621,
+    "spatial_auc_std": 0.06096879261835256,
+    "spatial_ap_mean": 0.706578630600353,
+    "spatial_brier_mean": 0.20699915213940412,
+    "oof_auc_raw": 0.7453386605783866,
+    "oof_auc_calibrated": 0.7643264840182649,
+    "oof_ap_raw": 0.5665517823746093,
+    "oof_ap_calibrated": 0.5772135465446616,
+    "oof_brier_raw": 0.21171401512429658,
+    "oof_brier_calibrated": 0.18203061374586646,
+    "threshold": {
+      "threshold": 0.7857142686843872,
+      "precision": 0.8,
+      "recall": 0.1
+    }
+  },
+  "all_datasets": [
+    {
+      "name": "training_dataset_kappa_india_gulf_v2_hardmerge4_deployable",
+      "n_samples": 449,
+      "n_presence": 123,
+      "n_background": 326,
+      "n_features": 23,
+      "training_mode": "single",
+      "n_ensemble_members": 1,
+      "n_spatial_folds": 8,
+      "best_params": {
+        "subsample": 0.7,
+        "scale_pos_weight": 2.6504065040650406,
+        "reg_lambda": 10.0,
+        "reg_alpha": 0.1,
+        "n_estimators": 250,
+        "min_child_weight": 6,
+        "max_depth": 2,
+        "learning_rate": 0.02,
+        "gamma": 0.0,
+        "colsample_bytree": 0.7
+      },
+      "spatial_auc_mean": 0.777067023050479,
+      "spatial_auc_std": 0.07409705263876122,
+      "spatial_ap_mean": 0.7013058004696623,
+      "spatial_brier_mean": 0.2072548804057673,
+      "oof_auc_raw": 0.7392271977284064,
+      "oof_auc_calibrated": 0.7605042016806722,
+      "oof_ap_raw": 0.553302404328407,
+      "oof_ap_calibrated": 0.5623829288495815,
+      "oof_brier_raw": 0.21310937577855293,
+      "oof_brier_calibrated": 0.18346142380359692,
+      "threshold": {
+        "threshold": 0.75,
+        "precision": 0.75,
+        "recall": 0.07563025210084033
+      }
+    },
+    {
+      "name": "training_dataset_kappa_india_gulf_v2_hardmerge4_augmented_plus_v2labels_2026_02_28_deployable",
+      "n_samples": 450,
+      "n_presence": 124,
+      "n_background": 326,
+      "n_features": 29,
+      "training_mode": "single",
+      "n_ensemble_members": 1,
+      "n_spatial_folds": 8,
+      "best_params": {
+        "subsample": 0.7,
+        "scale_pos_weight": 2.629032258064516,
+        "reg_lambda": 10.0,
+        "reg_alpha": 0.1,
+        "n_estimators": 250,
+        "min_child_weight": 6,
+        "max_depth": 2,
+        "learning_rate": 0.02,
+        "gamma": 0.0,
+        "colsample_bytree": 0.7
+      },
+      "spatial_auc_mean": 0.7823702179492621,
+      "spatial_auc_std": 0.06096879261835256,
+      "spatial_ap_mean": 0.706578630600353,
+      "spatial_brier_mean": 0.20699915213940412,
+      "oof_auc_raw": 0.7453386605783866,
+      "oof_auc_calibrated": 0.7643264840182649,
+      "oof_ap_raw": 0.5665517823746093,
+      "oof_ap_calibrated": 0.5772135465446616,
+      "oof_brier_raw": 0.21171401512429658,
+      "oof_brier_calibrated": 0.18203061374586646,
+      "threshold": {
+        "threshold": 0.7857142686843872,
+        "precision": 0.8,
+        "recall": 0.1
+      }
+    },
+    {
+      "name": "combined_deployable",
+      "n_samples": 450,
+      "n_presence": 124,
+      "n_background": 326,
+      "n_features": 23,
+      "training_mode": "single",
+      "n_ensemble_members": 1,
+      "n_spatial_folds": 8,
+      "best_params": {
+        "subsample": 0.7,
+        "scale_pos_weight": 2.629032258064516,
+        "reg_lambda": 10.0,
+        "reg_alpha": 0.1,
+        "n_estimators": 250,
+        "min_child_weight": 6,
+        "max_depth": 2,
+        "learning_rate": 0.02,
+        "gamma": 0.0,
+        "colsample_bytree": 0.7
+      },
+      "spatial_auc_mean": 0.7804757249150631,
+      "spatial_auc_std": 0.07208621980582974,
+      "spatial_ap_mean": 0.7015447200278027,
+      "spatial_brier_mean": 0.20759028099078972,
+      "oof_auc_raw": 0.7421803652968036,
+      "oof_auc_calibrated": 0.7602549467275496,
+      "oof_ap_raw": 0.5595180698431391,
+      "oof_ap_calibrated": 0.5640537633865074,
+      "oof_brier_raw": 0.21309566951850256,
+      "oof_brier_calibrated": 0.1827505032399218,
+      "threshold": {
+        "threshold": 1.0,
+        "precision": 1.0,
+        "recall": 0.016666666666666666
+      }
+    }
+  ],
+  "deployment_policy": {
+    "recommended_threshold": 0.7857142686843872,
+    "production_mode": true,
+    "min_threshold_floor": 0.5,
+    "high_confidence_cutoff": 0.8,
+    "medium_confidence_cutoff": 0.6,
+    "notes": "Use calibrated probabilities. Treat 0.60-0.80 as field-verification priority."
+  }
+}

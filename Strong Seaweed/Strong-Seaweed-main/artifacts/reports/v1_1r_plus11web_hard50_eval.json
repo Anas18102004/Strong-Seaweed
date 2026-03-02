@@ -1,0 +1,18 @@
+{
+  "n": 50,
+  "positives": 25,
+  "negatives": 25,
+  "threshold": 0.6666666865348816,
+  "accuracy": 0.82,
+  "precision": 0.9,
+  "recall": 0.72,
+  "f1": 0.8,
+  "roc_auc": 0.9256000000000001,
+  "avg_precision": 0.8827008547008548,
+  "confusion_matrix": {
+    "tn": 23,
+    "fp": 2,
+    "fn": 7,
+    "tp": 18
+  }
+}

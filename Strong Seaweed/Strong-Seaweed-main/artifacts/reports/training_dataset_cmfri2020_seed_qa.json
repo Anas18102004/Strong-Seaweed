@@ -1,0 +1,40 @@
+{
+  "dataset": "d:\\Strong Seaweed\\Strong-Seaweed-main\\data\\tabular\\training_dataset_cmfri2020_seed.csv",
+  "grade": "WARN_DATASET_STAGE",
+  "counts": {
+    "rows_total": 90,
+    "positives": 15,
+    "negatives": 75,
+    "other_labels": 0,
+    "neg_to_pos_ratio": 5.0
+  },
+  "quality": {
+    "missing_cells": 0,
+    "rows_with_missing": 0,
+    "dup_lon_lat_label": 0,
+    "dup_lon_lat_any": 0,
+    "conflict_cells": 0,
+    "conflict_ratio": 0.0,
+    "lon_valid_range": true,
+    "lat_valid_range": true,
+    "constant_columns": [
+      "shallow_mask",
+      "extreme_wave_days",
+      "policy_core_zone_exclusion",
+      "policy_go2005_review_required"
+    ],
+    "domain_checks": {
+      "depth_positive_only": 1,
+      "shallow_mask_positive": 1,
+      "distance_to_shore_le_5000": 1
+    }
+  },
+  "failed_checks": [
+    "too_few_positives(<50)",
+    "too_few_total_rows(<300)"
+  ],
+  "notes": [
+    "This is a dataset QA/readiness check only (no model training/eval in this report).",
+    "Use as seed baseline; production modeling still needs more verified positives and independent evaluation."
+  ]
+}

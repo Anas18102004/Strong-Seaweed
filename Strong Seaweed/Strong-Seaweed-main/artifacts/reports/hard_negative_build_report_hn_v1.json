@@ -1,0 +1,42 @@
+{
+  "out_suffix": "hn_v1",
+  "datasets": [
+    {
+      "dataset": "D:\\Strong Seaweed\\Strong-Seaweed-main\\data\\tabular\\training_dataset_gracilaria_spp_multispecies_cop_india_v2_prod_softpos_v5_strict.csv",
+      "output": "D:\\Strong Seaweed\\Strong-Seaweed-main\\data\\tabular\\training_dataset_gracilaria_spp_multispecies_cop_india_v2_prod_softpos_v5_strict_hn_v1.csv",
+      "species_id": "gracilaria_spp",
+      "added_hard_negatives": 300,
+      "rows_out": 1575,
+      "positives_out": 82,
+      "negatives_out": 1493
+    },
+    {
+      "dataset": "D:\\Strong Seaweed\\Strong-Seaweed-main\\data\\tabular\\training_dataset_kappaphycus_alvarezii_multispecies_cop_india_v2_prod_softpos_v5_strict.csv",
+      "output": "D:\\Strong Seaweed\\Strong-Seaweed-main\\data\\tabular\\training_dataset_kappaphycus_alvarezii_multispecies_cop_india_v2_prod_softpos_v5_strict_hn_v1.csv",
+      "species_id": "kappaphycus_alvarezii",
+      "added_hard_negatives": 151,
+      "rows_out": 1357,
+      "positives_out": 7,
+      "negatives_out": 1350
+    },
+    {
+      "dataset": "D:\\Strong Seaweed\\Strong-Seaweed-main\\data\\tabular\\training_dataset_sargassum_spp_multispecies_cop_india_v2_prod_softpos_v5_strict.csv",
+      "output": "D:\\Strong Seaweed\\Strong-Seaweed-main\\data\\tabular\\training_dataset_sargassum_spp_multispecies_cop_india_v2_prod_softpos_v5_strict_hn_v1.csv",
+      "species_id": "sargassum_spp",
+      "added_hard_negatives": 300,
+      "rows_out": 1573,
+      "positives_out": 83,
+      "negatives_out": 1490
+    },
+    {
+      "dataset": "D:\\Strong Seaweed\\Strong-Seaweed-main\\data\\tabular\\training_dataset_ulva_spp_multispecies_cop_india_v2_prod_softpos_v5_strict.csv",
+      "output": "D:\\Strong Seaweed\\Strong-Seaweed-main\\data\\tabular\\training_dataset_ulva_spp_multispecies_cop_india_v2_prod_softpos_v5_strict_hn_v1.csv",
+      "species_id": "ulva_spp",
+      "added_hard_negatives": 300,
+      "rows_out": 1598,
+      "positives_out": 105,
+      "negatives_out": 1493
+    }
+  ],
+  "grid_rows": 39941
+}

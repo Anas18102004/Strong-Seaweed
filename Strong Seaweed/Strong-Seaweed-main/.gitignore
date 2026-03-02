@@ -1,0 +1,48 @@
+# Python caches and virtualenvs
+__pycache__/
+*.pyc
+.venv*/
+.venv_model/
+.venv_model_api/
+
+# Local dependency folders
+.deps/
+.deps_xgb/
+
+# Logs and temp
+*.log
+.tmp/
+
+# OS/editor
+.DS_Store
+Thumbs.db
+.idea/
+.vscode/
+
+# Heavy/generated artifacts (runtime-safe tracking)
+outputs/
+artifacts/tmp/
+releases/backups/
+
+# Ignore large raw datasets by default
+data/netcdf/*.nc
+data/rasters/*.tif
+data/tabular/*.csv
+
+# Keep runtime files needed by serve_species_api.py
+!data/netcdf/india_physics_2025w01.nc
+!data/netcdf/india_waves_2025w01.nc
+!data/tabular/master_feature_matrix_kappa_india_gulf_v2_hardmerge4_augmented.csv
+
+# Ignore all releases by default
+releases/*
+
+# Keep only active runtime release bundles
+!releases/kappa_india_gulf_v2_prod_ready_v4_with_v2labels/
+!releases/kappa_india_gulf_v2_prod_ready_v4_with_v2labels/**
+!releases/kappa_india_gulf_v2_prod_ready_v3/
+!releases/kappa_india_gulf_v2_prod_ready_v3/**
+!releases/multi_species_cop_india_v5b_rich_relaxed_soft_hn/
+!releases/multi_species_cop_india_v5b_rich_relaxed_soft_hn/**
+!releases/multi_species_cop_india_v2_prod/
+!releases/multi_species_cop_india_v2_prod/**

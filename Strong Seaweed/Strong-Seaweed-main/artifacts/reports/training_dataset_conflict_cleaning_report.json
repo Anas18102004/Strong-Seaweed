@@ -1,0 +1,22 @@
+{
+  "rows_before": 351,
+  "rows_after": 331,
+  "rows_removed": 20,
+  "duplicates_lon_lat_label_before": 0,
+  "duplicates_lon_lat_label_after": 0,
+  "conflict_cells_before": 10,
+  "conflict_cells_after": 0,
+  "labels_before": {
+    "pos": 92,
+    "neg": 259
+  },
+  "labels_after": {
+    "pos": 82,
+    "neg": 249
+  },
+  "input_csv": "D:\\Strong Seaweed\\Strong-Seaweed-main\\data\\tabular\\training_dataset_v1_1_plus11web_plus35provisional.csv",
+  "output_csv": "D:\\Strong Seaweed\\Strong-Seaweed-main\\data\\tabular\\training_dataset_v1_1_plus11web_plus35provisional_clean.csv",
+  "report_json": "D:\\Strong Seaweed\\Strong-Seaweed-main\\artifacts\\reports\\training_dataset_conflict_cleaning_report.json",
+  "conflict_policy": "drop_both",
+  "round_coords": 8
+}

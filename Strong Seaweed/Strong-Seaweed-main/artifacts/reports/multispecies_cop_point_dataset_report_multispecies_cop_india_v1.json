@@ -1,0 +1,40 @@
+{
+  "occ_csv": "D:\\Strong Seaweed\\Strong-Seaweed-main\\data\\tabular\\multispecies_occurrences_multispecies_india_v2.csv",
+  "physics_nc": "D:\\Strong Seaweed\\Strong-Seaweed-main\\data\\netcdf\\india_physics_2025w01.nc",
+  "waves_nc": "D:\\Strong Seaweed\\Strong-Seaweed-main\\data\\netcdf\\india_waves_2025w01.nc",
+  "grid_pool_rows": 39941,
+  "species_reports": [
+    {
+      "species_id": "gracilaria_spp",
+      "occ_points": 98,
+      "positive_rows": 65,
+      "negative_rows": 500,
+      "total_rows": 565,
+      "output_csv": "D:\\Strong Seaweed\\Strong-Seaweed-main\\data\\tabular\\training_dataset_gracilaria_spp_multispecies_cop_india_v1.csv"
+    },
+    {
+      "species_id": "kappaphycus_alvarezii",
+      "occ_points": 5,
+      "positive_rows": 5,
+      "negative_rows": 500,
+      "total_rows": 505,
+      "output_csv": "D:\\Strong Seaweed\\Strong-Seaweed-main\\data\\tabular\\training_dataset_kappaphycus_alvarezii_multispecies_cop_india_v1.csv"
+    },
+    {
+      "species_id": "sargassum_spp",
+      "occ_points": 107,
+      "positive_rows": 64,
+      "negative_rows": 500,
+      "total_rows": 564,
+      "output_csv": "D:\\Strong Seaweed\\Strong-Seaweed-main\\data\\tabular\\training_dataset_sargassum_spp_multispecies_cop_india_v1.csv"
+    },
+    {
+      "species_id": "ulva_spp",
+      "occ_points": 154,
+      "positive_rows": 85,
+      "negative_rows": 500,
+      "total_rows": 585,
+      "output_csv": "D:\\Strong Seaweed\\Strong-Seaweed-main\\data\\tabular\\training_dataset_ulva_spp_multispecies_cop_india_v1.csv"
+    }
+  ]
+}

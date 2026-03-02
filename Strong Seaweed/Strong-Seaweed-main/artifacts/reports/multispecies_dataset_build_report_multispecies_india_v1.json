@@ -1,0 +1,66 @@
+{
+  "bbox": {
+    "min_lon": 68.0,
+    "max_lon": 98.5,
+    "min_lat": 5.0,
+    "max_lat": 24.5
+  },
+  "master_csv": "D:\\Strong Seaweed\\Strong-Seaweed-main\\data\\tabular\\master_feature_matrix_kappa_india_gulf_v2_hardmerge4_augmented.csv",
+  "domain_rows": 521,
+  "occurrences_csv": "D:\\Strong Seaweed\\Strong-Seaweed-main\\data\\tabular\\multispecies_occurrences_multispecies_india_v1.csv",
+  "species_reports": [
+    {
+      "species_id": "kappaphycus_alvarezii",
+      "species_target": "Kappaphycus alvarezii",
+      "queries": [
+        "Kappaphycus alvarezii",
+        "Eucheuma cottonii"
+      ],
+      "raw_occurrences": 2,
+      "snapped_positives": 0,
+      "negatives": 300,
+      "total_rows": 300,
+      "median_snap_m": 1038030.7219327027,
+      "output_csv": "D:\\Strong Seaweed\\Strong-Seaweed-main\\data\\tabular\\training_dataset_kappaphycus_alvarezii_multispecies_india_v1.csv"
+    },
+    {
+      "species_id": "gracilaria_edulis",
+      "species_target": "Gracilaria edulis",
+      "queries": [
+        "Gracilaria edulis"
+      ],
+      "raw_occurrences": 67,
+      "snapped_positives": 3,
+      "negatives": 300,
+      "total_rows": 303,
+      "median_snap_m": 653640.0561787868,
+      "output_csv": "D:\\Strong Seaweed\\Strong-Seaweed-main\\data\\tabular\\training_dataset_gracilaria_edulis_multispecies_india_v1.csv"
+    },
+    {
+      "species_id": "ulva_lactuca",
+      "species_target": "Ulva lactuca",
+      "queries": [
+        "Ulva lactuca"
+      ],
+      "raw_occurrences": 263,
+      "snapped_positives": 0,
+      "negatives": 300,
+      "total_rows": 300,
+      "median_snap_m": 912137.6010205372,
+      "output_csv": "D:\\Strong Seaweed\\Strong-Seaweed-main\\data\\tabular\\training_dataset_ulva_lactuca_multispecies_india_v1.csv"
+    },
+    {
+      "species_id": "sargassum_wightii",
+      "species_target": "Sargassum wightii",
+      "queries": [
+        "Sargassum wightii"
+      ],
+      "raw_occurrences": 96,
+      "snapped_positives": 0,
+      "negatives": 300,
+      "total_rows": 300,
+      "median_snap_m": 817592.3609694182,
+      "output_csv": "D:\\Strong Seaweed\\Strong-Seaweed-main\\data\\tabular\\training_dataset_sargassum_wightii_multispecies_india_v1.csv"
+    }
+  ]
+}

@@ -1,0 +1,21 @@
+{
+  "threshold": 0.285,
+  "n_total": 50,
+  "TP": 25,
+  "TN": 24,
+  "FP": 1,
+  "FN": 0,
+  "precision": 0.9615384615384616,
+  "recall": 1.0,
+  "specificity": 0.96,
+  "accuracy": 0.98,
+  "f1": 0.9803921568627451,
+  "median_snap_km": 0.06139185912406705,
+  "max_snap_km": 76.88448228958781,
+  "gt5km_snaps": 1,
+  "source_breakdown": {
+    "compiled": 25,
+    "gbif": 19,
+    "literature_non_kappa": 6
+  }
+}

@@ -1,0 +1,30 @@
+{
+  "target_species": "Kappaphycus alvarezii",
+  "sources": [
+    "OBIS API"
+  ],
+  "bbox_indian_ocean": {
+    "min_lon": 65.0,
+    "max_lon": 100.0,
+    "min_lat": -5.0,
+    "max_lat": 25.0
+  },
+  "positive_global_rows": 62,
+  "positive_indian_ocean_rows": 1,
+  "negative_candidate_rows": 297,
+  "negative_species_queries": [
+    "Sargassum wightii",
+    "Turbinaria ornata",
+    "Turbinaria conoides",
+    "Ulva lactuca"
+  ],
+  "files": {
+    "positive_global_csv": "d:\\Strong Seaweed\\Strong-Seaweed-main\\data\\tabular\\k_alvarezii_obis_global_positives.csv",
+    "positive_indian_ocean_csv": "d:\\Strong Seaweed\\Strong-Seaweed-main\\data\\tabular\\k_alvarezii_obis_indian_ocean_positives.csv",
+    "negative_candidates_csv": "d:\\Strong Seaweed\\Strong-Seaweed-main\\data\\tabular\\k_alvarezii_non_target_macroalgae_negative_candidates_obis_indian_ocean.csv"
+  },
+  "notes": [
+    "Negative file contains candidate negatives (non-target macroalgae), not strict absence labels.",
+    "For cultivation model, combine positives with stratified background negatives from your master feature grid."
+  ]
+}

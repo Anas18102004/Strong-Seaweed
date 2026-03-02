@@ -1,0 +1,141 @@
+{
+  "out_suffix": "softpos_v5_strict",
+  "datasets": [
+    {
+      "dataset": "D:\\Strong Seaweed\\Strong-Seaweed-main\\data\\tabular\\training_dataset_gracilaria_spp_multispecies_cop_india_v2_prod.csv",
+      "output": "D:\\Strong Seaweed\\Strong-Seaweed-main\\data\\tabular\\training_dataset_gracilaria_spp_multispecies_cop_india_v2_prod_softpos_v5_strict.csv",
+      "hard_positives": 65,
+      "soft_positives_added": 18,
+      "soft_from_existing_negatives": 2,
+      "soft_from_grid_candidates": 16,
+      "extra_candidates_considered": 42,
+      "uncertain_negatives_removed": 1,
+      "total_rows_out": 1280,
+      "positives_out": 82,
+      "negatives_out": 1198,
+      "distance_bands_km": [
+        [
+          2.0,
+          0.8
+        ],
+        [
+          4.0,
+          0.65
+        ],
+        [
+          6.0,
+          0.5
+        ]
+      ],
+      "feature_cols_used": [
+        "so_mean",
+        "so_std",
+        "current_mean",
+        "wave_mean",
+        "wave_std"
+      ]
+    },
+    {
+      "dataset": "D:\\Strong Seaweed\\Strong-Seaweed-main\\data\\tabular\\training_dataset_kappaphycus_alvarezii_multispecies_cop_india_v2_prod.csv",
+      "output": "D:\\Strong Seaweed\\Strong-Seaweed-main\\data\\tabular\\training_dataset_kappaphycus_alvarezii_multispecies_cop_india_v2_prod_softpos_v5_strict.csv",
+      "hard_positives": 5,
+      "soft_positives_added": 2,
+      "soft_from_existing_negatives": 0,
+      "soft_from_grid_candidates": 2,
+      "extra_candidates_considered": 6,
+      "uncertain_negatives_removed": 0,
+      "total_rows_out": 1207,
+      "positives_out": 7,
+      "negatives_out": 1200,
+      "distance_bands_km": [
+        [
+          2.0,
+          0.8
+        ],
+        [
+          4.0,
+          0.65
+        ],
+        [
+          6.0,
+          0.5
+        ]
+      ],
+      "feature_cols_used": [
+        "so_mean",
+        "so_std",
+        "current_mean",
+        "wave_mean",
+        "wave_std"
+      ]
+    },
+    {
+      "dataset": "D:\\Strong Seaweed\\Strong-Seaweed-main\\data\\tabular\\training_dataset_sargassum_spp_multispecies_cop_india_v2_prod.csv",
+      "output": "D:\\Strong Seaweed\\Strong-Seaweed-main\\data\\tabular\\training_dataset_sargassum_spp_multispecies_cop_india_v2_prod_softpos_v5_strict.csv",
+      "hard_positives": 64,
+      "soft_positives_added": 20,
+      "soft_from_existing_negatives": 2,
+      "soft_from_grid_candidates": 18,
+      "extra_candidates_considered": 46,
+      "uncertain_negatives_removed": 2,
+      "total_rows_out": 1280,
+      "positives_out": 83,
+      "negatives_out": 1197,
+      "distance_bands_km": [
+        [
+          2.0,
+          0.8
+        ],
+        [
+          4.0,
+          0.65
+        ],
+        [
+          6.0,
+          0.5
+        ]
+      ],
+      "feature_cols_used": [
+        "so_mean",
+        "so_std",
+        "current_mean",
+        "wave_mean",
+        "wave_std"
+      ]
+    },
+    {
+      "dataset": "D:\\Strong Seaweed\\Strong-Seaweed-main\\data\\tabular\\training_dataset_ulva_spp_multispecies_cop_india_v2_prod.csv",
+      "output": "D:\\Strong Seaweed\\Strong-Seaweed-main\\data\\tabular\\training_dataset_ulva_spp_multispecies_cop_india_v2_prod_softpos_v5_strict.csv",
+      "hard_positives": 85,
+      "soft_positives_added": 20,
+      "soft_from_existing_negatives": 0,
+      "soft_from_grid_candidates": 20,
+      "extra_candidates_considered": 62,
+      "uncertain_negatives_removed": 3,
+      "total_rows_out": 1302,
+      "positives_out": 105,
+      "negatives_out": 1197,
+      "distance_bands_km": [
+        [
+          2.0,
+          0.8
+        ],
+        [
+          4.0,
+          0.65
+        ],
+        [
+          6.0,
+          0.5
+        ]
+      ],
+      "feature_cols_used": [
+        "so_mean",
+        "so_std",
+        "current_mean",
+        "wave_mean",
+        "wave_std"
+      ]
+    }
+  ]
+}

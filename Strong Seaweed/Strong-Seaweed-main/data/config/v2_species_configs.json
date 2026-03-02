@@ -1,0 +1,71 @@
+{
+  "version": "v2.0",
+  "species": [
+    {
+      "name": "Kappaphycus alvarezii",
+      "short_name": "kappaphycus",
+      "target_rows": {
+        "hard_positive": 150,
+        "soft_positive": 1000,
+        "negative": 3000
+      },
+      "ecology_constraints": {
+        "depth_max_m": 15.0,
+        "distance_to_shore_km_max": 10.0
+      }
+    },
+    {
+      "name": "Gracilaria edulis",
+      "short_name": "gracilaria",
+      "target_rows": {
+        "hard_positive": 150,
+        "soft_positive": 1000,
+        "negative": 3000
+      },
+      "ecology_constraints": {
+        "depth_max_m": 20.0,
+        "distance_to_shore_km_max": 12.0
+      }
+    },
+    {
+      "name": "Ulva lactuca",
+      "short_name": "ulva",
+      "target_rows": {
+        "hard_positive": 120,
+        "soft_positive": 800,
+        "negative": 2500
+      },
+      "ecology_constraints": {
+        "depth_max_m": 20.0,
+        "distance_to_shore_km_max": 15.0
+      }
+    },
+    {
+      "name": "Sargassum wightii",
+      "short_name": "sargassum",
+      "target_rows": {
+        "hard_positive": 120,
+        "soft_positive": 800,
+        "negative": 2500
+      },
+      "ecology_constraints": {
+        "depth_max_m": 25.0,
+        "distance_to_shore_km_max": 20.0
+      }
+    }
+  ],
+  "split_strategy": {
+    "recommended_mode": "country_holdout",
+    "train_countries": [
+      "India",
+      "Indonesia"
+    ],
+    "val_countries": [
+      "Philippines"
+    ],
+    "test_countries": [
+      "Tanzania"
+    ],
+    "fallback_mode": "spatial_block_hash"
+  }
+}

@@ -1,0 +1,54 @@
+{
+  "input_csv": "data\\tabular\\v2_unified_dataset_template.csv",
+  "n_rows": 3,
+  "checks": {
+    "missing_required_columns": {
+      "pass": true,
+      "value": []
+    },
+    "labels_binary": {
+      "pass": true,
+      "value": {
+        "1": 2,
+        "0": 1
+      }
+    },
+    "label_type_allowed": {
+      "pass": true,
+      "value": {
+        "hard_positive": 1,
+        "soft_positive": 1,
+        "negative": 1
+      }
+    },
+    "coordinates_not_null": {
+      "pass": true,
+      "value": 0
+    },
+    "coordinates_valid_range": {
+      "pass": true,
+      "value": null
+    },
+    "duplicate_on_key": {
+      "pass": true,
+      "value": 0
+    },
+    "no_conflicting_labels_same_cell": {
+      "pass": true,
+      "value": 0
+    },
+    "coordinate_precision_threshold": {
+      "pass": true,
+      "value": 1.0
+    },
+    "label_weight_sanity": {
+      "pass": true,
+      "value": []
+    }
+  },
+  "failed_checks": [],
+  "species_counts": {
+    "Kappaphycus alvarezii": 3
+  },
+  "decision": "PASS"
+}

@@ -1,0 +1,19 @@
+{
+  "release": "kappa_india_gulf_v2_hardmerge4_prod2",
+  "n": 50,
+  "positives": 25,
+  "negatives": 25,
+  "threshold": 0.545,
+  "accuracy": 0.82,
+  "precision": 0.9,
+  "recall": 0.72,
+  "f1": 0.8,
+  "roc_auc": 0.8288,
+  "avg_precision": 0.8061104441776711,
+  "confusion_matrix": {
+    "tn": 23,
+    "fp": 2,
+    "fn": 7,
+    "tp": 18
+  }
+}

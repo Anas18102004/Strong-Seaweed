@@ -1,0 +1,12 @@
+{
+  "source_train_rows": 366,
+  "train_minus_rows": 316,
+  "holdout_rows": 50,
+  "holdout_pos": 25,
+  "holdout_neg": 25,
+  "threshold_source": 0.75,
+  "files": {
+    "holdout_csv": "artifacts\\experiments\\v1_2_internal_holdout50.csv",
+    "train_minus_csv": "data\\tabular\\training_dataset_v1.2_internal_train_minus_holdout50.csv"
+  }
+}

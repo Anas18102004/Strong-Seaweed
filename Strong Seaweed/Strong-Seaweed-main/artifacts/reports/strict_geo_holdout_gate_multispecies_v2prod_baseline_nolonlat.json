@@ -1,0 +1,134 @@
+{
+  "gate": "strict_geographic_holdout_multispecies",
+  "out_tag": "multispecies_v2prod_baseline_nolonlat",
+  "dataset_glob": "training_dataset_*_multispecies_cop_india_v2_prod.csv",
+  "thresholds": {
+    "min_rows": 500,
+    "min_pos_train": 30,
+    "min_pos_val": 10,
+    "min_pos_test": 10,
+    "min_auc": 0.8,
+    "min_ap": 0.35,
+    "max_brier": 0.2,
+    "max_auc_gap": 0.12,
+    "grid_deg": 1.0,
+    "val_pct": 0.2,
+    "test_pct": 0.2
+  },
+  "species": [
+    {
+      "species_id": "gracilaria_spp",
+      "rows": 1265,
+      "positives": 65,
+      "negatives": 1200,
+      "train_rows": 672,
+      "val_rows": 242,
+      "test_rows": 351,
+      "train_pos": 26,
+      "val_pos": 17,
+      "test_pos": 22,
+      "features": [
+        "so_mean",
+        "so_std",
+        "current_mean",
+        "wave_mean",
+        "wave_std"
+      ],
+      "metrics": {
+        "train_auc_raw": 0.9999702310073827,
+        "val_auc_cal": 0.9069281045751634,
+        "test_auc_cal": 0.6802984249792761,
+        "test_ap_cal": 0.11970036697309425,
+        "test_brier_cal": 0.06100949947774296
+      },
+      "checks": {
+        "min_pos_train": false,
+        "min_pos_val": true,
+        "min_pos_test": true,
+        "auc_test": false,
+        "ap_test": false,
+        "brier_test": true,
+        "auc_gap": false
+      },
+      "status": "fail"
+    },
+    {
+      "species_id": "kappaphycus_alvarezii",
+      "status": "skip",
+      "reason": "excluded_species"
+    },
+    {
+      "species_id": "sargassum_spp",
+      "rows": 1264,
+      "positives": 64,
+      "negatives": 1200,
+      "train_rows": 676,
+      "val_rows": 241,
+      "test_rows": 347,
+      "train_pos": 25,
+      "val_pos": 18,
+      "test_pos": 21,
+      "features": [
+        "so_mean",
+        "so_std",
+        "current_mean",
+        "wave_mean",
+        "wave_std"
+      ],
+      "metrics": {
+        "train_auc_raw": 0.9999692780337941,
+        "val_auc_cal": 0.8942451420029894,
+        "test_auc_cal": 0.6443908851884312,
+        "test_ap_cal": 0.12362453753431198,
+        "test_brier_cal": 0.05979403043389474
+      },
+      "checks": {
+        "min_pos_train": false,
+        "min_pos_val": true,
+        "min_pos_test": true,
+        "auc_test": false,
+        "ap_test": false,
+        "brier_test": true,
+        "auc_gap": false
+      },
+      "status": "fail"
+    },
+    {
+      "species_id": "ulva_spp",
+      "rows": 1285,
+      "positives": 85,
+      "negatives": 1200,
+      "train_rows": 687,
+      "val_rows": 248,
+      "test_rows": 350,
+      "train_pos": 32,
+      "val_pos": 24,
+      "test_pos": 29,
+      "features": [
+        "so_mean",
+        "so_std",
+        "current_mean",
+        "wave_mean",
+        "wave_std"
+      ],
+      "metrics": {
+        "train_auc_raw": 1.0,
+        "val_auc_cal": 0.9154575892857143,
+        "test_auc_cal": 0.5887313352669461,
+        "test_ap_cal": 0.10804334792110203,
+        "test_brier_cal": 0.08263155874702881
+      },
+      "checks": {
+        "min_pos_train": true,
+        "min_pos_val": true,
+        "min_pos_test": true,
+        "auc_test": false,
+        "ap_test": false,
+        "brier_test": true,
+        "auc_gap": false
+      },
+      "status": "fail"
+    }
+  ],
+  "decision": "FAIL"
+}

@@ -1,0 +1,42 @@
+{
+  "out_suffix": "hn_v3_rich",
+  "datasets": [
+    {
+      "dataset": "D:\\Strong Seaweed\\Strong-Seaweed-main\\data\\tabular\\training_dataset_gracilaria_spp_multispecies_cop_india_v3_rich_softpos_v7_relaxed_rich.csv",
+      "output": "D:\\Strong Seaweed\\Strong-Seaweed-main\\data\\tabular\\training_dataset_gracilaria_spp_multispecies_cop_india_v3_rich_softpos_v7_relaxed_rich_hn_v3_rich.csv",
+      "species_id": "gracilaria_spp",
+      "added_hard_negatives": 250,
+      "rows_out": 1544,
+      "positives_out": 100,
+      "negatives_out": 1444
+    },
+    {
+      "dataset": "D:\\Strong Seaweed\\Strong-Seaweed-main\\data\\tabular\\training_dataset_kappaphycus_alvarezii_multispecies_cop_india_v3_rich_softpos_v7_relaxed_rich.csv",
+      "output": "D:\\Strong Seaweed\\Strong-Seaweed-main\\data\\tabular\\training_dataset_kappaphycus_alvarezii_multispecies_cop_india_v3_rich_softpos_v7_relaxed_rich_hn_v3_rich.csv",
+      "species_id": "kappaphycus_alvarezii",
+      "added_hard_negatives": 151,
+      "rows_out": 1352,
+      "positives_out": 5,
+      "negatives_out": 1347
+    },
+    {
+      "dataset": "D:\\Strong Seaweed\\Strong-Seaweed-main\\data\\tabular\\training_dataset_sargassum_spp_multispecies_cop_india_v3_rich_softpos_v7_relaxed_rich.csv",
+      "output": "D:\\Strong Seaweed\\Strong-Seaweed-main\\data\\tabular\\training_dataset_sargassum_spp_multispecies_cop_india_v3_rich_softpos_v7_relaxed_rich_hn_v3_rich.csv",
+      "species_id": "sargassum_spp",
+      "added_hard_negatives": 250,
+      "rows_out": 1551,
+      "positives_out": 107,
+      "negatives_out": 1444
+    },
+    {
+      "dataset": "D:\\Strong Seaweed\\Strong-Seaweed-main\\data\\tabular\\training_dataset_ulva_spp_multispecies_cop_india_v3_rich_softpos_v7_relaxed_rich.csv",
+      "output": "D:\\Strong Seaweed\\Strong-Seaweed-main\\data\\tabular\\training_dataset_ulva_spp_multispecies_cop_india_v3_rich_softpos_v7_relaxed_rich_hn_v3_rich.csv",
+      "species_id": "ulva_spp",
+      "added_hard_negatives": 250,
+      "rows_out": 1629,
+      "positives_out": 155,
+      "negatives_out": 1474
+    }
+  ],
+  "grid_rows": 39941
+}

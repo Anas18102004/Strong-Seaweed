@@ -1,0 +1,51 @@
+lon,lat,p_raw,p_raw_std,p_calibrated,pred_label,priority,expected,id,site,source_ref,source_url,species,snap_km
+79.31277778,9.32825,0.97181576,0.0,0.6666667,1,medium,1,V11-008,V11-008,MFIS_246_B Johnson + cited farm-site literature,http://eprints.cmfri.org.in/14936/1/MFIS_246_B%20Johnson.pdf,Kappaphycus alvarezii,0.227489096309971
+79.33191667,9.317,0.9556155,0.0,0.6666667,1,medium,1,V11-007,V11-007,MFIS_246_B Johnson + cited farm-site literature,http://eprints.cmfri.org.in/14936/1/MFIS_246_B%20Johnson.pdf,Kappaphycus alvarezii,0.2845478789449315
+79.26163889,9.29275,0.95456505,0.0,0.6666667,1,medium,1,V11-012,V11-012,MFIS_246_B Johnson + cited farm-site literature,http://eprints.cmfri.org.in/14936/1/MFIS_246_B%20Johnson.pdf,Kappaphycus alvarezii,0.968704140367292
+79.105,9.289,0.92861134,0.0,0.6666667,1,medium,1,V11-019,V11-019,MFIS_246_B Johnson + cited farm-site literature,http://eprints.cmfri.org.in/14936/1/MFIS_246_B%20Johnson.pdf,Kappaphycus alvarezii,1.427527688156316
+79.13327778,9.28780556,0.94508696,0.0,0.6666667,1,medium,1,V11-017,V11-017,MFIS_246_B Johnson + cited farm-site literature,http://eprints.cmfri.org.in/14936/1/MFIS_246_B%20Johnson.pdf,Kappaphycus alvarezii,1.3018169746964927
+79.14469444,9.29138889,0.94508696,0.0,0.6666667,1,medium,1,V11-016,V11-016,MFIS_246_B Johnson + cited farm-site literature,http://eprints.cmfri.org.in/14936/1/MFIS_246_B%20Johnson.pdf,Kappaphycus alvarezii,0.1316237806316686
+79.23966667,9.29230556,0.972477,0.0,0.6666667,1,medium,1,V11-015,V11-015,MFIS_246_B Johnson + cited farm-site literature,http://eprints.cmfri.org.in/14936/1/MFIS_246_B%20Johnson.pdf,Kappaphycus alvarezii,1.078346287882965
+79.24508333,9.29227778,0.972477,0.0,0.6666667,1,medium,1,V11-014,V11-014,MFIS_246_B Johnson + cited farm-site literature,http://eprints.cmfri.org.in/14936/1/MFIS_246_B%20Johnson.pdf,Kappaphycus alvarezii,1.0440369053447591
+79.254,9.29177778,0.9722543,0.0,0.6666667,1,medium,1,V11-013,V11-013,MFIS_246_B Johnson + cited farm-site literature,http://eprints.cmfri.org.in/14936/1/MFIS_246_B%20Johnson.pdf,Kappaphycus alvarezii,1.096820331969964
+79.27197222,9.29794444,0.95456505,0.0,0.6666667,1,medium,1,V11-011,V11-011,MFIS_246_B Johnson + cited farm-site literature,http://eprints.cmfri.org.in/14936/1/MFIS_246_B%20Johnson.pdf,Kappaphycus alvarezii,1.2705022695476291
+79.29291667,9.32091667,0.9549779,0.0,0.6666667,1,medium,1,V11-010,V11-010,MFIS_246_B Johnson + cited farm-site literature,http://eprints.cmfri.org.in/14936/1/MFIS_246_B%20Johnson.pdf,Kappaphycus alvarezii,0.575978737133994
+79.29994444,9.32283333,0.9527505,0.0,0.6666667,1,medium,1,V11-009,V11-009,MFIS_246_B Johnson + cited farm-site literature,http://eprints.cmfri.org.in/14936/1/MFIS_246_B%20Johnson.pdf,Kappaphycus alvarezii,0.7028876782084501
+79.317861,9.328333,0.97181576,0.0,0.6666667,1,medium,0,TN-16,TN-16,"Heliyon 6(e04585), 2020",https://doi.org/10.1016/j.heliyon.2020.e04585,Diverse seaweeds,0.33080589799685
+79.17936111,9.28388889,0.94477606,0.0,0.6666667,1,medium,1,V11-003,V11-003,MFIS_246_B Johnson + cited farm-site literature,http://eprints.cmfri.org.in/14936/1/MFIS_246_B%20Johnson.pdf,Kappaphycus alvarezii,0.0935137913067811
+79.22027778,9.29141667,0.9471216,0.0,0.6666667,1,medium,1,V11-002,V11-002,MFIS_246_B Johnson + cited farm-site literature,http://eprints.cmfri.org.in/14936/1/MFIS_246_B%20Johnson.pdf,Kappaphycus alvarezii,1.2074991285052046
+79.23238889,9.29213889,0.9580572,0.0,0.6666667,1,medium,1,V11-001,V11-001,MFIS_246_B Johnson + cited farm-site literature,http://eprints.cmfri.org.in/14936/1/MFIS_246_B%20Johnson.pdf,Kappaphycus alvarezii,1.0486587234734217
+79.31530556,9.3275,0.97181576,0.0,0.6666667,1,medium,1,T09,TN-10,"MFIS Tech Series 246, 2020",https://eprints.cmfri.org.in/14936/1/MFIS_246_B%20Johnson.pdf,Kappaphycus alvarezii,0.1104939920058863
+79.22111111,9.26347222,0.89569414,0.0,0.4,1,low,1,V11-004,V11-004,MFIS_246_B Johnson + cited farm-site literature,http://eprints.cmfri.org.in/14936/1/MFIS_246_B%20Johnson.pdf,Kappaphycus alvarezii,0.6013935404966605
+79.14588889,9.27613889,0.91253674,0.0,0.4,1,low,1,V11-005,V11-005,MFIS_246_B Johnson + cited farm-site literature,http://eprints.cmfri.org.in/14936/1/MFIS_246_B%20Johnson.pdf,Kappaphycus alvarezii,0.8177554206751164
+79.312929,9.287625,0.28496543,0.0,0.2846154,1,low,0,GBIF-4866465876,"Rameswaram, Tamil Nadu 623526",GBIF occurrence,https://www.gbif.org/occurrence/4866465876,Ulva lactuca,1.2823955638884996
+79.198296,9.241772,0.07493156,0.0,0.2846154,1,low,0,GBIF-4856592646,"Islands of Pamoan and Krusadai, southeastern India.",GBIF occurrence,https://www.gbif.org/occurrence/4856592646,Valoniopsis pachynema,0.3588345119619684
+79.291115,9.274071,0.06407588,0.0,0.2846154,1,low,0,GBIF-4075521476,"Krusadai Island near Pamban, In the Gulf of Mannar",GBIF occurrence,https://www.gbif.org/occurrence/4075521476,Hypnea musciformis,3.2401654621712583
+79.210954,9.246966,0.059652787,0.0,0.2846154,1,low,0,GBIF-1989068144,"Krusadai Island, off Rameswaram, southeast India",GBIF occurrence,https://www.gbif.org/occurrence/1989068144,Hypnea musciformis,0.4332645064713313
+79.211571,9.245246,0.28379443,0.0,0.2846154,1,low,0,GBIF-4856778367,Krusadai Island. Pamban.,GBIF occurrence,https://www.gbif.org/occurrence/4856778367,Acanthophora spicifera,0.5518488875658113
+79.219,9.25,0.28379443,0.0,0.2846154,1,low,0,GBIF-57324539,Krusadai island,GBIF occurrence,https://www.gbif.org/occurrence/57324539,Ulva lactuca,0.4256443300393309
+79.11667,9.283333,0.73486495,0.0,0.2846154,1,low,0,GBIF-56899399,"Mandapam, Tamil Nadu, India",GBIF occurrence,https://www.gbif.org/occurrence/56899399,Caulerpa racemosa,2.013747987423016
+79.119,9.283,0.73486495,0.0,0.2846154,1,low,0,GBIF-57324520,Mandapam,GBIF occurrence,https://www.gbif.org/occurrence/57324520,Ulva lactuca,2.05919475486465
+79.208138,9.247788,0.059652787,0.0,0.2846154,1,low,0,GBIF-4856558413,Krusadai Island,GBIF occurrence,https://www.gbif.org/occurrence/4856558413,Caulerpa racemosa,0.1227837182481341
+79.118502,9.281197,0.73486495,0.0,0.2846154,1,low,0,GBIF-1988950021,Mandapam,GBIF occurrence,https://www.gbif.org/occurrence/1988950021,Gracilaria corticata,2.2547770450727675
+79.210884,9.245416,0.059652787,0.0,0.2846154,1,low,0,GBIF-4856592639,Pamoan and Krusadai,GBIF occurrence,https://www.gbif.org/occurrence/4856592639,Caulerpa racemosa,0.4824409974334193
+79.210619,9.246988,0.059652787,0.0,0.2846154,1,low,0,GBIF-1989447374,"Coral Reef, Krusadai Island Pamban",GBIF occurrence,https://www.gbif.org/occurrence/1989447374,Acanthophora spicifera,0.3965470805820035
+79.18876111,9.27943333,0.5796826,0.0,0.2846154,1,low,1,T04,TN-04,doi:10.56042/ijms.v47i06.13600,https://doi.org/10.56042/ijms.v47i06.13600,Kappaphycus alvarezii,0.4500973320499788
+79.12547222,9.28763889,0.32834995,0.0,0.2846154,1,low,1,V11-018,V11-018,MFIS_246_B Johnson + cited farm-site literature,http://eprints.cmfri.org.in/14936/1/MFIS_246_B%20Johnson.pdf,Kappaphycus alvarezii,1.536138858058939
+79.18615833,9.28743333,0.5796826,0.0,0.2846154,1,low,1,T05,TN-05,doi:10.56042/ijms.v47i06.13600,https://doi.org/10.56042/ijms.v47i06.13600,Kappaphycus alvarezii,0.5452630911859287
+79.18971667,9.28385278,0.5796826,0.0,0.2846154,1,low,1,T06,TN-06,doi:10.56042/ijms.v47i06.13600,https://doi.org/10.56042/ijms.v47i06.13600,Kappaphycus alvarezii,0.0816580253111041
+79.335694,9.314222,0.8217305,0.0,0.2846154,1,low,0,TN-15,TN-15,"Heliyon 6(e04585), 2020",https://doi.org/10.1016/j.heliyon.2020.e04585,Diverse seaweeds,0.5280603769703024
+79.210688,9.247233,0.059652787,0.0,0.2846154,1,low,0,GBIF-1989145528,"Pamban, Krusadai Island",GBIF occurrence,https://www.gbif.org/occurrence/1989145528,Hypnea musciformis,0.4008277137528048
+79.21667,9.233334,0.03187328,0.0,0.0952381,0,low,0,GBIF-90123917,Krusadai Island,GBIF occurrence,https://www.gbif.org/occurrence/90123917,Caulerpa racemosa,0.4243794273775751
+79.32675,9.294472,0.042814836,0.0,0.0952381,0,low,0,TN-08,TN-08,"MFIS Tech Series 246, 2020",http://eprints.cmfri.org.in/14936/1/MFIS_246_B%20Johnson.pdf,Gracilaria edulis,0.7022098231949913
+79.40525,9.19491667,0.03945234,0.0,0.0952381,0,low,1,V11-006,V11-006,MFIS_246_B Johnson + cited farm-site literature,http://eprints.cmfri.org.in/14936/1/MFIS_246_B%20Johnson.pdf,Kappaphycus alvarezii,4.415631429104856
+79.0,8.5,0.037445415,0.0,0.0952381,0,low,0,GBIF-57051511,Gulf of Mannar,GBIF occurrence,https://www.gbif.org/occurrence/57051511,Hydropuntia edulis,76.88448228958781
+79.225,9.19167,0.040964264,0.0,0.0952381,0,low,0,GBIF-37001569,Mandapam Village,GBIF occurrence,https://www.gbif.org/occurrence/37001569,Hydropuntia edulis,3.2153842814208486
+79.329,9.249,0.028511953,0.0,0.0952381,0,low,0,GBIF-57324621,Rameshwaram,GBIF occurrence,https://www.gbif.org/occurrence/57324621,Valoniopsis pachynema,1.2928430431621507
+79.21,9.24,0.041375034,0.0,0.0952381,0,low,1,T14,TN-20,doi:10.4490/algae.2010.25.4.205,https://doi.org/10.4490/algae.2010.25.4.205,Kappaphycus alvarezii,0.3616720605993786
+78.778,9.225,0.008807445,0.0,0.0,0,low,0,GBIF-57324594,Kilakarai,GBIF occurrence,https://www.gbif.org/occurrence/57324594,Ulva lactuca,1.5080730677939445
+78.783333,9.216667,0.008885142,0.0,0.0,0,low,0,GBIF-2827092263,Keelakarai.,GBIF occurrence,https://www.gbif.org/occurrence/2827092263,Caulerpa racemosa,0.5868479504912444
+78.161,8.786,0.0034372364,0.0,0.0,0,low,0,GBIF-57324607,Tuticorin,GBIF occurrence,https://www.gbif.org/occurrence/57324607,Ulva lactuca,0.5796891262791253
+78.11667,8.483334,0.012737907,0.0,0.0,0,low,0,GBIF-90128842,"Tiruchendur, Tamil Nadu, India",GBIF occurrence,https://www.gbif.org/occurrence/90128842,Chaetomorpha antennina,1.6497865818946147
+78.19485833,8.74586944,0.0034372364,0.0,0.0,0,low,1,T03,TN-03,doi:10.56042/ijms.v47i06.13600,https://doi.org/10.56042/ijms.v47i06.13600,Kappaphycus alvarezii,0.3547913250051294
+78.13333,8.783333,0.0034372364,0.0,0.0,0,low,0,GBIF-57239896,"Tuticorin, Tamil Nadu, India",GBIF occurrence,https://www.gbif.org/occurrence/57239896,Sargassum ilicifolium,3.4957103535673464

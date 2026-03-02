@@ -1,0 +1,49 @@
+{
+  "release": "kappa_india_gulf_v2_prod_ready_v3",
+  "gate_result": "PASS",
+  "checks": [
+    {
+      "name": "train_spatial_auc>=0.70",
+      "pass": true
+    },
+    {
+      "name": "train_oof_ap_cal>=0.45",
+      "pass": true
+    },
+    {
+      "name": "hard50_auc>=0.85",
+      "pass": true
+    },
+    {
+      "name": "hard50_precision>=0.80",
+      "pass": true
+    },
+    {
+      "name": "hard50_recall>=0.40",
+      "pass": true
+    },
+    {
+      "name": "independent_n>=40",
+      "pass": true
+    },
+    {
+      "name": "independent_pos>=20",
+      "pass": true
+    },
+    {
+      "name": "independent_neg>=20",
+      "pass": true
+    }
+  ],
+  "metrics": {
+    "train_spatial_auc": 0.7210830529764354,
+    "train_oof_ap_calibrated": 0.5123012251862742,
+    "hard50_auc": 0.8615999999999999,
+    "hard50_precision": 0.9090909090909091,
+    "hard50_recall": 0.8,
+    "independent_n": 44,
+    "independent_pos": 22,
+    "independent_neg": 22,
+    "independent_auc": 0.8388429752066116
+  }
+}

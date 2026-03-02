@@ -1,0 +1,17 @@
+[Unit]
+Description=ML Seaweed Prediction APIs (Kappaphycus & Species)
+After=network.target
+
+[Service]
+Type=simple
+User=ubuntu
+WorkingDirectory=/home/ubuntu/Strong Seaweed/Strong Seaweed/Strong-Seaweed-main
+Environment="PATH=/home/ubuntu/Strong Seaweed/Strong Seaweed/Strong-Seaweed-main/.venv_model/bin:/usr/bin"
+ExecStart=/home/ubuntu/Strong Seaweed/Strong Seaweed/Strong-Seaweed-main/.venv_model/bin/python serve_species_api.py
+Restart=always
+RestartSec=10
+StandardOutput=append:/home/ubuntu/Strong Seaweed/Strong Seaweed/Strong-Seaweed-main/_ml_api_stdout.log
+StandardError=append:/home/ubuntu/Strong Seaweed/Strong Seaweed/Strong-Seaweed-main/_ml_api_stderr.log
+
+[Install]
+WantedBy=multi-user.target

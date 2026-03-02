@@ -1,0 +1,22 @@
+{
+  "sources": {
+    "D:\\Strong Seaweed\\Strong-Seaweed-main\\data\\tabular\\v1_1_data_plan.csv": {
+      "exists": true,
+      "rows": 23
+    },
+    "D:\\Strong Seaweed\\Strong-Seaweed-main\\artifacts\\experiments\\v1_1_websweep_candidates_strict_ready.csv": {
+      "exists": true,
+      "rows": 173
+    },
+    "D:\\Strong Seaweed\\Strong-Seaweed-main\\data\\tabular\\v1.2_from_pack_auto_verified_from_pack.csv": {
+      "exists": true,
+      "rows": 50
+    }
+  },
+  "rows_all_concat": 246,
+  "rows_base_kappaphycus_positive": 246,
+  "rows_broad_dedup": 218,
+  "rows_strict_dedup": 173,
+  "out_strict_csv": "D:\\Strong Seaweed\\Strong-Seaweed-main\\data\\tabular\\kappaphycus_internal_merged_strict.csv",
+  "out_broad_csv": "D:\\Strong Seaweed\\Strong-Seaweed-main\\data\\tabular\\kappaphycus_internal_merged_broad.csv"
+}

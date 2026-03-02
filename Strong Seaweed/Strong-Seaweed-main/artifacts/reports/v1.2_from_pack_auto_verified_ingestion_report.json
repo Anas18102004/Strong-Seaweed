@@ -1,0 +1,32 @@
+{
+  "inputs": [
+    {
+      "file": "v1.2_from_pack_auto_verified_from_pack.csv",
+      "rows": 50
+    }
+  ],
+  "raw_rows": 50,
+  "after_quality_filters": 50,
+  "snapped_rows": 50,
+  "max_snap_m": 1500.0,
+  "min_year": 2000,
+  "bounds": {
+    "lon_min": 78.07517148040331,
+    "lon_max": 79.7999368259128,
+    "lat_min": 8.403119733194146,
+    "lat_max": 9.795508423579404
+  },
+  "median_snap_m_before_threshold": 0.0,
+  "output_csv": "artifacts\\experiments\\v1.2_from_pack_auto_verified_snapped_strict.csv",
+  "master_csv": "data\\tabular\\master_feature_matrix_v1_1.csv",
+  "training_csv": "data\\tabular\\training_dataset_v1_1_merged46_plus_hn30_augmented_plus11web.csv",
+  "require_verified": false,
+  "strict_acceptance": false,
+  "strict_min_confidence": 0.85,
+  "strict_min_verified_dates": 2,
+  "strict_depth_max_m": 8.0,
+  "strict_distance_to_shore_max_m": 2000.0,
+  "sources_after_filter": {
+    "v1.2_from_pack_auto_verified_from_pack.csv": 50
+  }
+}

@@ -1,0 +1,9 @@
+[
+  "lon",
+  "lat",
+  "so_mean",
+  "so_std",
+  "current_mean",
+  "wave_mean",
+  "wave_std"
+]

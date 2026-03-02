@@ -1,0 +1,7 @@
+fastapi==0.115.6
+uvicorn==0.34.0
+pydantic==2.10.5
+langchain==0.3.12
+langchain-openai==0.2.14
+langgraph==0.2.61
+crewai==0.95.0

@@ -1,0 +1,37 @@
+{
+  "candidates": [
+    {
+      "path": "D:\\Strong Seaweed\\Strong-Seaweed-main\\data\\tabular\\training_dataset_internal_strict_seed.csv",
+      "rows": 504,
+      "pos": 84,
+      "neg": 420,
+      "conflict_cells": 0,
+      "missing_cells": 0,
+      "score": 672.0
+    },
+    {
+      "path": "D:\\Strong Seaweed\\Strong-Seaweed-main\\data\\tabular\\training_dataset_internal_broad_seed.csv",
+      "rows": 762,
+      "pos": 127,
+      "neg": 635,
+      "conflict_cells": 0,
+      "missing_cells": 0,
+      "score": 1016.0
+    }
+  ],
+  "recommended": {
+    "path": "D:\\Strong Seaweed\\Strong-Seaweed-main\\data\\tabular\\training_dataset_internal_broad_seed.csv",
+    "rows": 762,
+    "pos": 127,
+    "neg": 635,
+    "conflict_cells": 0,
+    "missing_cells": 0,
+    "score": 1016.0
+  },
+  "why": [
+    "Higher positive count improves learnability for the rare class.",
+    "No label conflicts and no missing cells in both datasets.",
+    "Larger sample size improves stability of cross-validation estimates."
+  ],
+  "next_retrain_release_tag": "v1_3_internal_broad_seed"
+}

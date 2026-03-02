@@ -1,0 +1,42 @@
+{
+  "inputs": {
+    "seed_schema_csv": "D:\\Strong Seaweed\\Strong-Seaweed-main\\data\\tabular\\kappaphycus_seed_training_schema_v1_splits.csv",
+    "master_csv": "D:\\Strong Seaweed\\Strong-Seaweed-main\\data\\tabular\\master_feature_matrix_v1_1_augmented.csv"
+  },
+  "filters": {
+    "india_bbox": {
+      "lon_min": 68.0,
+      "lon_max": 98.5,
+      "lat_min": 5.0,
+      "lat_max": 24.5
+    },
+    "gulf_bbox_with_buffer": {
+      "lon_min": 77.87517148040331,
+      "lon_max": 79.9999368259128,
+      "lat_min": 8.203119733194146,
+      "lat_max": 9.995508423579404,
+      "buffer_deg": 0.2
+    }
+  },
+  "counts": {
+    "seed_rows": 437,
+    "india_rows": 36,
+    "india_pos": 4,
+    "india_neg": 32,
+    "gulf_rows": 9,
+    "gulf_pos": 1,
+    "gulf_neg": 8,
+    "gulf_presence_plan_rows": 1
+  },
+  "outputs": {
+    "india_csv": "D:\\Strong Seaweed\\Strong-Seaweed-main\\data\\tabular\\kappaphycus_seed_india_focus_v1.csv",
+    "gulf_csv": "D:\\Strong Seaweed\\Strong-Seaweed-main\\data\\tabular\\kappaphycus_seed_gulf_focus_v1.csv",
+    "gulf_presence_plan_csv": "D:\\Strong Seaweed\\Strong-Seaweed-main\\data\\tabular\\kappaphycus_gulf_presence_plan_v1.csv",
+    "master_tagged_csv": "D:\\Strong Seaweed\\Strong-Seaweed-main\\data\\tabular\\master_feature_matrix_kappa_india_gulf_v2_hardmerge4.csv",
+    "presence_tagged_csv": "D:\\Strong Seaweed\\Strong-Seaweed-main\\data\\tabular\\kappaphycus_presence_snapped_clean_kappa_india_gulf_v2_hardmerge4.csv",
+    "training_tagged_csv": "D:\\Strong Seaweed\\Strong-Seaweed-main\\data\\tabular\\training_dataset_kappa_india_gulf_v2_hardmerge4.csv",
+    "presence_report_json": "D:\\Strong Seaweed\\Strong-Seaweed-main\\artifacts\\reports\\presence_ingestion_report_kappa_india_gulf_v2_hardmerge4.json"
+  },
+  "copernicus_flow_ran": true,
+  "existing_presence_csv": "data\\tabular\\kappaphycus_presence_snapped_clean_india_gulf_hard_merged_v2.csv"
+}

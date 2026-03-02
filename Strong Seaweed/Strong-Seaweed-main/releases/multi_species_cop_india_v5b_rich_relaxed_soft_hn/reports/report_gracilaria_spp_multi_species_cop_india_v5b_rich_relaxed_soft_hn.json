@@ -1,0 +1,22 @@
+{
+  "n_rows": 1540,
+  "n_positive": 100,
+  "n_negative": 1440,
+  "n_features": 26,
+  "n_folds": 8,
+  "spatial_auc_mean": 0.9135960384362455,
+  "spatial_auc_std": 0.04775983644776444,
+  "spatial_ap_mean": 0.7150550454454618,
+  "spatial_brier_mean": 0.07317013371891884,
+  "oof_auc_raw": 0.9056081649831649,
+  "oof_auc_calibrated": 0.9173085016835018,
+  "oof_ap_raw": 0.7312576574909507,
+  "oof_ap_calibrated": 0.720375768318774,
+  "oof_brier_raw": 0.07251520065912002,
+  "oof_brier_calibrated": 0.03881953862997865,
+  "threshold": {
+    "threshold": 0.5,
+    "precision": 0.8333333333333334,
+    "recall": 0.6060606060606061
+  }
+}

@@ -1,0 +1,22 @@
+{
+  "dataset": "d:\\Strong Seaweed\\Strong-Seaweed-main\\data\\tabular\\kappaphycus_complex_global_seed_dataset_v1.csv",
+  "rows_total": 437,
+  "rows_pos": 82,
+  "rows_neg": 355,
+  "neg_species_queries": [
+    "Sargassum wightii",
+    "Turbinaria ornata",
+    "Turbinaria conoides",
+    "Ulva lactuca"
+  ],
+  "source_counts": {
+    "OBIS": 437
+  },
+  "year_min": 1912,
+  "year_max": 2023,
+  "notes": [
+    "Seed dataset for bootstrap training only.",
+    "Negatives are candidates (non-target macroalgae occurrences), not strict surveyed absences.",
+    "For production use, add verified farm-site positives + in-domain background negatives."
+  ]
+}

@@ -1,0 +1,71 @@
+{
+  "model_version": "kappa_india_gulf_v2_prod_ready_v3",
+  "model_name": "Gulf of Mannar Regional Ecological Screening Model",
+  "selected_dataset": "training_dataset_kappa_india_gulf_v2_hardmerge4_augmented_deployable_fixed",
+  "inference_feature_source": "data/tabular/master_feature_matrix_kappa_india_gulf_v2_hardmerge4_augmented.csv",
+  "training_region": {
+    "name": "Gulf of Mannar",
+    "bbox": {
+      "lon_min": 78.47941335825709,
+      "lon_max": 79.7999368259128,
+      "lat_min": 8.430069191717731,
+      "lat_max": 9.768558965055815
+    }
+  },
+  "resolution": {
+    "effective_resolution_km": 22.0,
+    "coarsest_layer": "wave_height (~0.20 degree)",
+    "coarsest_layer_resolution_km": 22.0,
+    "secondary_resolution_km": 9.2
+  },
+  "use_case": {
+    "intended": "regional_screening",
+    "not_valid_for": "micro-site (<5 km) decisions",
+    "notes": "Model predicts ecological suitability, not farm installation decisions."
+  },
+  "selected_metrics": {
+    "n_samples": 449,
+    "n_presence": 123,
+    "n_background": 326,
+    "n_features": 29,
+    "training_mode": "single_fixed_fullfit_cal",
+    "n_ensemble_members": 1,
+    "n_spatial_folds": 8,
+    "best_params": {
+      "n_estimators": 400,
+      "max_depth": 6,
+      "learning_rate": 0.05,
+      "subsample": 0.7,
+      "colsample_bytree": 0.7,
+      "min_child_weight": 8,
+      "gamma": 0.7,
+      "reg_alpha": 0.5,
+      "reg_lambda": 2.0,
+      "scale_pos_weight": 2.6504065040650406
+    },
+    "spatial_auc_mean": 0.7210830529764354,
+    "spatial_auc_std": 0.13733877875867362,
+    "spatial_ap_mean": 0.6086651564452121,
+    "spatial_brier_mean": 0.2195335082686495,
+    "oof_auc_raw": 0.717969379532635,
+    "oof_auc_calibrated": 0.7030044894670198,
+    "oof_ap_raw": 0.5503708928143213,
+    "oof_ap_calibrated": 0.5123012251862742,
+    "oof_brier_raw": 0.226740730618168,
+    "oof_brier_calibrated": 0.2554904722541076,
+    "threshold": {
+      "threshold": 0.9565219879150391,
+      "precision": null,
+      "recall": null
+    }
+  },
+  "all_datasets": [],
+  "deployment_policy": {
+    "recommended_threshold": 0.9565219879150391,
+    "production_mode": true,
+    "min_threshold_floor": 0.5,
+    "high_confidence_cutoff": 0.8,
+    "medium_confidence_cutoff": 0.6,
+    "notes": "Threshold and calibrator tuned for production gate metrics."
+  }
+}

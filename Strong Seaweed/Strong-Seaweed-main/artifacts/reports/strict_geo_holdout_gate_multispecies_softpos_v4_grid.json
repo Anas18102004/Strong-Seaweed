@@ -1,0 +1,173 @@
+{
+  "gate": "strict_geographic_holdout_multispecies",
+  "out_tag": "multispecies_softpos_v4_grid",
+  "dataset_glob": "training_dataset_*_multispecies_cop_india_v2_prod_softpos_v4_grid.csv",
+  "thresholds": {
+    "min_rows": 500,
+    "min_pos_train": 30,
+    "min_pos_val": 10,
+    "min_pos_test": 10,
+    "min_auc": 0.8,
+    "min_ap": 0.35,
+    "max_brier": 0.2,
+    "max_auc_gap": 0.12,
+    "grid_deg": 1.0,
+    "val_pct": 0.2,
+    "test_pct": 0.2
+  },
+  "species": [
+    {
+      "species_id": "gracilaria_spp",
+      "rows": 1373,
+      "positives": 178,
+      "negatives": 1195,
+      "train_rows": 725,
+      "val_rows": 269,
+      "test_rows": 379,
+      "train_pos": 81,
+      "val_pos": 44,
+      "test_pos": 53,
+      "features": [
+        "lon",
+        "lat",
+        "so_mean",
+        "so_std",
+        "current_mean",
+        "wave_mean",
+        "wave_std"
+      ],
+      "metrics": {
+        "train_auc_raw": 1.0,
+        "val_auc_cal": 0.9351515151515152,
+        "test_auc_cal": 0.7495659219817109,
+        "test_ap_cal": 0.4152328917090772,
+        "test_brier_cal": 0.10118764755808798
+      },
+      "checks": {
+        "min_pos_train": true,
+        "min_pos_val": true,
+        "min_pos_test": true,
+        "auc_test": false,
+        "ap_test": true,
+        "brier_test": true,
+        "auc_gap": false
+      },
+      "status": "fail"
+    },
+    {
+      "species_id": "kappaphycus_alvarezii",
+      "rows": 1211,
+      "positives": 11,
+      "negatives": 1200,
+      "train_rows": 654,
+      "val_rows": 237,
+      "test_rows": 320,
+      "train_pos": 6,
+      "val_pos": 3,
+      "test_pos": 2,
+      "features": [
+        "lon",
+        "lat",
+        "so_mean",
+        "so_std",
+        "current_mean",
+        "wave_mean",
+        "wave_std"
+      ],
+      "metrics": {
+        "train_auc_raw": 0.9999999999999999,
+        "val_auc_cal": 0.8575498575498575,
+        "test_auc_cal": 0.22955974842767296,
+        "test_ap_cal": 0.00625,
+        "test_brier_cal": 0.007045267596207899
+      },
+      "checks": {
+        "min_pos_train": false,
+        "min_pos_val": false,
+        "min_pos_test": false,
+        "auc_test": false,
+        "ap_test": false,
+        "brier_test": true,
+        "auc_gap": false
+      },
+      "status": "fail"
+    },
+    {
+      "species_id": "sargassum_spp",
+      "rows": 1362,
+      "positives": 168,
+      "negatives": 1194,
+      "train_rows": 724,
+      "val_rows": 263,
+      "test_rows": 375,
+      "train_pos": 76,
+      "val_pos": 40,
+      "test_pos": 52,
+      "features": [
+        "lon",
+        "lat",
+        "so_mean",
+        "so_std",
+        "current_mean",
+        "wave_mean",
+        "wave_std"
+      ],
+      "metrics": {
+        "train_auc_raw": 1.0,
+        "val_auc_cal": 0.9456838565022422,
+        "test_auc_cal": 0.667123124553465,
+        "test_ap_cal": 0.3018071928071928,
+        "test_brier_cal": 0.11235407247290304
+      },
+      "checks": {
+        "min_pos_train": true,
+        "min_pos_val": true,
+        "min_pos_test": true,
+        "auc_test": false,
+        "ap_test": false,
+        "brier_test": true,
+        "auc_gap": false
+      },
+      "status": "fail"
+    },
+    {
+      "species_id": "ulva_spp",
+      "rows": 1428,
+      "positives": 235,
+      "negatives": 1193,
+      "train_rows": 761,
+      "val_rows": 284,
+      "test_rows": 383,
+      "train_pos": 110,
+      "val_pos": 60,
+      "test_pos": 65,
+      "features": [
+        "lon",
+        "lat",
+        "so_mean",
+        "so_std",
+        "current_mean",
+        "wave_mean",
+        "wave_std"
+      ],
+      "metrics": {
+        "train_auc_raw": 1.0,
+        "val_auc_cal": 0.9498883928571429,
+        "test_auc_cal": 0.819206579583938,
+        "test_ap_cal": 0.5575662311033223,
+        "test_brier_cal": 0.10195737998459713
+      },
+      "checks": {
+        "min_pos_train": true,
+        "min_pos_val": true,
+        "min_pos_test": true,
+        "auc_test": true,
+        "ap_test": true,
+        "brier_test": true,
+        "auc_gap": false
+      },
+      "status": "fail"
+    }
+  ],
+  "decision": "FAIL"
+}

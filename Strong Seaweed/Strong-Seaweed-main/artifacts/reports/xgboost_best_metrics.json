@@ -1,0 +1,62 @@
+{
+  "selected_dataset": "baseline",
+  "selected_spatial_cv_auc_mean": 0.944344147720745,
+  "selected_spatial_cv_auc_std": 0.03354933886834723,
+  "selected_random_cv_auc_mean": 0.9686452045606975,
+  "selected_random_cv_auc_std": 0.02705678457811061,
+  "selected_train_auc_full_data": 0.9978972426105932,
+  "selected_params": {
+    "subsample": 0.9,
+    "scale_pos_weight": 5.0,
+    "reg_lambda": 5.0,
+    "reg_alpha": 0.1,
+    "n_estimators": 150,
+    "min_child_weight": 6,
+    "max_depth": 2,
+    "learning_rate": 0.05,
+    "gamma": 1.0,
+    "colsample_bytree": 0.8
+  },
+  "selected_top5_features": [
+    {
+      "feature": "turb_mean",
+      "importance_gain": 0.1750985085964203
+    },
+    {
+      "feature": "rain_mean",
+      "importance_gain": 0.17116539180278778
+    },
+    {
+      "feature": "distance_to_shore",
+      "importance_gain": 0.1276494413614273
+    },
+    {
+      "feature": "wind_std",
+      "importance_gain": 0.10598715394735336
+    },
+    {
+      "feature": "wave_mean",
+      "importance_gain": 0.09754166752099991
+    }
+  ],
+  "all_results": [
+    {
+      "dataset_name": "baseline",
+      "spatial_cv_auc_mean": 0.944344147720745,
+      "spatial_cv_auc_std": 0.03354933886834723,
+      "random_cv_auc_mean": 0.9686452045606975,
+      "random_cv_auc_std": 0.02705678457811061,
+      "train_auc_full_data": 0.9978972426105932,
+      "n_features": 15
+    },
+    {
+      "dataset_name": "augmented",
+      "spatial_cv_auc_mean": 0.9277381342433616,
+      "spatial_cv_auc_std": 0.016649670497675625,
+      "random_cv_auc_mean": 0.9704627766599598,
+      "random_cv_auc_std": 0.0318129968220218,
+      "train_auc_full_data": 0.9999999999999999,
+      "n_features": 20
+    }
+  ]
+}

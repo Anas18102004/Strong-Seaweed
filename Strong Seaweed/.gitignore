@@ -1,0 +1,39 @@
+# Keep top-level lockfile out if generated outside app folder
+package-lock.json
+.env
+**/.env
+**/.env.*
+!**/.env.example
+
+# Node / frontend artifacts
+**/node_modules/
+**/dist/
+**/dist-ssr/
+**/*.local
+
+# Logs
+**/logs/
+**/*.log
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+pnpm-debug.log*
+lerna-debug.log*
+
+# Python artifacts
+**/__pycache__/
+**/*.pyc
+**/.venv/
+**/.envrc
+
+# IDE / OS files
+.DS_Store
+Thumbs.db
+.idea/
+.vscode/*
+!.vscode/extensions.json
+*.suo
+*.ntvs*
+*.njsproj
+*.sln
+*.sw?

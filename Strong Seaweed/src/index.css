@@ -1,0 +1,167 @@
+@import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800;900&family=Plus+Jakarta+Sans:wght@400;500;600;700;800&display=swap');
+
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+@layer base {
+  :root {
+    --background: 197 100% 97%;
+    --foreground: 200 60% 10%;
+
+    --card: 0 0% 100%;
+    --card-foreground: 200 60% 10%;
+
+    --popover: 0 0% 100%;
+    --popover-foreground: 200 60% 10%;
+
+    --primary: 212 100% 50%;
+    --primary-foreground: 0 0% 100%;
+
+    --secondary: 197 30% 90%;
+    --secondary-foreground: 200 40% 25%;
+
+    --muted: 197 20% 94%;
+    --muted-foreground: 200 15% 50%;
+
+    --accent: 190 100% 45%;
+    --accent-foreground: 0 0% 100%;
+
+    --destructive: 0 84% 60%;
+    --destructive-foreground: 0 0% 100%;
+
+    --border: 200 20% 90%;
+    --input: 200 20% 90%;
+    --ring: 212 100% 50%;
+
+    --radius: 0.75rem;
+
+    /* Custom BlueWeave tokens */
+    --ocean-start: 212 100% 50%;
+    --ocean-end: 190 100% 50%;
+    --glass-bg: 0 0% 100% / 0.55;
+    --glass-border: 0 0% 100% / 0.6;
+    --glass-shadow: 212 100% 50% / 0.08;
+    --text-primary: 200 60% 10%;
+    --text-secondary: 200 20% 40%;
+    --text-muted: 200 15% 55%;
+    --glow-primary: 212 100% 50% / 0.25;
+
+    --sidebar-background: 0 0% 100% / 0.45;
+    --sidebar-foreground: 200 60% 10%;
+    --sidebar-primary: 212 100% 50%;
+    --sidebar-primary-foreground: 0 0% 100%;
+    --sidebar-accent: 197 30% 90%;
+    --sidebar-accent-foreground: 200 40% 25%;
+    --sidebar-border: 0 0% 100% / 0.6;
+    --sidebar-ring: 212 100% 50%;
+  }
+}
+
+@layer base {
+  * {
+    @apply border-border;
+  }
+
+  body {
+    @apply bg-background text-foreground font-sans antialiased;
+    font-family: 'Plus Jakarta Sans', 'Inter', sans-serif;
+  }
+}
+
+@layer utilities {
+  /* Glassmorphism */
+  .glass {
+    background: hsla(var(--glass-bg));
+    backdrop-filter: blur(24px);
+    -webkit-backdrop-filter: blur(24px);
+    border: 1px solid hsla(var(--glass-border));
+    box-shadow:
+      0 4px 24px -4px hsla(var(--glass-shadow)),
+      0 1px 2px hsla(200 60% 10% / 0.04);
+  }
+
+  .glass-strong {
+    background: hsla(0, 0%, 100%, 0.72);
+    backdrop-filter: blur(32px);
+    -webkit-backdrop-filter: blur(32px);
+    border: 1px solid hsla(var(--glass-border));
+    box-shadow:
+      0 8px 32px -8px hsla(var(--glass-shadow)),
+      0 1px 3px hsla(200 60% 10% / 0.06);
+  }
+
+  /* Gradient text */
+  .gradient-text {
+    @apply bg-clip-text text-transparent;
+    background-image: linear-gradient(135deg, hsl(var(--ocean-start)), hsl(var(--ocean-end)));
+  }
+
+  /* Primary gradient backgrounds */
+  .gradient-primary {
+    background: linear-gradient(135deg, hsl(var(--ocean-start)), hsl(var(--ocean-end)));
+  }
+
+  .gradient-bg {
+    background: linear-gradient(135deg, hsl(197 100% 95%) 0%, hsl(197 100% 93%) 40%, hsl(0 0% 100%) 100%);
+  }
+
+  /* Glow effects */
+  .glow-primary {
+    box-shadow: 0 0 24px hsla(var(--glow-primary)), 0 0 48px hsla(212 100% 50% / 0.12);
+  }
+
+  .glow-sm {
+    box-shadow: 0 0 12px hsla(var(--glow-primary));
+  }
+
+  /* Text colors using tokens */
+  .text-ocean-primary { color: hsl(var(--text-primary)); }
+  .text-ocean-secondary { color: hsl(var(--text-secondary)); }
+  .text-ocean-muted { color: hsl(var(--text-muted)); }
+}
+
+/* Floating animation */
+@keyframes float {
+  0%, 100% { transform: translateY(0px); }
+  50% { transform: translateY(-12px); }
+}
+
+@keyframes float-slow {
+  0%, 100% { transform: translateY(0px); }
+  50% { transform: translateY(-8px); }
+}
+
+@keyframes glow-pulse {
+  0%, 100% { box-shadow: 0 0 20px hsla(212, 100%, 50%, 0.2), 0 0 40px hsla(212, 100%, 50%, 0.08); }
+  50% { box-shadow: 0 0 28px hsla(212, 100%, 50%, 0.35), 0 0 56px hsla(212, 100%, 50%, 0.15); }
+}
+
+@keyframes ocean-shift {
+  0% { background-position: 0% 50%; }
+  50% { background-position: 100% 50%; }
+  100% { background-position: 0% 50%; }
+}
+
+@keyframes fade-in-up {
+  0% { opacity: 0; transform: translateY(20px); }
+  100% { opacity: 1; transform: translateY(0); }
+}
+
+@keyframes scale-in {
+  0% { opacity: 0; transform: scale(0.95); }
+  100% { opacity: 1; transform: scale(1); }
+}
+
+.animate-float { animation: float 4s ease-in-out infinite; }
+.animate-float-slow { animation: float-slow 5s ease-in-out infinite; }
+.animate-float-delay-1 { animation: float 4s ease-in-out 0.5s infinite; }
+.animate-float-delay-2 { animation: float 4s ease-in-out 1s infinite; }
+.animate-float-delay-3 { animation: float 4s ease-in-out 1.5s infinite; }
+.animate-glow-pulse { animation: glow-pulse 3s ease-in-out infinite; }
+.animate-ocean-shift {
+  background-size: 200% 200%;
+  animation: ocean-shift 8s ease infinite;
+}
+.animate-fade-in-up { animation: fade-in-up 0.6s ease-out forwards; }
+.animate-scale-in { animation: scale-in 0.4s ease-out forwards; }

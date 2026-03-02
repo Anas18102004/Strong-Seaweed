@@ -1,0 +1,79 @@
+{
+  "version": "v2.0",
+  "dataset_name": "seaweed_suitability_unified",
+  "task_targets": [
+    "cultivation_presence",
+    "species_suitability"
+  ],
+  "required_columns": [
+    "sample_id",
+    "species",
+    "label",
+    "label_type",
+    "label_weight",
+    "lon",
+    "lat",
+    "event_date",
+    "country",
+    "source_type",
+    "source_name",
+    "source_reference",
+    "citation_url",
+    "qa_status"
+  ],
+  "label_definition": {
+    "label": {
+      "1": "positive",
+      "0": "negative"
+    },
+    "label_type_values": [
+      "hard_positive",
+      "soft_positive",
+      "negative"
+    ],
+    "recommended_weights": {
+      "hard_positive": 1.0,
+      "soft_positive": 0.7,
+      "negative": 1.0
+    }
+  },
+  "hard_quality_rules": {
+    "coordinate_precision_km_max": 1.0,
+    "deduplicate_on": [
+      "species",
+      "lon",
+      "lat",
+      "label"
+    ],
+    "allow_conflicting_labels_same_cell": false
+  },
+  "feature_groups": {
+    "thermal": [
+      "sst_mean",
+      "sst_min",
+      "sst_max",
+      "sst_std",
+      "sst_seasonal_amp"
+    ],
+    "productivity": [
+      "chl_mean",
+      "chl_std",
+      "chl_seasonal_amp"
+    ],
+    "water_quality": [
+      "turbidity_mean",
+      "suspended_matter_mean"
+    ],
+    "physical": [
+      "depth",
+      "slope",
+      "distance_to_shore",
+      "wave_energy_mean"
+    ],
+    "advanced_optional": [
+      "current_velocity_mean",
+      "salinity_mean",
+      "tidal_amplitude"
+    ]
+  }
+}

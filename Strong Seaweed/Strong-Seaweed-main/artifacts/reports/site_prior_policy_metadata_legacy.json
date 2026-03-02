@@ -1,0 +1,16 @@
+{
+  "cluster_count": 6,
+  "core_zone_anchor_count": 2,
+  "invasion_sensitive_point_count": 1,
+  "confidence_weights": {
+    "high": 1.0,
+    "moderate": 0.7
+  },
+  "core_zone_exclusion_buffer_km": 5.0,
+  "invasion_risk_buffer_km": 10.0,
+  "notes": [
+    "Policy flags are separated from environmental suitability features.",
+    "GO 2005 is encoded as review-required flag, not hard exclusion in this script.",
+    "Only user-provided coordinates were used for core/invasion anchors."
+  ]
+}

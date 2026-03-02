@@ -1,0 +1,9 @@
+{
+  "input_points": 23,
+  "within_1km": 0,
+  "outside_1km": 23,
+  "snap_dist_median": 5190.119497731049,
+  "snap_dist_min": 1019.0476929872882,
+  "snap_dist_max": 9785.808847047083,
+  "output_csv": "c:\\Users\\Anas\\Desktop\\Strong Seaweed\\data\\tabular\\v1_1_points_with_features_v1_0grid.csv"
+}

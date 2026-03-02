@@ -1,0 +1,49 @@
+{
+  "release": "v1.2_from_pack_auto",
+  "gate_result": "FAIL",
+  "checks": [
+    {
+      "name": "train_spatial_auc>=0.70",
+      "pass": true
+    },
+    {
+      "name": "train_oof_ap_cal>=0.45",
+      "pass": true
+    },
+    {
+      "name": "hard50_auc>=0.85",
+      "pass": false
+    },
+    {
+      "name": "hard50_precision>=0.80",
+      "pass": false
+    },
+    {
+      "name": "hard50_recall>=0.40",
+      "pass": true
+    },
+    {
+      "name": "independent_n>=40",
+      "pass": false
+    },
+    {
+      "name": "independent_pos>=20",
+      "pass": false
+    },
+    {
+      "name": "independent_neg>=20",
+      "pass": false
+    }
+  ],
+  "metrics": {
+    "train_spatial_auc": 0.7725214735412104,
+    "train_oof_ap_calibrated": 0.598132989543609,
+    "hard50_auc": 0.8192,
+    "hard50_precision": 0.7727272727272727,
+    "hard50_recall": 0.68,
+    "independent_n": 12,
+    "independent_pos": 1,
+    "independent_neg": 11,
+    "independent_auc": 0.22727272727272724
+  }
+}

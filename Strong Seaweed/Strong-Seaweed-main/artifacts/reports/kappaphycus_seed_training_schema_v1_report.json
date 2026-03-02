@@ -1,0 +1,19 @@
+{
+  "input_csv": "D:\\Strong Seaweed\\Strong-Seaweed-main\\data\\tabular\\kappaphycus_complex_global_seed_dataset_v1.csv",
+  "output_schema_csv": "D:\\Strong Seaweed\\Strong-Seaweed-main\\data\\tabular\\kappaphycus_seed_training_schema_v1.csv",
+  "output_split_csv": "D:\\Strong Seaweed\\Strong-Seaweed-main\\data\\tabular\\kappaphycus_seed_training_schema_v1_splits.csv",
+  "n_rows": 437,
+  "n_pos": 82,
+  "n_neg": 355,
+  "split_counts": {
+    "test_label0": 38,
+    "test_label1": 8,
+    "train_label0": 272,
+    "train_label1": 56,
+    "val_label0": 45,
+    "val_label1": 18
+  },
+  "in_region_current_model_rows": 9,
+  "in_region_current_model_pos": 1,
+  "in_region_current_model_neg": 8
+}

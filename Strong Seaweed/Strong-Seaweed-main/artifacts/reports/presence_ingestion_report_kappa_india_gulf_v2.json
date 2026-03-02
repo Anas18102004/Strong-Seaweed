@@ -1,0 +1,12 @@
+{
+  "mode": "existing_snapped_presence",
+  "existing_presence_csv": "D:\\Strong Seaweed\\Strong-Seaweed-main\\data\\tabular\\kappaphycus_presence_snapped_clean_internal_broad.csv",
+  "selected_rows": 162,
+  "gulf_bbox_with_buffer": {
+    "lon_min": 77.87517148040331,
+    "lon_max": 79.9999368259128,
+    "lat_min": 8.203119733194146,
+    "lat_max": 9.995508423579404
+  },
+  "output_csv": "D:\\Strong Seaweed\\Strong-Seaweed-main\\data\\tabular\\kappaphycus_presence_snapped_clean_kappa_india_gulf_v2.csv"
+}

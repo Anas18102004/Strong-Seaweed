@@ -1,0 +1,24 @@
+{
+  "input_csv": "data\\tabular\\v2_unified_dataset_template.csv",
+  "output_csv": "D:\\Strong Seaweed\\Strong-Seaweed-main\\data\\tabular\\v2_unified_dataset_with_splits.csv",
+  "mode": "country_holdout",
+  "n_rows": 3,
+  "grid_deg": 1.0,
+  "split_counts": [
+    {
+      "species": "Kappaphycus alvarezii",
+      "split": "train",
+      "label": 0,
+      "n": 1
+    },
+    {
+      "species": "Kappaphycus alvarezii",
+      "split": "train",
+      "label": 1,
+      "n": 2
+    }
+  ],
+  "country_counts": {
+    "India": 3
+  }
+}

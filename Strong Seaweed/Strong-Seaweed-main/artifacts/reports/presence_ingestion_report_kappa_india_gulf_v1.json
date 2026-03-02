@@ -1,0 +1,32 @@
+{
+  "inputs": [
+    {
+      "file": "kappaphycus_gulf_presence_plan_v1.csv",
+      "rows": 1
+    }
+  ],
+  "raw_rows": 1,
+  "after_quality_filters": 1,
+  "snapped_rows": 1,
+  "max_snap_m": 30000.0,
+  "min_year": 2000,
+  "bounds": {
+    "lon_min": 78.07517148040331,
+    "lon_max": 79.7999368259128,
+    "lat_min": 8.403119733194146,
+    "lat_max": 9.795508423579404
+  },
+  "median_snap_m_before_threshold": 28682.942239733235,
+  "output_csv": "data\\tabular\\kappaphycus_presence_snapped_clean_kappa_india_gulf_v1.csv",
+  "master_csv": "data\\tabular\\master_feature_matrix_kappa_india_gulf_v1.csv",
+  "training_csv": "data\\tabular\\training_dataset_kappa_india_gulf_v1.csv",
+  "require_verified": false,
+  "strict_acceptance": false,
+  "strict_min_confidence": 0.85,
+  "strict_min_verified_dates": 2,
+  "strict_depth_max_m": 8.0,
+  "strict_distance_to_shore_max_m": 2000.0,
+  "sources_after_filter": {
+    "kappaphycus_gulf_presence_plan_v1.csv": 1
+  }
+}

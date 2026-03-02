@@ -1,0 +1,8 @@
+{
+  "input_csv": "d:\\Strong Seaweed\\Strong-Seaweed-main\\data\\tabular\\cmfri_johnson_2020_dms_template.csv",
+  "output_csv": "d:\\Strong Seaweed\\Strong-Seaweed-main\\data\\tabular\\cmfri_johnson_2020_converted_for_ingestion.csv",
+  "total_input_rows": 2,
+  "converted_rows": 2,
+  "failed_rows": 0,
+  "errors": []
+}

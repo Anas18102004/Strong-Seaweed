@@ -1,0 +1,22 @@
+{
+  "queries": [
+    "Kappaphycus alvarezii",
+    "Kappaphycus cottonii",
+    "Kappaphycus striatus",
+    "Kappaphycus"
+  ],
+  "global_rows": 128,
+  "indian_ocean_rows": 5,
+  "year_min": 1958,
+  "year_max": 2005,
+  "files": {
+    "global_csv": "d:\\Strong Seaweed\\Strong-Seaweed-main\\data\\tabular\\kappaphycus_complex_obis_global_positives.csv",
+    "indian_ocean_csv": "d:\\Strong Seaweed\\Strong-Seaweed-main\\data\\tabular\\kappaphycus_complex_obis_indian_ocean_positives.csv"
+  },
+  "bbox_indian_ocean": {
+    "min_lon": 65.0,
+    "max_lon": 100.0,
+    "min_lat": -5.0,
+    "max_lat": 25.0
+  }
+}
