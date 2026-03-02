@@ -85,14 +85,14 @@ jobs:
             if [[ "${SERVICE}" == "blueweave-backend" || "${SERVICE}" == "all" ]]; then
               echo "Setting up Node.js backend..."
               cd "Strong Seaweed/blue-weave-aqua-main/server"
-              npm ci --production
+              npm ci --omit=dev || npm install --omit=dev --legacy-peer-deps
               cd ../../..
             fi
 
             if [[ "${SERVICE}" == "blueweave-frontend" || "${SERVICE}" == "all" ]]; then
               echo "Building frontend..."
               cd "Strong Seaweed/blue-weave-aqua-main"
-              npm ci
+              npm ci || npm install --legacy-peer-deps
               npm run build
               test -f dist/index.html || { echo "Frontend build failed: dist/index.html missing"; exit 1; }
               cd ../..
