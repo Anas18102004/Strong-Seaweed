@@ -101,6 +101,75 @@ const agentCatalog: AgentCard[] = [
   },
 ];
 
+function renderInline(text: string) {
+  const parts = text.split(/(\*\*[^*]+\*\*)/g);
+  return parts.map((part, idx) => {
+    if (part.startsWith("**") && part.endsWith("**") && part.length > 4) {
+      return (
+        <strong key={idx} className="font-semibold text-slate-900">
+          {part.slice(2, -2)}
+        </strong>
+      );
+    }
+    return <span key={idx}>{part}</span>;
+  });
+}
+
+function renderAgentText(raw: string) {
+  const lines = String(raw || "")
+    .replace(/\r\n/g, "\n")
+    .split("\n")
+    .map((line) => line.trim())
+    .filter((line, idx, arr) => !(line === "" && arr[idx - 1] === ""));
+
+  return (
+    <div className="space-y-2">
+      {lines.map((line, idx) => {
+        // Strip markdown heading markers but keep emphasis.
+        if (/^#{1,3}\s+/.test(line)) {
+          const clean = line.replace(/^#{1,3}\s+/, "");
+          return (
+            <p key={idx} className="font-semibold text-slate-900">
+              {renderInline(clean)}
+            </p>
+          );
+        }
+
+        // Turn markdown bullets into styled bullets.
+        if (/^[-*•]\s+/.test(line)) {
+          const clean = line.replace(/^[-*•]\s+/, "");
+          return (
+            <div key={idx} className="flex items-start gap-2 text-slate-800">
+              <span className="mt-1 text-cyan-700">•</span>
+              <p className="leading-relaxed">{renderInline(clean)}</p>
+            </div>
+          );
+        }
+
+        // Flatten markdown table rows to readable text.
+        if (line.includes("|")) {
+          const clean = line
+            .replace(/\|/g, " ")
+            .replace(/\s{2,}/g, " ")
+            .trim();
+          if (!clean || /^[-: ]+$/.test(clean)) return null;
+          return (
+            <p key={idx} className="leading-relaxed text-slate-800">
+              {renderInline(clean)}
+            </p>
+          );
+        }
+
+        return (
+          <p key={idx} className="leading-relaxed text-slate-800">
+            {renderInline(line)}
+          </p>
+        );
+      })}
+    </div>
+  );
+}
+
 export default function AIAgents() {
   const [selectedAgent, setSelectedAgent] = useState<AgentId>("copilot");
   const [chatInput, setChatInput] = useState("");
@@ -257,7 +326,7 @@ export default function AIAgents() {
                           : "bg-white/75 text-slate-800 border-white/75"
                       }`}
                     >
-                      {m.text}
+                      {m.role === "agent" ? renderAgentText(m.text) : m.text}
                     </div>
                   </div>
                 ))}
