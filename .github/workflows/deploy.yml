@@ -71,7 +71,9 @@ jobs:
           AWS_HOST: ${{ secrets.AWS_HOST }}
           AWS_USER: ${{ secrets.AWS_USER }}
         run: |
+          echo "Uploading frontend artifact to ${AWS_USER}@${AWS_HOST}:/tmp/blueweave-dist.tgz"
           scp -i ~/.ssh/deploy_key "$RUNNER_TEMP/blueweave-dist.tgz" "${AWS_USER}@${AWS_HOST}:/tmp/blueweave-dist.tgz"
+          ssh -i ~/.ssh/deploy_key "${AWS_USER}@${AWS_HOST}" "ls -lh /tmp/blueweave-dist.tgz"
 
       - name: Deploy code to AWS
         env:
@@ -119,9 +121,14 @@ jobs:
             if [[ "${SERVICE}" == "blueweave-frontend" || "${SERVICE}" == "all" ]]; then
               echo "Deploying prebuilt frontend artifact..."
               cd "Strong Seaweed/blue-weave-aqua-main"
+              if [[ ! -f /tmp/blueweave-dist.tgz ]]; then
+                echo "Missing /tmp/blueweave-dist.tgz on server"
+                exit 1
+              fi
               rm -rf dist
               tar -xzf /tmp/blueweave-dist.tgz -C .
               test -f dist/index.html || { echo "Frontend artifact missing dist/index.html"; exit 1; }
+              ls -lah dist | sed -n '1,40p'
               cd ../..
               echo "Fixing frontend file permissions for nginx..."
               sudo chmod o+rx /home/ubuntu || true
