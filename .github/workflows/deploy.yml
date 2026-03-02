@@ -94,6 +94,7 @@ jobs:
               cd "Strong Seaweed/blue-weave-aqua-main"
               npm ci
               npm run build
+              test -f dist/index.html || { echo "Frontend build failed: dist/index.html missing"; exit 1; }
               cd ../..
               echo "Fixing frontend file permissions for nginx..."
               sudo chmod o+rx /home/ubuntu || true
