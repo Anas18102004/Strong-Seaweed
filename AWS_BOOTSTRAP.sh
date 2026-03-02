@@ -24,9 +24,12 @@ echo -e "${BLUE}[2/8] Installing Node.js 20...${NC}"
 curl -fsSL https://deb.nodesource.com/setup_20.x | sudo -E bash -
 sudo apt install -y nodejs
 
-# Step 3: Install Python 3.11
+# Step 3: Install Python 3.11 (via deadsnakes PPA for Ubuntu 24.04)
 echo -e "${BLUE}[3/8] Installing Python 3.11...${NC}"
-sudo apt install -y python3.11 python3.11-venv python3.11-dev
+sudo apt install -y software-properties-common
+sudo add-apt-repository -y ppa:deadsnakes/ppa
+sudo apt update
+sudo apt install -y python3.11 python3.11-venv python3.11-dev python3-pip
 sudo update-alternatives --install /usr/bin/python3 python3 /usr/bin/python3.11 1
 
 # Step 4: Install MongoDB
