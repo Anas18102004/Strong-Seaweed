@@ -23,11 +23,18 @@ on:
         type: boolean
         default: true
 
+permissions:
+  contents: read
+
+concurrency:
+  group: cd-deploy-beta
+  cancel-in-progress: false
+
 jobs:
   deploy:
     name: Deploy to Production
     runs-on: ubuntu-latest
-    if: ${{ github.event_name == 'workflow_dispatch' || (github.event_name == 'workflow_run' && github.event.workflow_run.conclusion == 'success') }}
+    if: ${{ github.event_name == 'workflow_dispatch' || (github.event_name == 'workflow_run' && github.event.workflow_run.conclusion == 'success' && github.event.workflow_run.event == 'push') }}
 
     steps:
       - uses: actions/checkout@v4
@@ -125,7 +132,19 @@ jobs:
         env:
           AWS_HOST: ${{ secrets.AWS_HOST }}
           AWS_USER: ${{ secrets.AWS_USER }}
+          SERVICE: ${{ github.event.inputs.service || 'all' }}
         run: |
           echo "Running health check..."
           sleep 5
-          ssh -i ~/.ssh/deploy_key "${AWS_USER}@${AWS_HOST}" "curl -f http://localhost:8000/health || echo 'Health check failed - service may still be starting'"
+          ssh -i ~/.ssh/deploy_key "${AWS_USER}@${AWS_HOST}" "SERVICE='${SERVICE}' bash -s" << 'EOF'
+            set -e
+            if [[ "${SERVICE}" == "ml-apis" || "${SERVICE}" == "all" ]]; then
+              curl -fsS http://127.0.0.1:8000/health
+            fi
+            if [[ "${SERVICE}" == "python-agents" || "${SERVICE}" == "all" ]]; then
+              curl -fsS http://127.0.0.1:8101/health || true
+            fi
+            if [[ "${SERVICE}" == "blueweave-backend" || "${SERVICE}" == "all" ]]; then
+              curl -fsS http://127.0.0.1:4000/health || true
+            fi
+          EOF

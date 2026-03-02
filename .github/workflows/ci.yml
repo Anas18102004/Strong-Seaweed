@@ -6,10 +6,18 @@ on:
   pull_request:
     branches: [beta, main]
 
+permissions:
+  contents: read
+
+concurrency:
+  group: ci-${{ github.ref }}
+  cancel-in-progress: true
+
 jobs:
   blueweave-frontend:
     name: Blue Weave Frontend
     runs-on: ubuntu-latest
+    timeout-minutes: 20
     defaults:
       run:
         working-directory: "Strong Seaweed/blue-weave-aqua-main"
@@ -21,16 +29,17 @@ jobs:
         uses: actions/setup-node@v4
         with:
           node-version: '20'
+          cache: 'npm'
+          cache-dependency-path: "Strong Seaweed/blue-weave-aqua-main/package-lock.json"
       
       - name: Install dependencies
-        run: npm install --legacy-peer-deps
+        run: npm ci --legacy-peer-deps
       
       - name: Run linter
         run: npm run lint
       
       - name: Run tests
         run: npm test
-        continue-on-error: true
       
       - name: Build frontend
         run: npm run build
@@ -38,6 +47,7 @@ jobs:
   blueweave-backend:
     name: Blue Weave Node.js Backend
     runs-on: ubuntu-latest
+    timeout-minutes: 10
     defaults:
       run:
         working-directory: "Strong Seaweed/blue-weave-aqua-main/server"
@@ -49,9 +59,11 @@ jobs:
         uses: actions/setup-node@v4
         with:
           node-version: '20'
+          cache: 'npm'
+          cache-dependency-path: "Strong Seaweed/blue-weave-aqua-main/server/package-lock.json"
       
       - name: Install dependencies
-        run: npm install --legacy-peer-deps
+        run: npm ci --legacy-peer-deps
       
       - name: Check syntax
         run: node --check src/index.js
@@ -59,6 +71,7 @@ jobs:
   ml-backend:
     name: ML Backend (XGBoost APIs)
     runs-on: ubuntu-latest
+    timeout-minutes: 20
     defaults:
       run:
         working-directory: "Strong Seaweed/Strong-Seaweed-main"
@@ -84,7 +97,6 @@ jobs:
       
       - name: Lint with ruff
         run: ruff check --output-format=github .
-        continue-on-error: true
       
       - name: Validate project_paths module
         run: python -c "import project_paths; print('✓ project_paths imports OK')"
@@ -92,6 +104,7 @@ jobs:
   python-agents:
     name: Python Agent Gateway
     runs-on: ubuntu-latest
+    timeout-minutes: 10
     defaults:
       run:
         working-directory: "Strong Seaweed/blue-weave-aqua-main/server/agents_python"
