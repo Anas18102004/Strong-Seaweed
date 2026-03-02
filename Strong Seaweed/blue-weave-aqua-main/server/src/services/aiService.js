@@ -45,6 +45,7 @@ const aiCache = new Map();
 const DEFAULT_VOICE_MIME = "audio/mpeg";
 const TTS_PROVIDER_BROWSER = "browser";
 const TTS_PROVIDER_ELEVENLABS = "elevenlabs";
+const MAX_UI_ANSWER_CHARS = 1200;
 
 function normalize(text = "") {
   return String(text || "").trim().toLowerCase();
@@ -97,6 +98,41 @@ function routeQuestion(question) {
 function unavailableAnswer(agentId = "copilot") {
   const topic = String(agentId || "copilot");
   return `Live AI model is unavailable right now for ${topic}. Please check provider status/config and try again.`;
+}
+
+function normalizeUiAnswer(input) {
+  let text = String(input || "").replace(/\r\n/g, "\n");
+
+  // Remove markdown heading markers.
+  text = text.replace(/^\s{0,3}#{1,6}\s+/gm, "");
+
+  // Convert markdown bullets to normal bullets.
+  text = text.replace(/^\s*[*•]\s+/gm, "- ");
+
+  // Flatten markdown table separator rows.
+  text = text.replace(/^\s*\|?[-:| ]+\|?\s*$/gm, "");
+
+  // Flatten table rows into readable inline text.
+  text = text.replace(/^\s*\|(.+)\|\s*$/gm, (_m, row) => {
+    return row
+      .split("|")
+      .map((cell) => cell.trim())
+      .filter(Boolean)
+      .join(" - ");
+  });
+
+  // Keep emphasis markers minimal for UI renderer but remove single-star noise.
+  text = text.replace(/\*(?!\*)(.*?)\*(?!\*)/g, "$1");
+
+  // Collapse excess blank lines/spaces.
+  text = text.replace(/[ \t]+\n/g, "\n").replace(/\n{3,}/g, "\n\n").trim();
+
+  // Keep responses medium by default.
+  if (text.length > MAX_UI_ANSWER_CHARS) {
+    text = `${text.slice(0, MAX_UI_ANSWER_CHARS).trim()}\n\n- Ask \"expand\" if you want deeper detail.`;
+  }
+
+  return text;
 }
 
 function providerOrder(agentId) {
@@ -271,7 +307,7 @@ export async function runAgent(agent, question, context = {}) {
     if (tried.ok) {
       const out = {
         agent: id,
-        answer: String(tried.out?.answer || ""),
+        answer: normalizeUiAnswer(tried.out?.answer || ""),
         stack: tried.out?.stack || stacks,
         provider,
         status: tried.out?.status || "live",
@@ -285,7 +321,7 @@ export async function runAgent(agent, question, context = {}) {
 
   const out = {
     agent: id,
-    answer: unavailableAnswer(id),
+    answer: normalizeUiAnswer(unavailableAnswer(id)),
     stack: stacks,
     provider: "fallback",
     status: "fallback",
@@ -305,7 +341,7 @@ export async function runChat(question, context = {}) {
       const tried = await tryProvider(provider, "/chat", { question, context, routedAgent });
       if (tried.ok) {
         const out = {
-          answer: String(tried.out?.answer || CANNED.copilot),
+          answer: normalizeUiAnswer(tried.out?.answer || CANNED.copilot),
           model: String(tried.out?.model || `provider-${provider}`),
           stack: tried.out?.stack || (STACK_MAP[routedAgent] || STACK_MAP.copilot),
           routedAgent,
@@ -323,7 +359,7 @@ export async function runChat(question, context = {}) {
   const fallbackModelName = routed.provider === "fallback" ? "blueweave-assistant" : `hybrid-${routed.provider}`;
   const answer = routed.provider === "fallback" ? unavailableAnswer(routedAgent) : routed.answer;
   const out = {
-    answer,
+    answer: normalizeUiAnswer(answer),
     model: fallbackModelName,
     stack: routed.stack,
     routedAgent,
@@ -352,8 +388,8 @@ export async function runVoice(question, context = {}) {
     });
     if (tried.ok) {
       const out = {
-        answer: String(tried.out?.answer || CANNED.copilot),
-        ttsText: String(tried.out?.ttsText || tried.out?.answer || CANNED.copilot),
+        answer: normalizeUiAnswer(tried.out?.answer || CANNED.copilot),
+        ttsText: normalizeUiAnswer(tried.out?.ttsText || tried.out?.answer || CANNED.copilot),
         model: String(tried.out?.model || `voice-${provider}`),
         stack: tried.out?.stack || (STACK_MAP[routedAgent] || STACK_MAP.copilot),
         routedAgent,
@@ -383,7 +419,7 @@ export async function runVoice(question, context = {}) {
   const out = await runChat(question, context);
   const fallback = {
     ...out,
-    ttsText: out.answer,
+    ttsText: normalizeUiAnswer(out.answer),
     voiceProfile,
   };
   try {

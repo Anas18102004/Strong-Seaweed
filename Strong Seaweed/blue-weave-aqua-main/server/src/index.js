@@ -12,12 +12,17 @@ function isDevLocalOrigin(origin) {
   return /^https?:\/\/(localhost|127\.0\.0\.1|192\.168\.\d{1,3}\.\d{1,3}|10\.\d{1,3}\.\d{1,3}\.\d{1,3}|172\.(1[6-9]|2\d|3[0-1])\.\d{1,3}\.\d{1,3})(:\d+)?$/i.test(origin);
 }
 
+function isIpv4Origin(origin) {
+  return /^https?:\/\/(\d{1,3}\.){3}\d{1,3}(:\d+)?$/i.test(origin);
+}
+
 app.use(
   cors({
     origin(origin, callback) {
       if (!origin) return callback(null, true);
       if (config.corsOrigins.includes(origin)) return callback(null, true);
-      if (process.env.NODE_ENV !== "production" && isDevLocalOrigin(origin)) return callback(null, true);
+      if (isDevLocalOrigin(origin)) return callback(null, true);
+      if (isIpv4Origin(origin)) return callback(null, true);
       return callback(new Error("CORS origin not allowed"));
     },
     credentials: false,

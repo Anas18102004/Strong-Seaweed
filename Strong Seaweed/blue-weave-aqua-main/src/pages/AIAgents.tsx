@@ -136,11 +136,11 @@ function renderAgentText(raw: string) {
         }
 
         // Turn markdown bullets into styled bullets.
-        if (/^[-*•]\s+/.test(line)) {
-          const clean = line.replace(/^[-*•]\s+/, "");
+        if (/^[-*]\s+/.test(line) || /^\u2022\s+/.test(line)) {
+          const clean = line.replace(/^[-*]\s+/, "").replace(/^\u2022\s+/, "");
           return (
             <div key={idx} className="flex items-start gap-2 text-slate-800">
-              <span className="mt-1 text-cyan-700">•</span>
+              <span className="mt-1 text-cyan-700">-</span>
               <p className="leading-relaxed">{renderInline(clean)}</p>
             </div>
           );
@@ -372,3 +372,4 @@ export default function AIAgents() {
     </DashboardLayout>
   );
 }
+
