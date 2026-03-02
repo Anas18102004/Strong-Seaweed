@@ -1,10 +1,12 @@
 name: Deploy to AWS
 
 on:
+  push:
+    branches: [beta]
   workflow_dispatch:
     inputs:
       service:
-        description: 'Which service to deploy'
+        description: "Which service to deploy"
         required: true
         type: choice
         options:
@@ -14,7 +16,7 @@ on:
           - python-agents
           - all
       restart:
-        description: 'Restart service after deployment'
+        description: "Restart service after deployment"
         required: true
         type: boolean
         default: true
@@ -23,35 +25,35 @@ jobs:
   deploy:
     name: Deploy to Production
     runs-on: ubuntu-latest
-    
+
     steps:
       - uses: actions/checkout@v4
-      
+
       - name: Setup SSH key
         run: |
           mkdir -p ~/.ssh
           echo "${{ secrets.AWS_SSH_KEY }}" > ~/.ssh/deploy_key
           chmod 600 ~/.ssh/deploy_key
-          ssh-keyscan -H ${{ secrets.AWS_HOST }} >> ~/.ssh/known_hosts
-      
+          ssh-keyscan -H "${{ secrets.AWS_HOST }}" >> ~/.ssh/known_hosts
+
       - name: Deploy code to AWS
         env:
           AWS_HOST: ${{ secrets.AWS_HOST }}
           AWS_USER: ${{ secrets.AWS_USER }}
           DEPLOY_PATH: ${{ secrets.DEPLOY_PATH }}
-          SERVICE: ${{ inputs.service }}
+          SERVICE: ${{ github.event.inputs.service || 'all' }}
         run: |
-          ssh -i ~/.ssh/deploy_key ${AWS_USER}@${AWS_HOST} << 'EOF'
-            cd ${DEPLOY_PATH}
-            
-            echo "📦 Pulling latest code from beta branch..."
+          ssh -i ~/.ssh/deploy_key "${AWS_USER}@${AWS_HOST}" "DEPLOY_PATH='${DEPLOY_PATH}' SERVICE='${SERVICE}' bash -s" << 'EOF'
+            set -euo pipefail
+            cd "${DEPLOY_PATH}"
+
+            echo "Pulling latest code from beta branch..."
             git fetch origin beta
             git checkout beta || git checkout -b beta origin/beta
             git reset --hard origin/beta
-            
-            # ML APIs
+
             if [[ "${SERVICE}" == "ml-apis" || "${SERVICE}" == "all" ]]; then
-              echo "🐍 Setting up ML Backend Python environment..."
+              echo "Setting up ML backend Python environment..."
               cd "Strong Seaweed/Strong-Seaweed-main"
               python3 -m venv .venv_model || true
               source .venv_model/bin/activate
@@ -59,10 +61,9 @@ jobs:
               pip install -r requirements-model-api.txt
               cd ../..
             fi
-            
-            # Python Agents
+
             if [[ "${SERVICE}" == "python-agents" || "${SERVICE}" == "all" ]]; then
-              echo "🤖 Setting up Python Agent Gateway..."
+              echo "Setting up Python agent gateway..."
               cd "Strong Seaweed/blue-weave-aqua-main/server/agents_python"
               python3 -m venv .venv || true
               source .venv/bin/activate
@@ -70,62 +71,58 @@ jobs:
               pip install -r requirements.txt
               cd ../../../..
             fi
-            
-            # Node.js Backend
+
             if [[ "${SERVICE}" == "blueweave-backend" || "${SERVICE}" == "all" ]]; then
-              echo "📦 Setting up Node.js backend..."
+              echo "Setting up Node.js backend..."
               cd "Strong Seaweed/blue-weave-aqua-main/server"
               npm ci --production
               cd ../../..
             fi
-            
-            # Frontend
+
             if [[ "${SERVICE}" == "blueweave-frontend" || "${SERVICE}" == "all" ]]; then
-              echo "🎨 Building frontend..."
+              echo "Building frontend..."
               cd "Strong Seaweed/blue-weave-aqua-main"
               npm ci
               npm run build
               cd ../..
             fi
-            
-            echo "✅ Deployment complete"
+
+            echo "Deployment complete."
           EOF
-      
+
       - name: Restart services
-        if: ${{ inputs.restart }}
+        if: ${{ github.event_name == 'push' || github.event.inputs.restart == 'true' }}
         env:
           AWS_HOST: ${{ secrets.AWS_HOST }}
           AWS_USER: ${{ secrets.AWS_USER }}
-          SERVICE: ${{ inputs.service }}
+          SERVICE: ${{ github.event.inputs.service || 'all' }}
         run: |
-          ssh -i ~/.ssh/deploy_key ${AWS_USER}@${AWS_HOST} << 'EOF'
-            echo "🔄 Restarting services..."
-            
+          ssh -i ~/.ssh/deploy_key "${AWS_USER}@${AWS_HOST}" "SERVICE='${SERVICE}' bash -s" << 'EOF'
+            echo "Restarting services..."
+
             if [[ "${SERVICE}" == "ml-apis" || "${SERVICE}" == "all" ]]; then
-              sudo systemctl restart ml-api || echo "⚠️  ml-api service not configured yet"
+              sudo systemctl restart ml-api || echo "ml-api service not configured yet"
             fi
-            
+
             if [[ "${SERVICE}" == "python-agents" || "${SERVICE}" == "all" ]]; then
-              sudo systemctl restart python-agents || echo "⚠️  python-agents service not configured yet"
+              sudo systemctl restart python-agents || echo "python-agents service not configured yet"
             fi
-            
+
             if [[ "${SERVICE}" == "blueweave-backend" || "${SERVICE}" == "all" ]]; then
-              sudo systemctl restart blueweave-backend || echo "⚠️  blueweave-backend service not configured yet"
+              sudo systemctl restart blueweave-backend || echo "blueweave-backend service not configured yet"
             fi
-            
+
             if [[ "${SERVICE}" == "blueweave-frontend" || "${SERVICE}" == "all" ]]; then
-              sudo systemctl reload nginx || echo "⚠️  nginx not configured yet"
+              sudo systemctl reload nginx || echo "nginx not configured yet"
             fi
           EOF
-      
+
       - name: Health check
-        if: ${{ inputs.restart }}
+        if: ${{ github.event_name == 'push' || github.event.inputs.restart == 'true' }}
         env:
           AWS_HOST: ${{ secrets.AWS_HOST }}
           AWS_USER: ${{ secrets.AWS_USER }}
         run: |
-          echo "🏥 Running health check..."
+          echo "Running health check..."
           sleep 5
-          ssh -i ~/.ssh/deploy_key ${AWS_USER}@${AWS_HOST} << 'EOF'
-            curl -f http://localhost:8000/health || echo "⚠️  Health check failed - service may still be starting"
-          EOF
+          ssh -i ~/.ssh/deploy_key "${AWS_USER}@${AWS_HOST}" "curl -f http://localhost:8000/health || echo 'Health check failed - service may still be starting'"
