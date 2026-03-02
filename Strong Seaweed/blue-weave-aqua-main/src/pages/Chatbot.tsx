@@ -54,6 +54,72 @@ const suggestedPrompts = [
   "Which new location is worth testing next?",
 ];
 
+function renderInline(text: string) {
+  const parts = text.split(/(\*\*[^*]+\*\*)/g);
+  return parts.map((part, idx) => {
+    if (part.startsWith("**") && part.endsWith("**") && part.length > 4) {
+      return (
+        <strong key={idx} className="font-semibold text-slate-900">
+          {part.slice(2, -2)}
+        </strong>
+      );
+    }
+    return <span key={idx}>{part}</span>;
+  });
+}
+
+function renderAssistantText(raw: string) {
+  const lines = String(raw || "")
+    .replace(/\r\n/g, "\n")
+    .split("\n")
+    .map((line) => line.trim())
+    .filter((line, idx, arr) => !(line === "" && arr[idx - 1] === ""));
+
+  return (
+    <div className="space-y-2">
+      {lines.map((line, idx) => {
+        if (/^#{1,3}\s+/.test(line)) {
+          const clean = line.replace(/^#{1,3}\s+/, "");
+          return (
+            <p key={idx} className="font-semibold text-slate-900">
+              {renderInline(clean)}
+            </p>
+          );
+        }
+
+        if (/^[-*]\s+/.test(line) || /^\u2022\s+/.test(line)) {
+          const clean = line.replace(/^[-*]\s+/, "").replace(/^\u2022\s+/, "");
+          return (
+            <div key={idx} className="flex items-start gap-2 text-slate-800">
+              <span className="mt-1 text-cyan-700">-</span>
+              <p className="leading-relaxed">{renderInline(clean)}</p>
+            </div>
+          );
+        }
+
+        if (line.includes("|")) {
+          const clean = line
+            .replace(/\|/g, " ")
+            .replace(/\s{2,}/g, " ")
+            .trim();
+          if (!clean || /^[-: ]+$/.test(clean)) return null;
+          return (
+            <p key={idx} className="leading-relaxed text-slate-800">
+              {renderInline(clean)}
+            </p>
+          );
+        }
+
+        return (
+          <p key={idx} className="leading-relaxed text-slate-800">
+            {renderInline(line)}
+          </p>
+        );
+      })}
+    </div>
+  );
+}
+
 export default function Chatbot() {
   const welcomeMessage: Message = {
     role: "assistant",
@@ -426,14 +492,14 @@ export default function Chatbot() {
 
   return (
     <DashboardLayout>
-      <div className="max-w-6xl mx-auto px-1 sm:px-0 h-[calc(100dvh-8.6rem)] sm:h-[calc(100dvh-7rem)] relative pb-2">
-        <div className="pointer-events-none absolute -top-10 -left-8 h-52 w-52 rounded-full bg-cyan-300/20 blur-3xl" />
-        <div className="pointer-events-none absolute top-20 right-0 h-64 w-64 rounded-full bg-blue-400/20 blur-3xl" />
+      <div className="max-w-7xl mx-auto px-1 sm:px-0 h-[calc(100dvh-8.6rem)] sm:h-[calc(100dvh-7rem)] relative pb-2">
+        <div className="pointer-events-none absolute -top-12 -left-10 h-60 w-60 rounded-full bg-cyan-300/25 blur-3xl" />
+        <div className="pointer-events-none absolute top-24 right-[-2rem] h-72 w-72 rounded-full bg-blue-400/25 blur-3xl" />
 
         <motion.div
           initial={{ opacity: 0, y: 10 }}
           animate={{ opacity: 1, y: 0 }}
-          className="mb-3 sm:mb-4 rounded-[26px] sm:rounded-[28px] border border-white/50 bg-gradient-to-br from-cyan-100/60 via-white/55 to-blue-100/55 p-4 sm:p-5 backdrop-blur-2xl shadow-[0_18px_50px_-25px_rgba(13,72,110,0.45)]"
+          className="mb-3 sm:mb-4 rounded-[28px] sm:rounded-[30px] border border-white/55 bg-gradient-to-br from-cyan-100/75 via-white/65 to-blue-100/65 p-4 sm:p-6 backdrop-blur-2xl shadow-[0_22px_56px_-28px_rgba(13,72,110,0.52)]"
         >
           <div className="flex flex-wrap items-center justify-between gap-2">
             <div>
@@ -441,8 +507,8 @@ export default function Chatbot() {
                 <Sparkles className="w-3.5 h-3.5" />
                 BlueWeave Chat
               </p>
-              <h1 className="text-xl sm:text-2xl font-semibold text-slate-900 mb-1">Ask AI Helper</h1>
-              <p className="text-slate-600 text-sm">Text chat + real-time voice assistant in one place.</p>
+              <h1 className="text-xl sm:text-3xl font-semibold text-slate-900 mb-1">Conversation Studio</h1>
+              <p className="text-slate-600 text-sm sm:text-base">Unified chat workspace with voice mode, history, and live assistant streaming.</p>
             </div>
             <div className="flex items-center gap-2">
               <Button
@@ -600,9 +666,9 @@ export default function Chatbot() {
         ) : null}
         {showSidebar && <div className="fixed inset-0 bg-slate-900/25 z-30 md:hidden" onClick={() => setShowSidebar(false)} />}
 
-        <div className="grid md:grid-cols-[295px_minmax(0,1fr)] gap-3 sm:gap-4 h-[calc(100%-5.2rem)] sm:h-[calc(100%-5.6rem)]">
+        <div className="grid md:grid-cols-[320px_minmax(0,1fr)] gap-3 sm:gap-4 h-[calc(100%-5.2rem)] sm:h-[calc(100%-5.6rem)]">
           <aside
-            className={`${showSidebar ? "block" : "hidden"} md:block fixed md:static inset-y-0 left-0 z-40 md:z-auto w-[86vw] max-w-[320px] md:w-auto rounded-r-[24px] md:rounded-[26px] border border-white/55 bg-white/78 md:bg-white/45 backdrop-blur-xl shadow-[0_14px_35px_-24px_rgba(15,74,109,0.5)] p-3 sm:p-4 h-full overflow-hidden`}
+            className={`${showSidebar ? "block" : "hidden"} md:block fixed md:static inset-y-0 left-0 z-40 md:z-auto w-[88vw] max-w-[336px] md:w-auto rounded-r-[24px] md:rounded-[28px] border border-white/55 bg-white/82 md:bg-white/55 backdrop-blur-xl shadow-[0_20px_42px_-24px_rgba(15,74,109,0.55)] p-3 sm:p-4 h-full overflow-hidden`}
           >
             <div className="flex items-center justify-between gap-2 mb-3">
               <div className="flex items-center gap-2">
@@ -624,8 +690,8 @@ export default function Chatbot() {
                   key={s.id}
                   className={`w-full rounded-2xl p-2 border transition ${
                     sessionId === s.id
-                      ? "gradient-primary text-primary-foreground border-cyan-300/30 shadow-[0_12px_24px_-16px_rgba(2,132,199,0.85)]"
-                      : "border-white/70 bg-white/70 hover:bg-white/85"
+                      ? "gradient-primary text-primary-foreground border-cyan-300/30 shadow-[0_12px_24px_-16px_rgba(2,132,199,0.9)]"
+                      : "border-white/75 bg-white/78 hover:bg-white/90"
                   }`}
                 >
                   <button onClick={() => openSession(s.id)} className="w-full text-left px-1 py-1">
@@ -654,7 +720,7 @@ export default function Chatbot() {
           </aside>
 
           <div className="min-h-0 flex flex-col">
-            <div className="flex-1 overflow-y-auto space-y-4 mb-3 sm:mb-4 pr-1 rounded-[24px] sm:rounded-[26px] border border-white/55 bg-white/45 backdrop-blur-xl shadow-[0_14px_35px_-24px_rgba(15,74,109,0.5)] p-3 sm:p-4">
+            <div className="flex-1 overflow-y-auto space-y-4 mb-3 sm:mb-4 pr-1 rounded-[26px] sm:rounded-[30px] border border-white/55 bg-white/55 backdrop-blur-xl shadow-[0_20px_42px_-24px_rgba(15,74,109,0.55)] p-3 sm:p-5">
               {messages.map((m, i) => (
                 <motion.div key={i} initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }} className={`flex ${m.role === "user" ? "justify-end" : "justify-start"}`}>
                   <div className={`flex items-start gap-2.5 max-w-[92%] sm:max-w-[85%] ${m.role === "user" ? "flex-row-reverse" : ""}`}>
@@ -665,10 +731,10 @@ export default function Chatbot() {
                     )}
                     <div className={`whitespace-pre-wrap rounded-2xl px-4 py-3 text-sm leading-relaxed border ${
                       m.role === "user"
-                        ? "gradient-primary text-primary-foreground border-cyan-300/30"
-                        : "bg-white/78 text-slate-800 border-white/70"
+                        ? "gradient-primary text-primary-foreground border-cyan-300/30 shadow-[0_10px_24px_-16px_rgba(2,132,199,0.9)]"
+                        : "bg-white/90 text-slate-800 border-white/80"
                     }`}>
-                      {m.content}
+                      {m.role === "assistant" ? renderAssistantText(m.content) : m.content}
                     </div>
                   </div>
                 </motion.div>
@@ -679,8 +745,8 @@ export default function Chatbot() {
                     <div className="w-8 h-8 rounded-xl gradient-primary flex items-center justify-center shrink-0">
                       <Waves className="w-4 h-4 text-primary-foreground" />
                     </div>
-                    <div className="whitespace-pre-wrap rounded-2xl px-4 py-3 text-sm leading-relaxed bg-white/78 text-slate-800 border border-white/70">
-                      {streamingAssistant}
+                    <div className="whitespace-pre-wrap rounded-2xl px-4 py-3 text-sm leading-relaxed bg-white/90 text-slate-800 border border-white/80">
+                      {renderAssistantText(streamingAssistant)}
                     </div>
                   </div>
                 </motion.div>
@@ -704,12 +770,12 @@ export default function Chatbot() {
             )}
 
             {!voiceMode && (
-              <div className="rounded-[20px] sm:rounded-[22px] border border-white/55 bg-white/50 backdrop-blur-xl shadow-[0_12px_30px_-22px_rgba(15,74,109,0.45)] flex items-center gap-2 sm:gap-3 p-2 sticky bottom-0 pb-[env(safe-area-inset-bottom)]">
+              <div className="rounded-[22px] sm:rounded-[24px] border border-white/60 bg-white/65 backdrop-blur-xl shadow-[0_16px_36px_-22px_rgba(15,74,109,0.5)] flex items-center gap-2 sm:gap-3 p-2.5 sticky bottom-0 pb-[env(safe-area-inset-bottom)]">
                 <input
                   value={input}
                   onChange={(e) => setInput(e.target.value)}
                   onKeyDown={(e) => e.key === "Enter" && sendMessage(undefined, "text")}
-                  placeholder="Ask something practical"
+                  placeholder="Ask a question about cultivation, risk, yield, weather, or market decisions"
                   className="flex-1 bg-transparent px-2 min-h-11 text-sm text-slate-900 placeholder:text-slate-500 focus:outline-none"
                 />
                 <Button variant="glass" size="icon" onClick={() => setVoiceMode(true)} className="rounded-xl w-11 h-11 shrink-0" disabled={!voiceSupported || isTyping}>
