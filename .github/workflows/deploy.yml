@@ -44,9 +44,10 @@ jobs:
           ssh -i ~/.ssh/deploy_key ${AWS_USER}@${AWS_HOST} << 'EOF'
             cd ${DEPLOY_PATH}
             
-            echo "📦 Pulling latest code..."
-            git fetch origin
-            git reset --hard origin/main
+            echo "📦 Pulling latest code from beta branch..."
+            git fetch origin beta
+            git checkout beta || git checkout -b beta origin/beta
+            git reset --hard origin/beta
             
             # ML APIs
             if [[ "${SERVICE}" == "ml-apis" || "${SERVICE}" == "all" ]]; then

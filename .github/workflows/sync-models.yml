@@ -7,6 +7,14 @@ on:
         description: 'Release tag to sync (e.g., kappa_india_gulf_v2_prod_ready_v4_with_v2labels)'
         required: true
         type: string
+      branch:
+        description: 'Which branch to sync from'
+        required: true
+        type: choice
+        default: 'beta'
+        options:
+          - beta
+          - main
 
 jobs:
   sync-models:
@@ -17,6 +25,7 @@ jobs:
       - uses: actions/checkout@v4
         with:
           lfs: true
+          ref: ${{ inputs.branch }}
       
       - name: Setup SSH key
         run: |
