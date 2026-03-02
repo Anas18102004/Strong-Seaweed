@@ -42,7 +42,7 @@ jobs:
         run: npm run lint
       
       - name: Run tests
-        run: npx vitest run --config vitest.config.ts
+        run: npx vitest run --root . --config vitest.config.ts
       
       - name: Build frontend
         run: npm run build
