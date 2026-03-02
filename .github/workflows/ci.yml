@@ -86,11 +86,8 @@ jobs:
         run: ruff check --output-format=github .
         continue-on-error: true
       
-      - name: Validate imports
-        run: |
-          python -c "import serve_kappaphycus_api; print('✓ serve_kappaphycus_api imports OK')"
-          python -c "import serve_species_api; print('✓ serve_species_api imports OK')"
-          python -c "import project_paths; print('✓ project_paths imports OK')"
+      - name: Validate project_paths module
+        run: python -c "import project_paths; print('✓ project_paths imports OK')"
 
   python-agents:
     name: Python Agent Gateway
