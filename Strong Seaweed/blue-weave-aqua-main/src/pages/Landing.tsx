@@ -4,6 +4,7 @@ import { FloatingSpeciesCards } from "@/components/FloatingSpeciesCards";
 import { ArrowRight, Microscope, MapPin, BarChart3, Brain, FileText, Waves } from "lucide-react";
 import { useNavigate } from "react-router-dom";
 import { useAuth } from "@/context/AuthContext";
+import BrandLogo from "@/components/BrandLogo";
 
 const features = [
   { icon: Microscope, title: "Check Best Species", desc: "Find which seaweed is most suitable for your selected location." },
@@ -28,12 +29,7 @@ export default function LandingPage() {
       </div>
 
       <nav className="relative z-10 flex items-center justify-between px-4 sm:px-6 lg:px-12 py-4 sm:py-5">
-        <div className="flex items-center gap-2">
-          <div className="w-9 h-9 rounded-xl gradient-primary flex items-center justify-center">
-            <Waves className="w-5 h-5 text-primary-foreground" />
-          </div>
-          <span className="text-xl font-bold text-foreground">BlueWeave<span className="gradient-text"> AI</span></span>
-        </div>
+        <BrandLogo size="md" />
         <div className="hidden md:flex items-center gap-8 text-sm font-medium text-muted-foreground">
           <a href="#features" className="hover:text-foreground transition-colors">Features</a>
           <a href="#about" className="hover:text-foreground transition-colors">About</a>
@@ -114,7 +110,7 @@ export default function LandingPage() {
       </section>
 
       <footer className="relative z-10 border-t border-border/50 py-8 text-center text-sm text-muted-foreground px-4">
-        <p>© 2026 BlueWeave AI - Climate Intelligence Platform</p>
+        <p>Â© 2026 BlueWeave AI - Climate Intelligence Platform</p>
       </footer>
     </div>
   );

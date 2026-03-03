@@ -1,10 +1,11 @@
 import DashboardLayout from "@/components/DashboardLayout";
 import { motion } from "framer-motion";
 import { useState, useRef, useEffect } from "react";
-import { Send, Waves, Sparkles, History, Mic, MicOff, Volume2, VolumeX, Radio, PhoneOff, Plus, Clock3, Menu, Trash2 } from "lucide-react";
+import { Send, Sparkles, History, Mic, MicOff, Volume2, VolumeX, Radio, PhoneOff, Plus, Clock3, Menu, Trash2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { api } from "@/lib/api";
 import { useAuth } from "@/context/AuthContext";
+import BrandLogo from "@/components/BrandLogo";
 
 type Message = { role: "user" | "assistant"; content: string };
 
@@ -725,9 +726,7 @@ export default function Chatbot() {
                 <motion.div key={i} initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }} className={`flex ${m.role === "user" ? "justify-end" : "justify-start"}`}>
                   <div className={`flex items-start gap-2.5 max-w-[92%] sm:max-w-[85%] ${m.role === "user" ? "flex-row-reverse" : ""}`}>
                     {m.role === "assistant" && (
-                      <div className="w-8 h-8 rounded-xl gradient-primary flex items-center justify-center shrink-0">
-                        <Waves className="w-4 h-4 text-primary-foreground" />
-                      </div>
+                      <BrandLogo size="sm" showWordmark={false} className="shrink-0" />
                     )}
                     <div className={`whitespace-pre-wrap rounded-2xl px-4 py-3 text-sm leading-relaxed border ${
                       m.role === "user"
@@ -742,9 +741,7 @@ export default function Chatbot() {
               {streamingAssistant && (
                 <motion.div initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }} className="flex justify-start">
                   <div className="flex items-start gap-2.5 max-w-[92%] sm:max-w-[85%]">
-                    <div className="w-8 h-8 rounded-xl gradient-primary flex items-center justify-center shrink-0">
-                      <Waves className="w-4 h-4 text-primary-foreground" />
-                    </div>
+                    <BrandLogo size="sm" showWordmark={false} className="shrink-0" />
                     <div className="whitespace-pre-wrap rounded-2xl px-4 py-3 text-sm leading-relaxed bg-white/90 text-slate-800 border border-white/80">
                       {renderAssistantText(streamingAssistant)}
                     </div>

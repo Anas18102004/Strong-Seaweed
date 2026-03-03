@@ -19,8 +19,8 @@ import {
   CloudSun,
   MessageSquare,
   Settings,
-  Waves,
 } from "lucide-react";
+import BrandLogo from "@/components/BrandLogo";
 
 const navItems = [
   { title: "Live Dashboard", url: "/dashboard", icon: LayoutDashboard },
@@ -41,9 +41,7 @@ export function AppSidebar() {
   return (
     <Sidebar collapsible="icon" className="border-r-0 bg-transparent">
       <div className="m-3 mb-2 rounded-2xl border border-white/60 bg-white/55 backdrop-blur-xl shadow-[0_12px_28px_-20px_rgba(12,74,110,0.45)] p-3 flex items-center gap-2.5">
-        <div className="w-10 h-10 rounded-xl gradient-primary flex items-center justify-center shrink-0 shadow-[0_10px_22px_-14px_rgba(2,132,199,0.9)]">
-          <Waves className="w-5 h-5 text-primary-foreground" />
-        </div>
+        <BrandLogo size="md" showWordmark={false} />
         {!collapsed && (
           <div className="min-w-0">
             <p className="text-[11px] uppercase tracking-[0.14em] text-cyan-700">Control Center</p>

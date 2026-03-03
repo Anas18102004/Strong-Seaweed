@@ -1,9 +1,10 @@
 import { motion } from "framer-motion";
 import { Button } from "@/components/ui/button";
 import { useState } from "react";
-import { Waves, Eye, EyeOff, ArrowRight, Check } from "lucide-react";
+import { Eye, EyeOff, ArrowRight, Check } from "lucide-react";
 import { useNavigate, Link } from "react-router-dom";
 import { useAuth } from "@/context/AuthContext";
+import BrandLogo from "@/components/BrandLogo";
 
 const roles = ["Farmer", "Researcher", "Government", "Investor"];
 const states = [
@@ -94,10 +95,7 @@ export default function SignUp() {
       >
         <div className="glass-strong rounded-[24px] sm:rounded-[28px] p-5 sm:p-8">
           <div className="flex items-center gap-2 justify-center mb-5 sm:mb-6">
-            <div className="w-10 h-10 rounded-xl gradient-primary flex items-center justify-center">
-              <Waves className="w-5 h-5 text-primary-foreground" />
-            </div>
-            <span className="text-xl font-bold text-foreground">BlueWeave<span className="gradient-text"> AI</span></span>
+            <BrandLogo size="lg" />
           </div>
 
           <h2 className="text-xl sm:text-2xl font-bold text-foreground text-center mb-1">Create account</h2>
