@@ -25,6 +25,7 @@ import {
   ChevronLeft,
   ChevronRight,
   Waves,
+  X,
 } from "lucide-react";
 import BrandLogo from "@/components/BrandLogo";
 
@@ -53,7 +54,7 @@ const navSections = [
 ];
 
 export function AppSidebar() {
-  const { state, toggleSidebar } = useSidebar();
+  const { state, toggleSidebar, isMobile, setOpenMobile } = useSidebar();
   const collapsed = state === "collapsed";
   const location = useLocation();
 
@@ -69,9 +70,19 @@ export function AppSidebar() {
       [&>[data-sidebar=sidebar]]:bg-[linear-gradient(180deg,#0F2E47_0%,#123E63_52%,#0B2236_100%)]
       [&>[data-sidebar=sidebar]]:shadow-[18px_0_36px_-28px_rgba(11,34,54,0.85),inset_0_1px_0_rgba(255,255,255,0.06)]"
     >
+      {isMobile && (
+        <button
+          type="button"
+          onClick={() => setOpenMobile(false)}
+          className="absolute right-4 top-4 z-20 inline-flex h-9 w-9 items-center justify-center rounded-full border border-white/20 bg-white/[0.08] text-cyan-100 transition-all duration-200 hover:bg-white/[0.14]"
+          aria-label="Close navigation"
+        >
+          <X className="h-4 w-4" />
+        </button>
+      )}
       <div className="pointer-events-none absolute inset-0 opacity-[0.065] [background-image:radial-gradient(rgba(255,255,255,0.95)_0.35px,transparent_0.35px)] [background-size:3px_3px]" />
       <div className="pointer-events-none absolute -right-16 top-10 h-40 w-40 rounded-full bg-cyan-300/15 blur-3xl" />
-      <div className="m-3 mb-2 rounded-2xl border border-white/10 bg-white/[0.045] p-3 backdrop-blur-xl shadow-[inset_0_1px_0_rgba(255,255,255,0.08)] transition-all duration-200 hover:-translate-y-0.5 hover:bg-white/[0.07] hover:shadow-[0_14px_24px_-20px_rgba(22,163,233,0.85),inset_0_1px_0_rgba(255,255,255,0.1)]">
+      <div className="m-3 mb-2 rounded-2xl border border-white/10 bg-white/[0.045] p-2.5 md:p-3 backdrop-blur-xl shadow-[inset_0_1px_0_rgba(255,255,255,0.08)] transition-all duration-200 hover:-translate-y-0.5 hover:bg-white/[0.07] hover:shadow-[0_14px_24px_-20px_rgba(22,163,233,0.85),inset_0_1px_0_rgba(255,255,255,0.1)]">
         <div className="flex items-center gap-2.5">
           <div className="relative rounded-2xl bg-gradient-to-br from-[#1DA1F2] to-[#0B6CB8] p-1.5 shadow-[0_0_20px_rgba(29,161,242,0.45)]">
             <div className="absolute inset-0 -z-10 rounded-2xl bg-cyan-300/50 blur-lg" />
@@ -79,9 +90,9 @@ export function AppSidebar() {
           </div>
           {!collapsed && (
             <div className="min-w-0">
-              <p className="text-[11px] uppercase tracking-[0.16em] text-[#7FA9C4]">Marine Intelligence</p>
+              <p className="text-[10px] uppercase tracking-[0.16em] text-[#7FA9C4] md:text-[11px]">Marine Intelligence</p>
               <div className="flex items-center gap-1.5">
-                <span className="text-base font-semibold text-white whitespace-nowrap">BlueWave</span>
+                <span className="text-[15px] font-semibold text-white whitespace-nowrap md:text-base">BlueWave</span>
                 <span className="inline-flex items-center rounded-full border border-cyan-200/30 bg-cyan-400/20 px-2 py-0.5 text-[10px] font-semibold uppercase tracking-[0.12em] text-cyan-100 shadow-[0_0_12px_rgba(34,211,238,0.35)]">
                   AI
                 </span>
@@ -91,19 +102,19 @@ export function AppSidebar() {
         </div>
       </div>
       <SidebarContent className="overflow-y-auto pb-2 [scrollbar-color:rgba(125,183,221,0.55)_transparent] [scrollbar-width:thin]">
-        <div className="space-y-1">
+        <div className="space-y-2">
           {navSections.map((section, sectionIdx) => (
-            <SidebarGroup key={section.label} className="px-3 py-2">
+            <SidebarGroup key={section.label} className="px-3 py-2.5">
               {!collapsed && (
-                <SidebarGroupLabel className="mb-1 h-auto px-1 pb-1 text-[11px] font-medium uppercase tracking-[1.5px] text-[#7FA9C4]">
+                <SidebarGroupLabel className="mb-1.5 h-auto px-1 pb-1 text-[10px] font-medium uppercase tracking-[1.5px] text-[#7FA9C4] md:text-[11px]">
                   <div className="w-full">
                     <p>{section.label}</p>
-                    <div className="mt-1.5 h-px w-full bg-gradient-to-r from-cyan-200/25 via-cyan-200/10 to-transparent" />
+                    <div className="mt-2 h-px w-full bg-gradient-to-r from-cyan-200/30 via-cyan-200/15 to-transparent" />
                   </div>
                 </SidebarGroupLabel>
               )}
               <SidebarGroupContent>
-                <SidebarMenu className="gap-1.5">
+                <SidebarMenu className="gap-2">
                   {section.items.map((item, itemIdx) => {
                     const active = isActive(item.url);
                     return (
@@ -116,14 +127,14 @@ export function AppSidebar() {
                           <NavLink
                             to={item.url}
                             end={item.url === "/dashboard"}
-                            className={`group relative h-12 overflow-hidden rounded-xl border transition-all duration-200 ${
+                            className={`group relative h-14 md:h-12 overflow-hidden rounded-xl border transition-all duration-200 ${
                               active
-                                ? "border-cyan-200/25 bg-gradient-to-r from-[#1DA1F2] to-[#0EA5E9] text-white shadow-[0_12px_24px_-14px_rgba(14,165,233,0.95)]"
+                                ? "border-cyan-200/30 bg-gradient-to-r from-[#1DA1F2]/70 to-[#0EA5E9]/70 text-white shadow-[0_10px_22px_-14px_rgba(14,165,233,0.9)]"
                                 : "border-transparent bg-white/[0.02] text-[#CFE9FF] hover:translate-x-1 hover:border-cyan-200/20 hover:bg-white/[0.08] hover:shadow-[0_10px_20px_-16px_rgba(34,211,238,0.75)]"
                             }`}
                             activeClassName=""
                           >
-                            <span className={`absolute left-0 top-1/2 h-8 -translate-y-1/2 rounded-r-full bg-white/90 transition-all duration-200 ${active ? "w-[3px] opacity-100" : "w-0 opacity-0"}`} />
+                            <span className={`absolute left-0 top-1/2 h-9 -translate-y-1/2 rounded-r-full bg-white/90 transition-all duration-200 ${active ? "w-[3px] opacity-100" : "w-0 opacity-0"}`} />
                             <span className="pointer-events-none absolute left-1/2 top-1/2 h-20 w-20 -translate-x-1/2 -translate-y-1/2 rounded-full bg-white/25 opacity-0 scale-0 transition-all duration-300 group-active:scale-100 group-active:opacity-30" />
                             <div className={`flex h-full items-center ${collapsed ? "justify-center" : "px-3"}`}>
                               <item.icon
