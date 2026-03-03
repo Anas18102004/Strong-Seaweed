@@ -125,6 +125,41 @@ export type PredictionSubmissionItem = {
   bestSpecies: SpeciesScore | null;
 };
 
+export type UserPreferences = {
+  notifications: {
+    predictionCompleted: boolean;
+    riskAlerts: boolean;
+    seasonalAdvisories: boolean;
+    reportGenerated: boolean;
+    newModelVersion: boolean;
+  };
+  dataModels: {
+    proMode: boolean;
+    aiExplanation: boolean;
+  };
+  appearance: {
+    theme: "light" | "dark" | "system";
+    confidenceBadge: boolean;
+  };
+};
+
+export type SettingsProfile = {
+  name: string;
+  email: string;
+  phone: string;
+  state: string;
+  role: string;
+};
+
+export type SettingsResponse = {
+  profile: SettingsProfile;
+  preferences: UserPreferences;
+  metadata: {
+    modelVersion: string;
+    updatedAt?: string;
+  };
+};
+
 type ChatStreamEvent =
   | { type: "delta"; token?: string }
   | {
@@ -316,6 +351,44 @@ export const api = {
 
   mySubmissions: (token?: string, limit = 20) =>
     request<{ total: number; submissions: PredictionSubmissionItem[] }>(`/api/predict/submissions/me?limit=${limit}`, { method: "GET" }, token),
+
+  getSettings: (token?: string) => request<SettingsResponse>("/api/settings", { method: "GET" }, token),
+
+  updateSettingsProfile: (
+    payload: { name: string; phone?: string; state?: string; role?: string },
+    token?: string,
+  ) =>
+    request<{ profile: SettingsProfile; metadata: { updatedAt?: string } }>(
+      "/api/settings/profile",
+      {
+        method: "PUT",
+        body: JSON.stringify(payload),
+      },
+      token,
+    ),
+
+  updatePassword: (
+    payload: { currentPassword: string; newPassword: string },
+    token?: string,
+  ) =>
+    request<{ success: boolean }>(
+      "/api/settings/security/password",
+      {
+        method: "PUT",
+        body: JSON.stringify(payload),
+      },
+      token,
+    ),
+
+  updatePreferences: (preferences: Partial<UserPreferences>, token?: string) =>
+    request<{ preferences: UserPreferences; metadata: { updatedAt?: string } }>(
+      "/api/settings/preferences",
+      {
+        method: "PUT",
+        body: JSON.stringify({ preferences }),
+      },
+      token,
+    ),
 };
 
 export { API_BASE_URL };

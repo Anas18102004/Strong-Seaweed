@@ -5,6 +5,7 @@ import { config } from "./config.js";
 import authRoutes from "./routes/auth.js";
 import aiRoutes from "./routes/ai.js";
 import predictRoutes from "./routes/predict.js";
+import settingsRoutes from "./routes/settings.js";
 
 const app = express();
 
@@ -37,6 +38,7 @@ app.get("/api/health", (_req, res) => {
 app.use("/api/auth", authRoutes);
 app.use("/api/ai", aiRoutes);
 app.use("/api/predict", predictRoutes);
+app.use("/api/settings", settingsRoutes);
 
 async function start() {
   await mongoose.connect(config.mongoUri);

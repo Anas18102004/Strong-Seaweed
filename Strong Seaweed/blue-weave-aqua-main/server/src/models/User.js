@@ -8,6 +8,23 @@ const userSchema = new mongoose.Schema(
     phone: { type: String, default: "" },
     state: { type: String, default: "" },
     role: { type: String, default: "" },
+    preferences: {
+      notifications: {
+        predictionCompleted: { type: Boolean, default: true },
+        riskAlerts: { type: Boolean, default: true },
+        seasonalAdvisories: { type: Boolean, default: true },
+        reportGenerated: { type: Boolean, default: true },
+        newModelVersion: { type: Boolean, default: true },
+      },
+      dataModels: {
+        proMode: { type: Boolean, default: false },
+        aiExplanation: { type: Boolean, default: true },
+      },
+      appearance: {
+        theme: { type: String, enum: ["light", "dark", "system"], default: "light" },
+        confidenceBadge: { type: Boolean, default: true },
+      },
+    },
   },
   { timestamps: true },
 );
