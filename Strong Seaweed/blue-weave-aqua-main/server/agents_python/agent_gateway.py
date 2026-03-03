@@ -161,7 +161,10 @@ AGENT_SYSTEM = {
         "- For greeting/small-talk/very short messages (e.g., hi, hello, ok): reply naturally in 1-2 short lines.\n"
         "- Do NOT use numbered sections for small-talk.\n"
         "- Use structured sections only for real planning/analysis requests.\n"
-        "- Default to medium-length answers unless user asks for deep detail.\n"
+        "- For simple questions, respond in 2-4 lines max.\n"
+        "- Default to short answers. Use medium length only when the user asks for detail or the task is complex.\n"
+        "- Avoid long lists by default; if listing is needed, keep to at most 3 concise bullets.\n"
+        "- Include assumptions only when truly required, and keep them to one short line.\n"
         "- Output plain text only; avoid markdown table syntax and markdown markers like #, |, **, *.\n"
         "- Use simple section titles and hyphen bullets when needed.\n"
         "Style: clear, decisive, execution-first."
@@ -359,7 +362,12 @@ class AgentOrchestrator:
         style = (
             "Respond for voice output: short sentences, no markdown tables, no long lists."
             if is_voice
-            else "Respond concise and practical. Use short bullet points when needed."
+            else (
+                "Respond concise and practical. Keep default replies short (2-4 lines). "
+                "Use medium length only for complex questions. "
+                "Avoid long lists; if needed, max 3 bullets. "
+                "Do not add assumptions unless essential."
+            )
         )
 
         def _call_with_key(key: str) -> Tuple[Optional[str], Optional[str]]:
@@ -372,7 +380,7 @@ class AgentOrchestrator:
                 f"{system} {style}\n\n"
                 f"Question: {question}\n"
                 f"Context JSON: {AgentOrchestrator._context_block(context)}\n"
-                "Return actionable guidance with assumptions called out."
+                "Return actionable guidance. Include assumptions only if essential."
             )
             rsp = client.responses.create(
                 input=prompt,
@@ -427,7 +435,12 @@ class AgentOrchestrator:
         style = (
             "Respond for voice output: short sentences, no markdown tables, no long lists."
             if is_voice
-            else "Respond concise and practical. Use short bullet points when needed."
+            else (
+                "Respond concise and practical. Keep default replies short (2-4 lines). "
+                "Use medium length only for complex questions. "
+                "Avoid long lists; if needed, max 3 bullets. "
+                "Do not add assumptions unless essential."
+            )
         )
 
         payload = {
@@ -439,7 +452,7 @@ class AgentOrchestrator:
                     "content": (
                         f"Question: {question}\n"
                         f"Context JSON: {AgentOrchestrator._context_block(context)}\n"
-                        "Return actionable guidance with assumptions called out."
+                        "Return actionable guidance. Include assumptions only if essential."
                     ),
                 },
             ],
@@ -506,7 +519,12 @@ class AgentOrchestrator:
         style = (
             "Respond for voice output: short sentences, no markdown tables, no long lists."
             if is_voice
-            else "Respond concise and practical. Use short bullet points when needed."
+            else (
+                "Respond concise and practical. Keep default replies short (2-4 lines). "
+                "Use medium length only for complex questions. "
+                "Avoid long lists; if needed, max 3 bullets. "
+                "Do not add assumptions unless essential."
+            )
         )
 
         prompt = ChatPromptTemplate.from_messages(
@@ -515,7 +533,7 @@ class AgentOrchestrator:
                 (
                     "human",
                     "Question: {question}\nContext JSON: {context_json}\n"
-                    "Return actionable guidance with assumptions called out.",
+                    "Return actionable guidance. Include assumptions only if essential.",
                 ),
             ]
         )
@@ -548,14 +566,19 @@ class AgentOrchestrator:
         style = (
             "Respond for voice output: short sentences, no markdown tables, no long lists."
             if is_voice
-            else "Respond concise and practical. Use short bullet points when needed."
+            else (
+                "Respond concise and practical. Keep default replies short (2-4 lines). "
+                "Use medium length only for complex questions. "
+                "Avoid long lists; if needed, max 3 bullets. "
+                "Do not add assumptions unless essential."
+            )
         )
 
         prompt = (
             f"{system} {style}\n\n"
             f"Question: {question}\n"
             f"Context JSON: {AgentOrchestrator._context_block(context)}\n"
-            "Return actionable guidance with assumptions called out."
+            "Return actionable guidance. Include assumptions only if essential."
         )
 
         payload = {
