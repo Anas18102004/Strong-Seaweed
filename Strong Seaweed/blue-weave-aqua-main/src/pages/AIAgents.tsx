@@ -233,7 +233,7 @@ export default function AIAgents() {
                     onClick={() => setSelectedTask(task.id)}
                     className={`task-select-tile group w-full text-left rounded-xl p-4 border transition-all duration-200 ${
                       activeCard
-                        ? "border-cyan-200/35 bg-gradient-to-r from-cyan-400/22 to-blue-500/32 text-white shadow-[0_20px_34px_-16px_rgba(14,165,233,0.75)]"
+                        ? "border-[#66ceff]/60 bg-[linear-gradient(135deg,#0f3a59_0%,#145981_55%,#1b6f99_100%)] text-white shadow-[0_20px_34px_-16px_rgba(9,84,133,0.78)]"
                         : "border-[#c6dbea] bg-white text-slate-800 hover:-translate-y-0.5 hover:border-cyan-300/60 hover:shadow-[0_14px_26px_-20px_rgba(15,52,88,0.45)]"
                     }`}
                   >
@@ -246,8 +246,8 @@ export default function AIAgents() {
                       </div>
                       <div className="min-w-0">
                         <p className={`font-semibold text-sm ${activeCard ? "text-white" : "text-slate-900"}`}>{task.name}</p>
-                        <p className={`mt-0.5 text-xs ${activeCard ? "text-white/90" : "text-slate-600"}`}>{task.short}</p>
-                        <p className={`mt-2 text-[11px] ${activeCard ? "text-white/95" : "text-cyan-700"}`}>Outcome: {task.outcome}</p>
+                        <p className={`mt-0.5 text-xs ${activeCard ? "text-white/95" : "text-slate-600"}`}>{task.short}</p>
+                        <p className={`mt-2 text-[11px] ${activeCard ? "text-cyan-100" : "text-cyan-700"}`}>Outcome: {task.outcome}</p>
                       </div>
                     </div>
                   </button>
