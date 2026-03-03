@@ -915,15 +915,6 @@ export default function Chatbot() {
                           <p>- Recommendations were tuned for execution feasibility.</p>
                         </div>
                       </details>
-                      <div className="mt-3">
-                        <div className="mb-1 flex items-center justify-between text-[11px] text-slate-500">
-                          <span>Trust Indicator</span>
-                          <span>{m.confidence ?? 92}%</span>
-                        </div>
-                        <div className="h-1.5 rounded-full bg-slate-200">
-                          <div className="h-1.5 rounded-full bg-gradient-to-r from-emerald-500 to-cyan-500" style={{ width: `${Math.max(0, Math.min(100, m.confidence ?? 92))}%` }} />
-                        </div>
-                      </div>
                     </div>
                   )}
                 </motion.div>
