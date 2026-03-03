@@ -17,6 +17,7 @@ KAPPA_RELEASE = os.getenv("KAPPA_RELEASE_TAG", "v1.1r_base46_cmp")
 KAPPA_RELEASE_FALLBACK = "kappa_india_gulf_v2_prod_ready_v3"
 MULTI_RELEASE = os.getenv("MULTI_RELEASE", "multi_species_cop_india_v5b_rich_relaxed_soft_hn")
 MULTI_RELEASE_FALLBACK = "multi_species_cop_india_v2_prod"
+KAPPA_MAX_DISTANCE_KM = float(os.getenv("KAPPA_MAX_DISTANCE_KM", "250"))
 
 KAPPA_MASTER = BASE / "data" / "tabular" / "master_feature_matrix_kappa_india_gulf_v2_hardmerge4_augmented.csv"
 
@@ -290,6 +291,9 @@ def predict_other(model_bundle: dict | None, feat_vals: dict | None) -> tuple[bo
 def predict_species(lat: float, lon: float) -> dict:
     warnings = []
     k = predict_kappa(lat, lon)
+    kappa_in_coverage = bool(k.get("nearestGrid")) and float(k["nearestGrid"].get("distance_km", 1e9)) <= KAPPA_MAX_DISTANCE_KM
+    if not kappa_in_coverage:
+        warnings.append("kappaphycus_model_out_of_coverage")
     feat_vals = extract_runtime_features(lat, lon)
     if feat_vals is None:
         warnings.append("india_wide_proxy_models_out_of_coverage")
@@ -302,10 +306,16 @@ def predict_species(lat: float, lon: float) -> dict:
         {
             "speciesId": "kappaphycus_alvarezii",
             "displayName": "Kappaphycus alvarezii",
-            "ready": True,
-            "probabilityPercent": k["probabilityPercent"],
-            "priority": k["priority"],
-            "reason": "dedicated_production_model",
+            "ready": bool(kappa_in_coverage),
+            "probabilityPercent": k["probabilityPercent"] if kappa_in_coverage else None,
+            "priority": k["priority"] if kappa_in_coverage else "unknown",
+            "reason": (
+                "dedicated_production_model_positive"
+                if kappa_in_coverage and int(k.get("predLabel", 0)) == 1
+                else "dedicated_production_model_negative"
+                if kappa_in_coverage
+                else "out_of_coverage"
+            ),
         },
         {
             "speciesId": "gracilaria_edulis",
@@ -333,15 +343,16 @@ def predict_species(lat: float, lon: float) -> dict:
         },
     ]
 
-    best = (
-        sorted(
-            [s for s in species if s["ready"] and s["probabilityPercent"] is not None],
-            key=lambda x: float(x["probabilityPercent"]),
-            reverse=True,
-        )[0]
-        if any(s["ready"] and s["probabilityPercent"] is not None for s in species)
-        else None
-    )
+    eligible = [
+        s
+        for s in species
+        if s["ready"]
+        and s["probabilityPercent"] is not None
+        and str(s.get("reason", "")).endswith("_positive")
+    ]
+    best = sorted(eligible, key=lambda x: float(x["probabilityPercent"]), reverse=True)[0] if eligible else None
+    if best is None:
+        warnings.append("no_species_meets_suitability_threshold")
 
     loaded_other_releases = sorted(
         {m["release"] for m in OTHER_MODELS.values() if isinstance(m, dict) and "release" in m}

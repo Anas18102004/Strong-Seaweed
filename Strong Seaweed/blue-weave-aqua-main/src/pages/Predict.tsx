@@ -65,8 +65,9 @@ function confidenceLabel(score: number, completeness: number) {
   return "Developing";
 }
 
-function recommendedSpecies(score: number, season: string, liveName?: string) {
+function recommendedSpecies(score: number, season: string, liveName?: string, hasLivePrediction = false) {
   if (liveName) return liveName;
+  if (hasLivePrediction) return "No species passes threshold";
   if (season.toLowerCase().includes("monsoon")) return "Sargassum wightii";
   if (score >= 75) return "Kappaphycus alvarezii";
   if (score >= 62) return "Gracilaria edulis";
@@ -236,7 +237,12 @@ export default function PredictPage() {
       score,
       confidence: confidenceLabel(score, completeness),
       risk: riskBand(score),
-      species: recommendedSpecies(score, season, lastPrediction?.bestSpecies?.displayName || undefined),
+      species: recommendedSpecies(
+        score,
+        season,
+        lastPrediction?.bestSpecies?.displayName || undefined,
+        Boolean(lastPrediction),
+      ),
     };
   }, [coords, season, depth, temperatureC, salinityPpt, lastPrediction]);
 
