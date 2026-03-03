@@ -218,6 +218,10 @@ async function request<T>(path: string, options: RequestInit = {}, token?: strin
 
   if (!res.ok) {
     const text = await res.text();
+    const isHtmlError = /<!doctype html>|<html|<body|<pre>/i.test(text || "");
+    if (isHtmlError) {
+      throw new Error(`API route unavailable (${res.status}) for ${path}. Backend may be out of date.`);
+    }
     throw new Error(text || `Request failed (${res.status})`);
   }
 

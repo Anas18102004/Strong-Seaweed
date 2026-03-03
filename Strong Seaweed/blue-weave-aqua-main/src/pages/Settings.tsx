@@ -68,7 +68,25 @@ export default function Settings() {
       setModelVersion(out.metadata?.modelVersion || "Marine Core v2");
       if (isInitial) setStatusText("");
     } catch (err) {
-      if (isInitial) setStatusText(err instanceof Error ? err.message : "Could not load settings.");
+      const msg = err instanceof Error ? err.message : "Could not load settings.";
+      const routeMissing = /api route unavailable|\/api\/settings|cannot get/i.test(msg);
+      if (routeMissing) {
+        try {
+          const me = await api.me(token);
+          setProfile((prev) => ({
+            ...prev,
+            name: me.user?.name || prev.name,
+            email: me.user?.email || prev.email,
+            role: me.user?.role || prev.role,
+          }));
+          setPreferences(defaultPreferences);
+          setStatusText("Settings backend is not deployed on this server yet. Running in profile fallback mode.");
+        } catch {
+          if (isInitial) setStatusText("Could not load settings.");
+        }
+      } else if (isInitial) {
+        setStatusText(msg);
+      }
     } finally {
       if (isInitial) setLoading(false);
     }
