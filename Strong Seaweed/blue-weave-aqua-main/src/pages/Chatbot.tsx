@@ -147,6 +147,7 @@ export default function Chatbot() {
   const [liveTranscript, setLiveTranscript] = useState("");
   const [streamingAssistant, setStreamingAssistant] = useState("");
   const [sttLocale, setSttLocale] = useState("en-IN");
+  const [orbOffset, setOrbOffset] = useState({ x: 0, y: 0 });
 
   const recognitionRef = useRef<BrowserSpeechRecognition | null>(null);
   const activeAudioRef = useRef<HTMLAudioElement | null>(null);
@@ -566,25 +567,29 @@ export default function Chatbot() {
         </motion.div>
 
         {voiceMode ? (
-          <motion.div
-            initial={{ opacity: 0, y: 12 }}
-            animate={{ opacity: 1, y: 0 }}
-            className="voice-shell rounded-[30px] p-3 sm:p-4 mb-4"
-          >
-            <div className="voice-mode-panel rounded-[28px] p-6 sm:p-8 text-center relative overflow-hidden">
+          <motion.div initial={{ opacity: 0, y: 12 }} animate={{ opacity: 1, y: 0 }} className="voice-immersive-shell rounded-[30px] p-3 sm:p-4 h-[calc(100%-5.2rem)] sm:h-[calc(100%-5.6rem)]">
+            <div
+              className="voice-mode-panel rounded-[28px] p-6 sm:p-8 text-center relative overflow-hidden h-full flex flex-col"
+              onMouseMove={(e) => {
+                const rect = (e.currentTarget as HTMLDivElement).getBoundingClientRect();
+                const x = ((e.clientX - rect.left) / rect.width - 0.5) * 12;
+                const y = ((e.clientY - rect.top) / rect.height - 0.5) * 12;
+                setOrbOffset({ x, y });
+              }}
+              onMouseLeave={() => setOrbOffset({ x: 0, y: 0 })}
+            >
               <div className="voice-grid-glow" />
               <div className="voice-noise" />
+              <div className="voice-particle-layer" />
 
-              <div className="relative z-10">
+              <div className="relative z-10 flex h-full flex-col">
                 <div className="flex flex-wrap items-center justify-between gap-2 mb-6">
-                  <div className="voice-chip">
+                  <div className="voice-chip bg-cyan-300/10 border-cyan-200/25">
                     <span className={`voice-chip-dot ${listening ? "voice-chip-dot-live" : ""}`} />
-                    BlueWeave Voice Assistant
+                    AI Voice Core
                   </div>
-                  <div className="voice-chip text-cyan-100/80">
-                    Voice: Female
-                  </div>
-                  <label className="voice-chip text-cyan-100/90">
+                  <div className="voice-chip text-cyan-100/80 bg-white/5">Voice: Female</div>
+                  <label className="voice-chip text-cyan-100/90 bg-white/5">
                     STT:
                     <select
                       value={sttLocale}
@@ -600,7 +605,7 @@ export default function Chatbot() {
                   </label>
                 </div>
 
-                <div className={`voice-orb ${listening ? "voice-orb-live" : ""} ${isTyping ? "voice-orb-thinking" : ""}`}>
+                <div className={`voice-orb ${listening ? "voice-orb-live" : ""} ${isTyping ? "voice-orb-thinking" : ""}`} style={{ transform: `translate(${orbOffset.x}px, ${orbOffset.y}px)` }}>
                   <div className="voice-orb-ring" />
                   <div className="voice-orb-ring voice-orb-ring-2" />
                   <div className="voice-orb-ring voice-orb-ring-3" />
@@ -613,26 +618,32 @@ export default function Chatbot() {
                   </div>
                   <div className="voice-bars" aria-hidden="true">
                     {Array.from({ length: 7 }).map((_, i) => (
-                      <span
-                        key={i}
-                        className="voice-bar"
-                        style={{ animationDelay: `${i * 0.12}s` }}
-                      />
+                      <span key={i} className="voice-bar" style={{ animationDelay: `${i * 0.12}s` }} />
                     ))}
                   </div>
                 </div>
 
-                <p className="mt-8 text-sm sm:text-base text-cyan-50 font-medium">
-                  {isTyping
-                    ? "Thinking and preparing your voice response..."
-                    : listening
-                      ? "Listening live. Speak naturally."
-                      : voiceSessionActive
-                        ? "Voice standby. Listening will auto-resume."
-                      : voiceSupported
-                        ? "Tap Start Voice to begin."
-                        : "Voice input is not supported in this browser."}
-                </p>
+                <div className="mt-auto" />
+                <div className="voice-status-bar mt-8">
+                  <p className="text-sm sm:text-base text-cyan-50 font-medium">
+                    {isTyping
+                      ? "Thinking and preparing your voice response..."
+                      : listening
+                        ? "Listening live. Speak naturally."
+                        : voiceSessionActive
+                          ? "Voice standby. Listening will auto-resume."
+                          : voiceSupported
+                            ? "Tap Start Voice to begin."
+                            : "Voice input is not supported in this browser."}
+                  </p>
+                  {isTyping && (
+                    <div className="voice-thinking-dots mt-2">
+                      <span />
+                      <span />
+                      <span />
+                    </div>
+                  )}
+                </div>
 
                 <div className="voice-transcript mt-3">
                   <p className="text-xs text-cyan-100/90 min-h-5">{liveTranscript || "Waiting for your voice..."}</p>
@@ -643,7 +654,7 @@ export default function Chatbot() {
                   <Button
                     type="button"
                     variant={listening ? "hero-outline" : "hero"}
-                    className="min-h-11 min-w-40"
+                    className="voice-mic-btn min-h-12 min-w-44 rounded-full"
                     onClick={() => {
                       if (voiceSessionActive || listening) {
                         setVoiceSessionActive(false);
@@ -659,8 +670,7 @@ export default function Chatbot() {
                   </Button>
                   <Button
                     type="button"
-                    variant="glass"
-                    className="min-h-11 min-w-40"
+                    className="min-h-12 min-w-44 rounded-full border border-white/20 bg-white/10 text-cyan-100 hover:bg-white/15"
                     onClick={() => {
                       setVoiceSessionActive(false);
                       stopListening();
@@ -674,10 +684,11 @@ export default function Chatbot() {
               </div>
             </div>
           </motion.div>
-        ) : null}
-        {showSidebar && <div className="fixed inset-0 bg-slate-900/25 z-30 md:hidden" onClick={() => setShowSidebar(false)} />}
+        ) : (
+          <>
+            {showSidebar && <div className="fixed inset-0 bg-slate-900/25 z-30 md:hidden" onClick={() => setShowSidebar(false)} />}
 
-        <div className="grid md:grid-cols-[320px_minmax(0,1fr)] gap-3 sm:gap-4 h-[calc(100%-5.2rem)] sm:h-[calc(100%-5.6rem)]">
+            <div className="grid md:grid-cols-[320px_minmax(0,1fr)] gap-3 sm:gap-4 h-[calc(100%-5.2rem)] sm:h-[calc(100%-5.6rem)]">
           <aside
             className={`${showSidebar ? "block" : "hidden"} md:block fixed md:static inset-y-0 left-0 z-40 md:z-auto w-[88vw] max-w-[336px] md:w-auto rounded-r-[24px] md:rounded-[28px] border border-white/55 bg-white/82 md:bg-white/55 backdrop-blur-xl shadow-[0_20px_42px_-24px_rgba(15,74,109,0.55)] p-3 sm:p-4 h-full overflow-hidden`}
           >
@@ -795,6 +806,8 @@ export default function Chatbot() {
             )}
           </div>
         </div>
+          </>
+        )}
       </div>
     </DashboardLayout>
   );

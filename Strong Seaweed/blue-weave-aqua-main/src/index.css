@@ -487,6 +487,138 @@
   .ocean-weather-float {
     animation: float-slow 6s ease-in-out infinite;
   }
+
+  .ai-command-hero {
+    background:
+      radial-gradient(circle at 14% 12%, hsla(187 100% 68% / 0.18), transparent 32%),
+      radial-gradient(circle at 86% 20%, hsla(208 100% 65% / 0.16), transparent 34%),
+      linear-gradient(155deg, hsla(209 66% 16% / 0.78), hsla(206 70% 20% / 0.7), hsla(211 68% 13% / 0.78));
+    box-shadow:
+      inset 0 1px 0 hsla(0 0% 100% / 0.1),
+      0 20px 44px -30px hsla(201 92% 18% / 0.72);
+  }
+
+  .ai-neural-grid {
+    position: absolute;
+    inset: 0;
+    opacity: 0.18;
+    background-image:
+      linear-gradient(hsla(191 100% 80% / 0.15) 1px, transparent 1px),
+      linear-gradient(90deg, hsla(191 100% 80% / 0.15) 1px, transparent 1px);
+    background-size: 34px 34px;
+    animation: ocean-shift 12s ease-in-out infinite;
+    pointer-events: none;
+  }
+
+  .task-select-tile {
+    position: relative;
+    overflow: hidden;
+  }
+
+  .task-shine {
+    position: absolute;
+    top: -40%;
+    left: -30%;
+    width: 26%;
+    height: 180%;
+    transform: rotate(22deg);
+    background: linear-gradient(to right, transparent, hsla(0 0% 100% / 0.3), transparent);
+    opacity: 0;
+    transition: opacity 0.2s ease;
+    pointer-events: none;
+  }
+
+  .task-select-tile:hover .task-shine {
+    opacity: 1;
+    animation: button-shine 2.1s linear infinite;
+  }
+
+  .task-active-line {
+    position: absolute;
+    left: 0;
+    top: 12px;
+    bottom: 12px;
+    width: 3px;
+    border-radius: 999px;
+    background: linear-gradient(to bottom, #7dd3fc, #1da1f2);
+    box-shadow: 0 0 12px hsla(199 100% 62% / 0.75);
+  }
+
+  .context-intelligence-panel {
+    border: 1px solid hsla(199 55% 85% / 0.18);
+    background:
+      radial-gradient(circle at 12% 12%, hsla(186 100% 70% / 0.1), transparent 30%),
+      linear-gradient(150deg, hsla(208 62% 15% / 0.75), hsla(206 62% 18% / 0.7));
+    box-shadow:
+      inset 0 1px 0 hsla(0 0% 100% / 0.08),
+      0 16px 34px -24px hsla(210 78% 11% / 0.85);
+    backdrop-filter: blur(24px);
+  }
+
+  .voice-immersive-shell {
+    background:
+      radial-gradient(circle at 50% 10%, hsla(189 100% 68% / 0.16), transparent 40%),
+      radial-gradient(circle at 50% 90%, hsla(210 100% 66% / 0.16), transparent 48%),
+      linear-gradient(180deg, hsla(211 72% 12% / 0.9), hsla(206 72% 13% / 0.92));
+    border: 1px solid hsla(191 70% 80% / 0.12);
+    box-shadow: inset 0 1px 0 hsla(0 0% 100% / 0.06), 0 24px 44px -30px hsla(214 90% 8% / 0.8);
+  }
+
+  .voice-particle-layer {
+    position: absolute;
+    inset: 0;
+    pointer-events: none;
+    background:
+      radial-gradient(circle at 12% 18%, hsla(191 100% 82% / 0.36) 0 2px, transparent 3px),
+      radial-gradient(circle at 80% 24%, hsla(191 100% 82% / 0.28) 0 1.8px, transparent 3px),
+      radial-gradient(circle at 34% 76%, hsla(191 100% 82% / 0.3) 0 1.8px, transparent 3px),
+      radial-gradient(circle at 72% 72%, hsla(191 100% 82% / 0.24) 0 1.6px, transparent 3px);
+    opacity: 0.45;
+    animation: float-slow 7s ease-in-out infinite;
+  }
+
+  .voice-status-bar {
+    margin-inline: auto;
+    max-width: 620px;
+    border-radius: 999px;
+    border: 1px solid hsla(191 85% 78% / 0.28);
+    background: linear-gradient(145deg, hsla(202 50% 28% / 0.52), hsla(211 46% 20% / 0.38));
+    backdrop-filter: blur(14px);
+    padding: 0.65rem 1rem;
+    box-shadow: inset 0 1px 0 hsla(0 0% 100% / 0.12), 0 10px 24px -18px hsla(191 100% 70% / 0.55);
+  }
+
+  .voice-thinking-dots {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.32rem;
+  }
+
+  .voice-thinking-dots span {
+    width: 6px;
+    height: 6px;
+    border-radius: 999px;
+    background: hsla(187 100% 80% / 0.9);
+    animation: calm-pulse 1.2s ease-in-out infinite;
+  }
+
+  .voice-thinking-dots span:nth-child(2) {
+    animation-delay: 0.16s;
+  }
+
+  .voice-thinking-dots span:nth-child(3) {
+    animation-delay: 0.32s;
+  }
+
+  .voice-mic-btn {
+    box-shadow: 0 0 0 1px hsla(191 90% 78% / 0.28), 0 0 24px hsla(199 100% 62% / 0.4);
+    transition: transform 0.2s cubic-bezier(0.4, 0, 0.2, 1), box-shadow 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+  }
+
+  .voice-mic-btn:hover {
+    transform: translateY(-1px);
+    box-shadow: 0 0 0 1px hsla(191 90% 78% / 0.34), 0 0 30px hsla(199 100% 62% / 0.5);
+  }
 }
 
 /* Floating animation */
