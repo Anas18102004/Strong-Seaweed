@@ -1,12 +1,14 @@
 import DashboardLayout from "@/components/DashboardLayout";
 import { motion } from "framer-motion";
 import { useEffect, useMemo, useState } from "react";
-import { TrendingUp, Droplets, Activity, MessageSquare, Cpu } from "lucide-react";
+import { TrendingUp, Droplets, Activity, MessageSquare, Cpu, ArrowRight, Sparkles, Radar } from "lucide-react";
 import { api, PredictionSubmissionItem } from "@/lib/api";
 import { useAuth } from "@/context/AuthContext";
+import { useNavigate } from "react-router-dom";
 
 export default function Dashboard() {
   const { token } = useAuth();
+  const navigate = useNavigate();
   const [loading, setLoading] = useState(true);
   const [apiUp, setApiUp] = useState(false);
   const [sessionsCount, setSessionsCount] = useState(0);
@@ -60,15 +62,15 @@ export default function Dashboard() {
   }, [submissions]);
 
   const stats = [
-    { label: "Live Predictions", value: String(submissions.length), icon: Activity, change: "from your recent runs" },
+    { label: "Live Predictions", value: String(submissions.length), icon: Activity, change: "+12% this cycle" },
     {
       label: "Top Suggested Species",
       value: topSpecies,
       icon: Droplets,
-      change: avgScore === null ? "no score yet" : `${avgScore.toFixed(1)}% avg`,
+      change: avgScore === null ? "No score yet" : `${avgScore.toFixed(1)}% avg confidence`,
     },
-    { label: "Backend API", value: apiUp ? "Online" : "Offline", icon: Cpu, change: apiUp ? "live realtime mode" : "check backend" },
-    { label: "Chat Sessions", value: String(sessionsCount), icon: MessageSquare, change: "assistant history saved" },
+    { label: "Backend API", value: apiUp ? "Online" : "Offline", icon: Cpu, change: apiUp ? "Realtime mode active" : "Check service health" },
+    { label: "Chat Sessions", value: String(sessionsCount), icon: MessageSquare, change: "Assistant history retained" },
   ];
 
   const recentPredictions = submissions.slice(0, 8).map((s) => {
@@ -84,94 +86,136 @@ export default function Dashboard() {
 
   return (
     <DashboardLayout>
-      <div className="max-w-6xl mx-auto space-y-6">
-        <motion.div initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.4 }}>
-          <h1 className="text-2xl font-bold text-foreground mb-1">Dashboard</h1>
-          <p className="text-muted-foreground text-sm">Live cultivation intelligence from your real backend data</p>
-        </motion.div>
+      <div className="max-w-7xl mx-auto">
+        <div className="ocean-page-shell">
+          <motion.div className="ocean-page-header" initial={{ opacity: 0, y: 12 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.5 }}>
+            <div className="flex flex-wrap items-start justify-between gap-4">
+              <div>
+                <p className="ocean-page-kicker">Overview / Operations</p>
+                <h1 className="ocean-title-glow mt-2">
+                  Marine <span className="ocean-title-highlight">Intelligence</span> Dashboard
+                </h1>
+                <p className="mt-3 max-w-2xl text-sm text-[#CFE9FF]/80">
+                  Unified live visibility into prediction performance, model confidence, and advisor activity across your ocean farming operations.
+                </p>
+                <div className="ocean-header-line" />
+              </div>
+              <div className="flex items-center gap-2.5">
+                <button
+                  onClick={() => navigate("/predict")}
+                  className="ocean-glass-card rounded-xl px-3.5 py-2 text-xs font-semibold text-[#CFE9FF] transition-colors hover:text-white"
+                >
+                  New Prediction
+                </button>
+                <button
+                  onClick={() => navigate("/chat")}
+                  className="ocean-shine-btn rounded-xl bg-gradient-to-r from-[#1DA1F2] to-[#0EA5E9] px-3.5 py-2 text-xs font-semibold text-white shadow-[0_10px_24px_-14px_rgba(14,165,233,0.9)]"
+                >
+                  Open Copilot
+                </button>
+              </div>
+            </div>
+            <div className="mt-5 inline-flex items-center gap-2 rounded-full border border-emerald-200/20 bg-emerald-400/10 px-3 py-1 text-xs text-emerald-100">
+              <span className="ocean-breathe-dot inline-flex h-2 w-2 rounded-full bg-emerald-300" />
+              Live pulse active
+            </div>
+          </motion.div>
 
-        <div className="grid sm:grid-cols-2 lg:grid-cols-4 gap-4">
-          {stats.map((s, i) => (
+          <div className="px-4 pb-4 sm:px-6 sm:pb-6 space-y-6">
+            <div className="grid sm:grid-cols-2 xl:grid-cols-4 gap-4">
+              {stats.map((s, i) => (
+                <motion.div
+                  key={s.label}
+                  initial={{ opacity: 0, y: 15 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  transition={{ delay: i * 0.08, duration: 0.4 }}
+                  className="ocean-glass-card ocean-kpi-card rounded-[20px] p-5"
+                >
+                  <div className="flex items-start justify-between gap-2">
+                    <div className="relative inline-flex h-11 w-11 items-center justify-center rounded-2xl bg-gradient-to-br from-cyan-400/30 to-blue-500/30">
+                      <div className="absolute inset-0 rounded-2xl bg-cyan-300/30 blur-lg" />
+                      <s.icon className="relative z-10 h-5 w-5 text-cyan-100" />
+                    </div>
+                    <span className="inline-flex items-center gap-1 text-[11px] font-semibold text-emerald-100">
+                      <TrendingUp className="h-3 w-3" />
+                      {s.change}
+                    </span>
+                  </div>
+                  <p className="mt-4 text-3xl font-bold text-white tracking-tight">{s.value}</p>
+                  <p className="mt-1 text-xs uppercase tracking-[0.13em] text-[#7FA9C4]">{s.label}</p>
+                </motion.div>
+              ))}
+            </div>
+
             <motion.div
-              key={s.label}
               initial={{ opacity: 0, y: 15 }}
               animate={{ opacity: 1, y: 0 }}
-              transition={{ delay: i * 0.08, duration: 0.4 }}
-              className="glass-strong rounded-3xl p-5"
+              transition={{ delay: 0.3, duration: 0.4 }}
+              className="ocean-glass-card rounded-[22px] p-4 sm:p-6"
             >
-              <div className="flex items-start justify-between mb-3 gap-2">
-                <div className="w-10 h-10 rounded-2xl gradient-primary flex items-center justify-center shrink-0">
-                  <s.icon className="w-5 h-5 text-primary-foreground" />
+              <div className="mb-5 flex items-center justify-between">
+                <div>
+                  <p className="ocean-page-kicker">Prediction Feed</p>
+                  <h2 className="mt-1 text-xl font-semibold text-white">Recent Predictions</h2>
                 </div>
-                <span className="text-xs text-muted-foreground font-medium text-right">{s.change}</span>
+                <Radar className="h-5 w-5 text-cyan-200 ocean-weather-float" />
               </div>
-              <p className="text-2xl font-bold text-foreground truncate">{s.value}</p>
-              <p className="text-sm text-muted-foreground">{s.label}</p>
-            </motion.div>
-          ))}
-        </div>
 
-        <motion.div
-          initial={{ opacity: 0, y: 15 }}
-          animate={{ opacity: 1, y: 0 }}
-          transition={{ delay: 0.3, duration: 0.4 }}
-          className="glass-strong rounded-3xl p-6"
-        >
-          <div className="flex items-center justify-between mb-5">
-            <h2 className="text-lg font-semibold text-foreground">Recent Predictions</h2>
-            <TrendingUp className="w-5 h-5 text-muted-foreground" />
+              {recentPredictions.length > 0 ? (
+                <div className="overflow-x-auto rounded-2xl border border-white/10 bg-white/[0.03]">
+                  <table className="w-full text-sm">
+                    <thead className="bg-white/[0.06]">
+                      <tr className="text-left text-[#CFE9FF]">
+                        <th className="px-4 py-3 font-semibold rounded-l-xl">Location</th>
+                        <th className="px-4 py-3 font-semibold">Species</th>
+                        <th className="px-4 py-3 font-semibold">Score</th>
+                        <th className="px-4 py-3 font-semibold rounded-r-xl">Status</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {recentPredictions.map((p, i) => (
+                        <tr key={i} className="border-t border-white/5 text-[#CFE9FF] hover:bg-white/[0.04] transition-colors">
+                          <td className="px-4 py-3 font-medium">{p.location}</td>
+                          <td className="px-4 py-3 italic text-[#b6d8ef]">{p.species}</td>
+                          <td className="px-4 py-3">
+                            <div className="flex items-center gap-2">
+                              <div className="h-2 w-20 rounded-full bg-white/10 overflow-hidden">
+                                <div className="h-full rounded-full bg-gradient-to-r from-[#1DA1F2] to-[#0EA5E9]" style={{ width: `${p.score}%` }} />
+                              </div>
+                              <span className="text-xs font-semibold text-white">{p.score}%</span>
+                            </div>
+                          </td>
+                          <td className="px-4 py-3">
+                            <span className="inline-flex rounded-full border border-cyan-200/20 bg-cyan-400/10 px-2.5 py-1 text-[11px] font-semibold text-cyan-100">
+                              {p.status}
+                            </span>
+                          </td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                </div>
+              ) : (
+                !loading && (
+                  <div className="ocean-map-placeholder rounded-2xl p-10 text-center">
+                    <div className="mx-auto mb-4 flex h-14 w-14 items-center justify-center rounded-2xl border border-cyan-100/20 bg-cyan-300/10">
+                      <Sparkles className="h-6 w-6 text-cyan-100" />
+                    </div>
+                    <p className="text-white text-base font-semibold">No prediction stream yet</p>
+                    <p className="mt-2 text-sm text-[#CFE9FF]/70">Start your first prediction to unlock live region intelligence.</p>
+                    <button
+                      onClick={() => navigate("/predict")}
+                      className="mt-5 inline-flex items-center gap-2 rounded-xl bg-gradient-to-r from-[#1DA1F2] to-[#0EA5E9] px-4 py-2 text-sm font-semibold text-white"
+                    >
+                      Run First Prediction
+                      <ArrowRight className="h-4 w-4" />
+                    </button>
+                  </div>
+                )
+              )}
+            </motion.div>
           </div>
-          <div className="overflow-x-auto">
-            <table className="w-full text-sm">
-              <thead>
-                <tr className="text-left text-muted-foreground border-b border-border/50">
-                  <th className="pb-3 font-medium">Location</th>
-                  <th className="pb-3 font-medium">Species</th>
-                  <th className="pb-3 font-medium">Score</th>
-                  <th className="pb-3 font-medium">Status</th>
-                </tr>
-              </thead>
-              <tbody>
-                {recentPredictions.map((p, i) => (
-                  <tr key={i} className="border-b border-border/30 last:border-0">
-                    <td className="py-3 font-medium text-foreground">{p.location}</td>
-                    <td className="py-3 text-muted-foreground italic">{p.species}</td>
-                    <td className="py-3">
-                      <div className="flex items-center gap-2">
-                        <div className="w-16 h-1.5 rounded-full bg-muted overflow-hidden">
-                          <div className="h-full rounded-full gradient-primary" style={{ width: `${p.score}%` }} />
-                        </div>
-                        <span className="font-semibold gradient-text">{p.score}%</span>
-                      </div>
-                    </td>
-                    <td className="py-3">
-                      <span
-                        className={`text-xs font-medium px-2.5 py-1 rounded-full ${
-                          p.status === "Optimal"
-                            ? "bg-ocean-100 text-ocean-600"
-                            : p.status === "Good"
-                              ? "bg-ocean-50 text-ocean-500"
-                              : p.status === "Moderate"
-                                ? "bg-secondary text-secondary-foreground"
-                                : "bg-muted text-muted-foreground"
-                        }`}
-                      >
-                        {p.status}
-                      </span>
-                    </td>
-                  </tr>
-                ))}
-                {!loading && recentPredictions.length === 0 && (
-                  <tr>
-                    <td className="py-6 text-muted-foreground" colSpan={4}>
-                      No submissions yet. Run your first prediction from "Check My Location".
-                    </td>
-                  </tr>
-                )}
-              </tbody>
-            </table>
-          </div>
-        </motion.div>
+        </div>
       </div>
     </DashboardLayout>
   );

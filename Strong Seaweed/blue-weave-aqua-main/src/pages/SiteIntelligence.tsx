@@ -1,9 +1,10 @@
 import DashboardLayout from "@/components/DashboardLayout";
 import { motion } from "framer-motion";
 import { useMemo, useState, useEffect } from "react";
-import { MapPin, Droplets, Thermometer } from "lucide-react";
+import { MapPin, Droplets, Thermometer, ArrowRight, Layers } from "lucide-react";
 import { api, PredictionSubmissionItem } from "@/lib/api";
 import { useAuth } from "@/context/AuthContext";
+import { useNavigate } from "react-router-dom";
 
 type RegionItem = {
   name: string;
@@ -16,9 +17,9 @@ type RegionItem = {
 };
 
 const levelColors = {
-  high: "bg-ocean-500",
-  moderate: "bg-ocean-300",
-  low: "bg-muted-foreground/50",
+  high: "bg-emerald-300",
+  moderate: "bg-cyan-300",
+  low: "bg-slate-400",
 };
 
 const levelLabels = {
@@ -34,6 +35,7 @@ function regionName(s: PredictionSubmissionItem) {
 
 export default function SiteIntelligence() {
   const { token } = useAuth();
+  const navigate = useNavigate();
   const [rows, setRows] = useState<PredictionSubmissionItem[]>([]);
   const [loading, setLoading] = useState(true);
 
@@ -92,92 +94,138 @@ export default function SiteIntelligence() {
 
   return (
     <DashboardLayout>
-      <div className="max-w-6xl mx-auto space-y-6">
-        <motion.div initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }}>
-          <h1 className="text-2xl font-bold text-foreground mb-1">Site Intelligence</h1>
-          <p className="text-muted-foreground text-sm">Realtime regional suitability from your saved prediction history</p>
-        </motion.div>
+      <div className="max-w-7xl mx-auto">
+        <div className="ocean-page-shell">
+          <motion.div className="ocean-page-header" initial={{ opacity: 0, y: 12 }} animate={{ opacity: 1, y: 0 }}>
+            <p className="ocean-page-kicker">Operations / Site Intelligence</p>
+            <h1 className="ocean-title-glow mt-2">
+              Top Farming <span className="ocean-title-highlight">Areas</span>
+            </h1>
+            <p className="mt-3 max-w-2xl text-sm text-[#CFE9FF]/80">
+              Compare regional suitability using historical inference data and quickly identify high-confidence cultivation zones.
+            </p>
+            <div className="ocean-header-line" />
+          </motion.div>
 
-        <div className="flex flex-wrap gap-3 sm:gap-4 text-xs font-medium">
-          {(["high", "moderate", "low"] as const).map((l) => (
-            <div key={l} className="flex items-center gap-1.5">
-              <div className={`w-3 h-3 rounded-full ${levelColors[l]}`} />
-              <span className="text-muted-foreground">{levelLabels[l]}</span>
-            </div>
-          ))}
-        </div>
+          <div className="px-4 pb-4 sm:px-6 sm:pb-6">
+            <div className="grid xl:grid-cols-5 gap-6">
+              <div className="xl:col-span-2 space-y-4">
+                <div className="ocean-glass-card rounded-2xl p-4">
+                  <p className="text-xs uppercase tracking-[0.14em] text-[#7FA9C4]">Region Selector</p>
+                  <p className="mt-1 text-sm text-[#CFE9FF]/80">Choose a region to inspect model confidence and advisory signals.</p>
+                </div>
+                <div className="space-y-3">
+                  {regions.map((r, i) => (
+                    <motion.button
+                      key={r.name}
+                      initial={{ opacity: 0, x: -10 }}
+                      animate={{ opacity: 1, x: 0 }}
+                      transition={{ delay: i * 0.04 }}
+                      onClick={() => setSelected(r)}
+                      className={`w-full text-left rounded-2xl border p-4 transition-all duration-200 ${
+                        selected?.name === r.name
+                          ? "border-cyan-200/35 bg-gradient-to-r from-cyan-400/15 to-blue-400/20 shadow-[0_10px_22px_-16px_rgba(14,165,233,0.85)]"
+                          : "border-white/10 bg-white/[0.04] hover:bg-white/[0.08]"
+                      }`}
+                    >
+                      <div className="flex items-center justify-between">
+                        <div className="flex items-center gap-3">
+                          <div className={`h-2.5 w-2.5 rounded-full ${levelColors[r.level]}`} />
+                          <div>
+                            <p className="text-sm font-semibold text-white">{r.name}</p>
+                            <p className="text-xs text-[#9fc6e2] italic">{r.species}</p>
+                          </div>
+                        </div>
+                        <span className="text-sm font-bold text-cyan-100">{r.score}%</span>
+                      </div>
+                    </motion.button>
+                  ))}
+                  {!loading && regions.length === 0 && (
+                    <div className="ocean-glass-card rounded-2xl p-6 text-center">
+                      <MapPin className="mx-auto h-8 w-8 text-cyan-200" />
+                      <p className="mt-2 text-sm text-[#CFE9FF]/80">No site data yet. Save prediction runs to unlock ranking.</p>
+                    </div>
+                  )}
+                </div>
+              </div>
 
-        <div className="grid lg:grid-cols-5 gap-6">
-          <div className="lg:col-span-2 space-y-3">
-            {regions.map((r, i) => (
-              <motion.button
-                key={r.name}
-                initial={{ opacity: 0, x: -10 }}
-                animate={{ opacity: 1, x: 0 }}
-                transition={{ delay: i * 0.04 }}
-                onClick={() => setSelected(r)}
-                className={`w-full text-left glass-strong rounded-2xl p-4 transition-all duration-200 ${selected?.name === r.name ? "ring-2 ring-primary/30 glow-sm" : ""}`}
-              >
-                <div className="flex items-center justify-between">
-                  <div className="flex items-center gap-3">
-                    <div className={`w-3 h-3 rounded-full ${levelColors[r.level]}`} />
+              <div className="xl:col-span-3 space-y-4">
+                <div className="ocean-map-placeholder rounded-[22px] min-h-[280px] p-5">
+                  <div className="ocean-map-orbiter" />
+                  <div className="flex flex-wrap items-center justify-between gap-3">
                     <div>
-                      <p className="font-semibold text-foreground text-sm">{r.name}</p>
-                      <p className="text-xs text-muted-foreground italic">{r.species}</p>
+                      <p className="ocean-page-kicker">Intelligence Map</p>
+                      <h3 className="mt-1 text-lg font-semibold text-white">Regional Suitability Layers</h3>
+                    </div>
+                    <div className="flex items-center gap-2 text-xs text-cyan-100">
+                      <span className="rounded-full border border-cyan-100/20 bg-white/10 px-2.5 py-1">Depth</span>
+                      <span className="rounded-full border border-cyan-100/20 bg-white/10 px-2.5 py-1">Salinity</span>
+                      <span className="rounded-full border border-cyan-100/20 bg-white/10 px-2.5 py-1">Temperature</span>
                     </div>
                   </div>
-                  <span className="text-sm font-bold gradient-text">{r.score}%</span>
-                </div>
-              </motion.button>
-            ))}
-            {!loading && regions.length === 0 && <p className="text-sm text-muted-foreground">No site data yet. Save some predictions first.</p>}
-          </div>
-
-          <div className="lg:col-span-3">
-            {selected ? (
-              <motion.div key={selected.name} initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} className="glass-strong rounded-2xl sm:rounded-3xl p-4 sm:p-6 space-y-5 lg:sticky lg:top-6">
-                <div className="flex items-start justify-between">
-                  <div>
-                    <h3 className="text-xl font-bold text-foreground">{selected.name}</h3>
-                    <span className={`inline-block mt-1 text-xs font-medium px-2.5 py-0.5 rounded-full ${selected.level === "high" ? "bg-ocean-100 text-ocean-600" : selected.level === "moderate" ? "bg-secondary text-secondary-foreground" : "bg-muted text-muted-foreground"}`}>
-                      {levelLabels[selected.level]}
-                    </span>
-                  </div>
-                  <div className="text-right">
-                    <p className="text-3xl font-bold gradient-text">{selected.score}%</p>
-                    <p className="text-xs text-muted-foreground">Suitability Score</p>
+                  <div className="mt-6 grid grid-cols-3 gap-3">
+                    <div className="rounded-xl border border-cyan-100/15 bg-white/[0.06] px-3 py-2 text-xs text-cyan-100">West Coast Marker</div>
+                    <div className="rounded-xl border border-cyan-100/15 bg-white/[0.06] px-3 py-2 text-xs text-cyan-100">South Bay Marker</div>
+                    <div className="rounded-xl border border-cyan-100/15 bg-white/[0.06] px-3 py-2 text-xs text-cyan-100">Island Marker</div>
                   </div>
                 </div>
 
-                <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
-                  <div className="glass rounded-2xl p-3 text-center">
-                    <Thermometer className="w-5 h-5 text-primary mx-auto mb-1" />
-                    <p className="text-sm font-semibold text-foreground">{selected.temp}</p>
-                    <p className="text-xs text-muted-foreground">Temperature</p>
-                  </div>
-                  <div className="glass rounded-2xl p-3 text-center">
-                    <Droplets className="w-5 h-5 text-primary mx-auto mb-1" />
-                    <p className="text-sm font-semibold text-foreground">{selected.salinity}</p>
-                    <p className="text-xs text-muted-foreground">Salinity</p>
-                  </div>
-                  <div className="glass rounded-2xl p-3 text-center">
-                    <MapPin className="w-5 h-5 text-primary mx-auto mb-1" />
-                    <p className="text-sm font-semibold text-foreground italic">{selected.species}</p>
-                    <p className="text-xs text-muted-foreground">Top Species</p>
-                  </div>
-                </div>
+                {selected ? (
+                  <motion.div key={selected.name} initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} className="ocean-glass-card rounded-[22px] p-5 sm:p-6 space-y-5">
+                    <div className="flex items-start justify-between">
+                      <div>
+                        <h3 className="text-2xl font-semibold text-white">{selected.name}</h3>
+                        <span className="mt-2 inline-flex rounded-full border border-cyan-200/20 bg-cyan-400/10 px-2.5 py-1 text-xs font-semibold text-cyan-100">
+                          {levelLabels[selected.level]}
+                        </span>
+                      </div>
+                      <div className="text-right">
+                        <p className="text-3xl font-bold text-cyan-100">{selected.score}%</p>
+                        <p className="text-xs text-[#7FA9C4]">Suitability Score</p>
+                      </div>
+                    </div>
 
-                <div className="glass rounded-2xl p-4">
-                  <p className="text-xs font-semibold text-muted-foreground uppercase tracking-wider mb-1">Advisory</p>
-                  <p className="text-sm text-foreground">{selected.advisory}</p>
-                </div>
-              </motion.div>
-            ) : (
-              <div className="glass-strong rounded-3xl p-12 text-center">
-                <MapPin className="w-10 h-10 text-muted-foreground mx-auto mb-3" />
-                <p className="text-muted-foreground">Select a region to view detailed intelligence</p>
+                    <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
+                      <div className="rounded-2xl border border-white/10 bg-white/[0.04] p-3 text-center">
+                        <Thermometer className="mx-auto mb-1 h-5 w-5 text-cyan-100" />
+                        <p className="text-sm font-semibold text-white">{selected.temp}</p>
+                        <p className="text-xs text-[#7FA9C4]">Temperature</p>
+                      </div>
+                      <div className="rounded-2xl border border-white/10 bg-white/[0.04] p-3 text-center">
+                        <Droplets className="mx-auto mb-1 h-5 w-5 text-cyan-100" />
+                        <p className="text-sm font-semibold text-white">{selected.salinity}</p>
+                        <p className="text-xs text-[#7FA9C4]">Salinity</p>
+                      </div>
+                      <div className="rounded-2xl border border-white/10 bg-white/[0.04] p-3 text-center">
+                        <Layers className="mx-auto mb-1 h-5 w-5 text-cyan-100" />
+                        <p className="text-sm font-semibold text-white italic">{selected.species}</p>
+                        <p className="text-xs text-[#7FA9C4]">Top Species</p>
+                      </div>
+                    </div>
+
+                    <div className="rounded-2xl border border-white/10 bg-white/[0.04] p-4">
+                      <p className="text-xs font-semibold uppercase tracking-[0.14em] text-[#7FA9C4]">Advisory</p>
+                      <p className="mt-2 text-sm text-[#CFE9FF]">{selected.advisory}</p>
+                    </div>
+                  </motion.div>
+                ) : (
+                  <div className="ocean-glass-card rounded-[22px] p-10 text-center">
+                    <div className="mx-auto mb-4 flex h-14 w-14 items-center justify-center rounded-2xl border border-cyan-100/20 bg-cyan-300/10">
+                      <MapPin className="h-6 w-6 text-cyan-100" />
+                    </div>
+                    <p className="text-base font-semibold text-white">Analyze a Region</p>
+                    <p className="mt-2 text-sm text-[#CFE9FF]/70">Select a region from the left panel to generate intelligence insights.</p>
+                    <button
+                      onClick={() => navigate("/predict")}
+                      className="mt-5 inline-flex items-center gap-2 rounded-xl bg-gradient-to-r from-[#1DA1F2] to-[#0EA5E9] px-4 py-2 text-sm font-semibold text-white"
+                    >
+                      Run a Prediction
+                      <ArrowRight className="h-4 w-4" />
+                    </button>
+                  </div>
+                )}
               </div>
-            )}
+            </div>
           </div>
         </div>
       </div>

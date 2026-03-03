@@ -2,7 +2,7 @@ import DashboardLayout from "@/components/DashboardLayout";
 import { motion } from "framer-motion";
 import { Button } from "@/components/ui/button";
 import { useState } from "react";
-import { ArrowRight, ChevronDown, MapPin } from "lucide-react";
+import { ArrowRight, ChevronDown, MapPin, Calendar, Ruler, Thermometer, Droplets, Orbit } from "lucide-react";
 import { useNavigate } from "react-router-dom";
 import { api } from "@/lib/api";
 import { useAuth } from "@/context/AuthContext";
@@ -45,6 +45,10 @@ function toOptionalNumber(value: string): number | null {
   if (!value.trim()) return null;
   const n = Number(value);
   return Number.isFinite(n) ? n : null;
+}
+
+function fieldClass(hasValue: boolean) {
+  return `w-full h-12 rounded-2xl border border-white/15 bg-white/[0.05] px-10 pr-4 text-sm text-white placeholder:text-[#9dc2dd] focus:outline-none focus:ring-2 focus:ring-cyan-300/35 focus:border-cyan-200/35 transition-all ${hasValue ? "shadow-[0_0_0_1px_rgba(125,183,221,0.18)]" : ""}`;
 }
 
 export default function PredictPage() {
@@ -122,143 +126,197 @@ export default function PredictPage() {
     }
   };
 
-  const inputClass =
-    "w-full h-12 rounded-2xl glass-strong px-4 text-sm text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-primary/30 transition-shadow";
-  const labelClass = "block text-sm font-medium text-foreground mb-1.5";
-
   return (
     <DashboardLayout>
-      <div className="max-w-2xl mx-auto">
-        <motion.div initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }}>
-          <h1 className="text-2xl font-bold text-foreground mb-1">Check My Location</h1>
-          <p className="text-muted-foreground text-sm mb-8">Enter site details and get species-wise suitability output.</p>
-        </motion.div>
-
-        <motion.form
-          onSubmit={handleSubmit}
-          initial={{ opacity: 0, y: 15 }}
-          animate={{ opacity: 1, y: 0 }}
-          transition={{ delay: 0.15 }}
-          className="glass-strong rounded-3xl p-8 space-y-6"
-        >
-          <div className="grid sm:grid-cols-2 gap-5">
-            <div>
-              <label className={labelClass}>Location</label>
-              <div className="relative">
-                <select value={location} onChange={(e) => setLocation(e.target.value)} className={inputClass + " appearance-none cursor-pointer"}>
-                  <option value="">Select location...</option>
-                  {locations.map((l) => (
-                    <option key={l} value={l}>
-                      {l}
-                    </option>
-                  ))}
-                </select>
-                <MapPin className="absolute right-4 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground pointer-events-none" />
+      <div className="max-w-7xl mx-auto">
+        <div className="ocean-page-shell">
+          <motion.div className="ocean-page-header" initial={{ opacity: 0, y: 12 }} animate={{ opacity: 1, y: 0 }}>
+            <div className="flex flex-wrap items-start justify-between gap-4">
+              <div>
+                <p className="ocean-page-kicker">Operations / Suitability Engine</p>
+                <h1 className="ocean-title-glow mt-2">
+                  Check My <span className="ocean-title-highlight">Location</span>
+                </h1>
+                <p className="mt-3 max-w-2xl text-sm text-[#CFE9FF]/80">
+                  Submit site conditions to run live model inference and species-level suitability scoring.
+                </p>
+                <div className="ocean-header-line" />
+              </div>
+              <div className="relative hidden sm:block">
+                <Orbit className="h-7 w-7 text-cyan-200 ocean-weather-float" />
+                <span className="absolute -right-1 -top-1 inline-flex h-2.5 w-2.5 rounded-full bg-cyan-300 ocean-breathe-dot" />
               </div>
             </div>
-            <div>
-              <label className={labelClass}>Season</label>
-              <select value={season} onChange={(e) => setSeason(e.target.value)} className={inputClass + " appearance-none cursor-pointer"}>
-                <option value="">Select season...</option>
-                {seasons.map((s) => (
-                  <option key={s} value={s}>
-                    {s}
-                  </option>
-                ))}
-              </select>
-            </div>
-          </div>
+          </motion.div>
 
-          <div className="grid sm:grid-cols-2 gap-5">
-            <div>
-              <label className={labelClass}>Latitude</label>
-              <input type="number" step="any" placeholder="e.g. 9.1000" value={lat} onChange={(e) => setLat(e.target.value)} className={inputClass} />
-            </div>
-            <div>
-              <label className={labelClass}>Longitude</label>
-              <input type="number" step="any" placeholder="e.g. 79.3000" value={lon} onChange={(e) => setLon(e.target.value)} className={inputClass} />
-            </div>
-          </div>
+          <div className="px-4 pb-4 sm:px-6 sm:pb-6">
+            <div className="grid xl:grid-cols-5 gap-6">
+              <motion.form
+                onSubmit={handleSubmit}
+                initial={{ opacity: 0, x: -10 }}
+                animate={{ opacity: 1, x: 0 }}
+                transition={{ delay: 0.12 }}
+                className="ocean-glass-card rounded-[22px] p-5 sm:p-6 space-y-5 xl:col-span-3"
+              >
+                <div className="grid sm:grid-cols-2 gap-4">
+                  <div>
+                    <label className="mb-1.5 block text-xs uppercase tracking-[0.14em] text-[#7FA9C4]">Location</label>
+                    <div className="relative">
+                      <select value={location} onChange={(e) => setLocation(e.target.value)} className={fieldClass(!!location) + " appearance-none cursor-pointer"}>
+                        <option value="">Select location...</option>
+                        {locations.map((l) => (
+                          <option key={l} value={l}>
+                            {l}
+                          </option>
+                        ))}
+                      </select>
+                      <MapPin className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-cyan-200" />
+                    </div>
+                  </div>
+                  <div>
+                    <label className="mb-1.5 block text-xs uppercase tracking-[0.14em] text-[#7FA9C4]">Season</label>
+                    <div className="relative">
+                      <select value={season} onChange={(e) => setSeason(e.target.value)} className={fieldClass(!!season) + " appearance-none cursor-pointer"}>
+                        <option value="">Select season...</option>
+                        {seasons.map((s) => (
+                          <option key={s} value={s}>
+                            {s}
+                          </option>
+                        ))}
+                      </select>
+                      <Calendar className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-cyan-200" />
+                    </div>
+                  </div>
+                </div>
 
-          {location && locationToCoords[location] && (
-            <button
-              type="button"
-              onClick={() => {
-                setLat(String(locationToCoords[location].lat));
-                setLon(String(locationToCoords[location].lon));
-              }}
-              className="text-xs text-primary hover:text-primary/80 transition-colors"
-            >
-              Use default coordinates for {location}
-            </button>
-          )}
+                <div className="grid sm:grid-cols-2 gap-4">
+                  <div>
+                    <label className="mb-1.5 block text-xs uppercase tracking-[0.14em] text-[#7FA9C4]">Latitude</label>
+                    <div className="relative">
+                      <input type="number" step="any" placeholder="e.g. 9.1000" value={lat} onChange={(e) => setLat(e.target.value)} className={fieldClass(!!lat)} />
+                      <MapPin className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-cyan-200" />
+                    </div>
+                  </div>
+                  <div>
+                    <label className="mb-1.5 block text-xs uppercase tracking-[0.14em] text-[#7FA9C4]">Longitude</label>
+                    <div className="relative">
+                      <input type="number" step="any" placeholder="e.g. 79.3000" value={lon} onChange={(e) => setLon(e.target.value)} className={fieldClass(!!lon)} />
+                      <MapPin className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-cyan-200" />
+                    </div>
+                  </div>
+                </div>
 
-          <div className="grid sm:grid-cols-2 gap-5">
-            <div>
-              <label className={labelClass}>Depth (m)</label>
-              <input type="number" placeholder="e.g. 5" value={depth} onChange={(e) => setDepth(e.target.value)} className={inputClass} />
-            </div>
-            <div>
-              <label className={labelClass}>Temperature Override (deg C)</label>
-              <input
-                type="number"
-                step="any"
-                placeholder="Auto-fetched"
-                value={temperatureC}
-                onChange={(e) => setTemperatureC(e.target.value)}
-                className={inputClass}
-              />
-            </div>
-          </div>
+                {location && locationToCoords[location] && (
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setLat(String(locationToCoords[location].lat));
+                      setLon(String(locationToCoords[location].lon));
+                    }}
+                    className="text-xs text-cyan-200 hover:text-cyan-100 transition-colors"
+                  >
+                    Use default coordinates for {location}
+                  </button>
+                )}
 
-          <div>
-            <label className={labelClass}>Salinity Override (ppt)</label>
-            <input
-              type="number"
-              step="any"
-              placeholder="Auto-fetched"
-              value={salinityPpt}
-              onChange={(e) => setSalinityPpt(e.target.value)}
-              className={inputClass}
-            />
-          </div>
+                <div className="grid sm:grid-cols-2 gap-4">
+                  <div>
+                    <label className="mb-1.5 block text-xs uppercase tracking-[0.14em] text-[#7FA9C4]">Depth (m)</label>
+                    <div className="relative">
+                      <input type="number" placeholder="e.g. 5" value={depth} onChange={(e) => setDepth(e.target.value)} className={fieldClass(!!depth)} />
+                      <Ruler className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-cyan-200" />
+                    </div>
+                  </div>
+                  <div>
+                    <label className="mb-1.5 block text-xs uppercase tracking-[0.14em] text-[#7FA9C4]">Temperature Override (deg C)</label>
+                    <div className="relative">
+                      <input
+                        type="number"
+                        step="any"
+                        placeholder="Auto-fetched"
+                        value={temperatureC}
+                        onChange={(e) => setTemperatureC(e.target.value)}
+                        className={fieldClass(!!temperatureC)}
+                      />
+                      <Thermometer className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-cyan-200" />
+                    </div>
+                  </div>
+                </div>
 
-          <button
-            type="button"
-            onClick={() => setShowAdvanced(!showAdvanced)}
-            className="flex items-center gap-2 text-sm font-medium text-primary hover:text-primary/80 transition-colors"
-          >
-            <ChevronDown className={`w-4 h-4 transition-transform ${showAdvanced ? "rotate-180" : ""}`} />
-            Advanced Parameters
-          </button>
-
-          {showAdvanced && (
-            <motion.div initial={{ opacity: 0, height: 0 }} animate={{ opacity: 1, height: "auto" }} className="space-y-6 border-t border-border/40 pt-6">
-              <p className="text-xs font-semibold text-muted-foreground uppercase tracking-wider">Physical Parameters</p>
-              <div className="grid sm:grid-cols-2 gap-5">
-                {advancedFields.map((field) => (
-                  <div key={field.key}>
-                    <label className={labelClass}>{field.label}</label>
+                <div>
+                  <label className="mb-1.5 block text-xs uppercase tracking-[0.14em] text-[#7FA9C4]">Salinity Override (ppt)</label>
+                  <div className="relative">
                     <input
                       type="number"
                       step="any"
-                      placeholder="-"
-                      value={advanced[field.key] || ""}
-                      onChange={(e) => setAdvanced((prev) => ({ ...prev, [field.key]: e.target.value }))}
-                      className={inputClass}
+                      placeholder="Auto-fetched"
+                      value={salinityPpt}
+                      onChange={(e) => setSalinityPpt(e.target.value)}
+                      className={fieldClass(!!salinityPpt)}
                     />
+                    <Droplets className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-cyan-200" />
                   </div>
-                ))}
-              </div>
-            </motion.div>
-          )}
+                </div>
 
-          {error && <p className="text-sm text-red-500">{error}</p>}
+                <div className="rounded-2xl border border-white/12 bg-white/[0.04]">
+                  <button
+                    type="button"
+                    onClick={() => setShowAdvanced(!showAdvanced)}
+                    className="flex w-full items-center justify-between px-4 py-3 text-left text-sm font-medium text-[#CFE9FF]"
+                  >
+                    Advanced Parameters
+                    <ChevronDown className={`h-4 w-4 transition-transform ${showAdvanced ? "rotate-180" : ""}`} />
+                  </button>
+                  {showAdvanced && (
+                    <motion.div initial={{ opacity: 0, height: 0 }} animate={{ opacity: 1, height: "auto" }} className="border-t border-white/10 px-4 py-4">
+                      <div className="grid sm:grid-cols-2 gap-4">
+                        {advancedFields.map((field) => (
+                          <div key={field.key}>
+                            <label className="mb-1.5 block text-xs uppercase tracking-[0.14em] text-[#7FA9C4]">{field.label}</label>
+                            <input
+                              type="number"
+                              step="any"
+                              placeholder="-"
+                              value={advanced[field.key] || ""}
+                              onChange={(e) => setAdvanced((prev) => ({ ...prev, [field.key]: e.target.value }))}
+                              className={fieldClass(!!advanced[field.key])}
+                            />
+                          </div>
+                        ))}
+                      </div>
+                    </motion.div>
+                  )}
+                </div>
 
-          <Button type="submit" variant="hero" size="lg" className="w-full" disabled={isLoading}>
-            {isLoading ? "Running model..." : "Run Suitability Model"} <ArrowRight className="w-5 h-5" />
-          </Button>
-        </motion.form>
+                {error && <p className="text-sm text-rose-300">{error}</p>}
+
+                <Button type="submit" size="lg" className="ocean-shine-btn w-full bg-gradient-to-r from-[#1DA1F2] to-[#0EA5E9] text-white hover:opacity-95" disabled={isLoading}>
+                  {isLoading ? "Running model..." : "Run Suitability Model"}
+                  <ArrowRight className="h-5 w-5" />
+                </Button>
+              </motion.form>
+
+              <motion.div initial={{ opacity: 0, x: 10 }} animate={{ opacity: 1, x: 0 }} transition={{ delay: 0.2 }} className="xl:col-span-2 space-y-4">
+                <div className="ocean-map-placeholder rounded-[22px] min-h-[340px] p-5">
+                  <div className="ocean-map-orbiter" />
+                  <p className="ocean-page-kicker">Live Preview</p>
+                  <h3 className="mt-1 text-xl font-semibold text-white">Suitability Visualizer</h3>
+                  <p className="mt-2 max-w-xs text-sm text-[#CFE9FF]/75">Live suitability preview will appear here after model execution.</p>
+                  <div className="mt-8 grid grid-cols-2 gap-2 text-xs">
+                    <div className="rounded-xl border border-cyan-100/15 bg-white/[0.06] px-3 py-2 text-cyan-100">Temperature Layer</div>
+                    <div className="rounded-xl border border-cyan-100/15 bg-white/[0.06] px-3 py-2 text-cyan-100">Salinity Layer</div>
+                    <div className="rounded-xl border border-cyan-100/15 bg-white/[0.06] px-3 py-2 text-cyan-100">Depth Layer</div>
+                    <div className="rounded-xl border border-cyan-100/15 bg-white/[0.06] px-3 py-2 text-cyan-100">Current Layer</div>
+                  </div>
+                </div>
+                <div className="ocean-glass-card rounded-2xl p-4">
+                  <p className="text-xs uppercase tracking-[0.14em] text-[#7FA9C4]">Execution Notes</p>
+                  <p className="mt-2 text-sm text-[#CFE9FF]/80">Use this panel to validate coordinates and environmental overrides before triggering high-confidence species recommendations.</p>
+                </div>
+              </motion.div>
+            </div>
+          </div>
+        </div>
       </div>
     </DashboardLayout>
   );
