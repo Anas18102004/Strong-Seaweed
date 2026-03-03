@@ -849,7 +849,7 @@ export default function Chatbot() {
                         }}
                         role="button"
                         tabIndex={0}
-                        className={`group relative w-full rounded-lg border p-2.5 text-left transition-all duration-200 ${
+                        className={`group relative w-full rounded-lg border p-2.5 pr-10 text-left transition-all duration-200 ${
                           sessionId === s.id
                             ? "border-cyan-300/70 bg-gradient-to-r from-[#1da1f2]/12 to-[#0ea5e9]/20 shadow-[0_10px_18px_-14px_rgba(2,132,199,0.9)]"
                             : "border-[#c6dbea] bg-white hover:-translate-y-0.5 hover:border-cyan-300/60 hover:bg-cyan-50/40"
@@ -867,7 +867,7 @@ export default function Chatbot() {
                             e.stopPropagation();
                             void deleteSession(s.id);
                           }}
-                          className="absolute right-2 top-2 inline-flex h-6 w-6 items-center justify-center rounded-md border border-transparent text-slate-400 opacity-0 transition-all duration-200 hover:border-rose-200 hover:text-rose-600 group-hover:opacity-100"
+                          className="absolute right-2 top-1/2 inline-flex h-6 w-6 -translate-y-1/2 items-center justify-center rounded-md border border-transparent bg-white/70 text-slate-400 opacity-0 transition-all duration-200 hover:border-rose-200 hover:text-rose-600 group-hover:opacity-100 focus-visible:opacity-100"
                           title="Delete chat"
                         >
                           <Trash2 className="h-3.5 w-3.5" />
