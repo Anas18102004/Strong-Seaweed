@@ -257,39 +257,41 @@ export default function AIAgents() {
           </div>
 
           <div className="lg:col-span-3 space-y-4">
-            <div className="context-intelligence-panel rounded-2xl p-4 sm:p-6">
-              <p className="text-sm font-semibold text-white">{active.name}</p>
-              <p className="text-xs text-[#b7dbf4] mt-1">Provide focused context for higher-quality task plans.</p>
+            <div className="rounded-2xl border border-[#88acc3]/55 bg-gradient-to-b from-[#48647b] to-[#445f76] p-4 sm:p-6 shadow-[0_20px_34px_-24px_rgba(14,45,72,0.9)]">
+              <p className="text-lg font-semibold text-white">{active.name}</p>
+              <p className="text-sm text-[#d7ebfa] mt-1">Provide focused context for higher-quality task plans.</p>
+              <div className="mt-4 h-px bg-gradient-to-r from-cyan-200/35 via-cyan-100/15 to-transparent" />
+
               <div className="grid sm:grid-cols-2 gap-3 mt-4">
-                <label className="relative block ai-input-shell rounded-xl">
+                <label className="block">
+                  <span className="mb-1.5 block text-[11px] font-semibold uppercase tracking-[0.12em] text-[#d1e8f9]">Location (optional)</span>
                   <input
                     value={location}
                     onChange={(e) => setLocation(e.target.value)}
-                    placeholder=" "
-                    className="peer h-11 w-full rounded-xl border border-white/25 bg-[#0f304b]/70 px-4 text-sm text-white outline-none transition-all duration-200 focus:border-cyan-200/45 focus:ring-2 focus:ring-cyan-200/35"
+                    placeholder="e.g. Gulf of Mannar"
+                    className="h-11 w-full rounded-lg border border-[#84a9c3]/55 bg-[#163b58] px-3.5 text-sm text-white placeholder:text-[#9ec1d9] outline-none transition-all duration-200 focus:border-cyan-200/70 focus:ring-2 focus:ring-cyan-200/35"
                   />
-                  <span className="pointer-events-none absolute left-4 top-1/2 -translate-y-1/2 text-xs text-[#9fc6e2] transition-all peer-focus:top-2 peer-focus:text-[10px] peer-focus:text-cyan-100 peer-[:not(:placeholder-shown)]:top-2 peer-[:not(:placeholder-shown)]:text-[10px]">Location (optional)</span>
                 </label>
-                <label className="relative block ai-input-shell rounded-xl">
+                <label className="block">
+                  <span className="mb-1.5 block text-[11px] font-semibold uppercase tracking-[0.12em] text-[#d1e8f9]">Objective (optional)</span>
                   <input
                     value={objective}
                     onChange={(e) => setObjective(e.target.value)}
-                    placeholder=" "
-                    className="peer h-11 w-full rounded-xl border border-white/25 bg-[#0f304b]/70 px-4 text-sm text-white outline-none transition-all duration-200 focus:border-cyan-200/45 focus:ring-2 focus:ring-cyan-200/35"
+                    placeholder="e.g. reduce harvest risk in 30 days"
+                    className="h-11 w-full rounded-lg border border-[#84a9c3]/55 bg-[#163b58] px-3.5 text-sm text-white placeholder:text-[#9ec1d9] outline-none transition-all duration-200 focus:border-cyan-200/70 focus:ring-2 focus:ring-cyan-200/35"
                   />
-                  <span className="pointer-events-none absolute left-4 top-1/2 -translate-y-1/2 text-xs text-[#9fc6e2] transition-all peer-focus:top-2 peer-focus:text-[10px] peer-focus:text-cyan-100 peer-[:not(:placeholder-shown)]:top-2 peer-[:not(:placeholder-shown)]:text-[10px]">Objective (optional)</span>
                 </label>
               </div>
-              <label className="relative block mt-4 ai-input-shell rounded-xl">
+              <label className="block mt-4">
+                <span className="mb-1.5 block text-[11px] font-semibold uppercase tracking-[0.12em] text-[#d1e8f9]">Constraints</span>
                 <textarea
                   value={constraints}
                   onChange={(e) => setConstraints(e.target.value)}
-                  placeholder=" "
-                  className="peer min-h-24 w-full rounded-xl border border-white/25 bg-gradient-to-b from-[#10324d]/75 to-[#0d2940]/78 px-4 py-3 text-sm text-white outline-none transition-all duration-200 focus:border-cyan-200/45 focus:ring-2 focus:ring-cyan-200/35"
+                  placeholder="Budget, timeline, manpower, regulations"
+                  className="min-h-24 w-full rounded-lg border border-[#84a9c3]/55 bg-[#163b58] px-3.5 py-3 text-sm text-white placeholder:text-[#9ec1d9] outline-none transition-all duration-200 focus:border-cyan-200/70 focus:ring-2 focus:ring-cyan-200/35"
                 />
-                <span className="pointer-events-none absolute left-4 top-3 text-xs text-[#9fc6e2] transition-all peer-focus:top-2 peer-focus:text-[10px] peer-focus:text-cyan-100 peer-[:not(:placeholder-shown)]:top-2 peer-[:not(:placeholder-shown)]:text-[10px]">Constraints (budget, timeline, manpower, regulations)</span>
               </label>
-              <div className="mt-5 flex flex-wrap gap-2">
+              <div className="mt-5 flex flex-wrap gap-2.5">
                 <Button
                   onClick={runTask}
                   className="ocean-shine-btn ai-cta-btn min-h-12 rounded-full bg-gradient-to-r from-[#1DA1F2] to-[#0EA5E9] px-5 text-white hover:opacity-95"
