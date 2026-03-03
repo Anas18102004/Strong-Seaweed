@@ -57,6 +57,14 @@ export default function Settings() {
     "relative inline-flex h-6 w-11 items-center rounded-full bg-slate-300 transition-colors after:absolute after:left-0.5 after:h-5 after:w-5 after:rounded-full after:bg-white after:transition-transform peer-checked:bg-cyan-600 peer-checked:after:translate-x-5";
 
   const userInitial = useMemo(() => (profile.name || profile.email || "U").trim().charAt(0).toUpperCase(), [profile.name, profile.email]);
+  const toUiError = (err: unknown, fallback: string) => {
+    const msg = err instanceof Error ? err.message : fallback;
+    const routeMissing = /api route unavailable|cannot (get|put)|\/api\/settings/i.test(msg);
+    if (routeMissing) {
+      return "Settings API is not deployed on this server yet. Pull latest backend and restart services.";
+    }
+    return msg || fallback;
+  };
 
   const loadSettings = async (isInitial = false) => {
     if (!token) return;
@@ -118,7 +126,7 @@ export default function Settings() {
       setProfile((prev) => ({ ...prev, ...out.profile }));
       setStatusText("Profile saved.");
     } catch (err) {
-      setStatusText(err instanceof Error ? err.message : "Could not save profile.");
+      setStatusText(toUiError(err, "Could not save profile."));
     } finally {
       setSaving(false);
     }
@@ -144,7 +152,7 @@ export default function Settings() {
       setPwConfirm("");
       setStatusText("Password updated.");
     } catch (err) {
-      setStatusText(err instanceof Error ? err.message : "Could not update password.");
+      setStatusText(toUiError(err, "Could not update password."));
     } finally {
       setSaving(false);
     }
@@ -157,7 +165,7 @@ export default function Settings() {
       await api.updatePreferences(next, token);
       setStatusText("Preferences saved.");
     } catch (err) {
-      setStatusText(err instanceof Error ? err.message : "Could not save preferences.");
+      setStatusText(toUiError(err, "Could not save preferences."));
     }
   };
 
