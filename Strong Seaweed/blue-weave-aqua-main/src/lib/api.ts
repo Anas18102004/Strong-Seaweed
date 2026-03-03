@@ -194,6 +194,22 @@ export type DashboardHealthResponse = {
   updatedAt: string;
 };
 
+export type PredictReferenceResponse = {
+  locations: string[];
+  seasons: string[];
+  currentSeason: string;
+  fetchedAt: string;
+};
+
+export type PredictEnvironmentResponse = {
+  temperatureC: number | null;
+  salinityPpt: number | null;
+  provider: string;
+  fetchedAt: string;
+  notes?: string[];
+  error?: string;
+};
+
 type ChatStreamEvent =
   | { type: "delta"; token?: string }
   | {
@@ -436,6 +452,12 @@ export const api = {
 
   dashboardHealth: (token?: string) =>
     request<DashboardHealthResponse>("/api/dashboard/health", { method: "GET" }, token),
+
+  predictReference: (token?: string) =>
+    request<PredictReferenceResponse>("/api/predict/reference", { method: "GET" }, token),
+
+  predictEnvironment: (lat: number, lon: number, token?: string) =>
+    request<PredictEnvironmentResponse>(`/api/predict/environment?lat=${lat}&lon=${lon}`, { method: "GET" }, token),
 };
 
 export { API_BASE_URL };

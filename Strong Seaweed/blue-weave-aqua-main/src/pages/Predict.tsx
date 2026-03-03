@@ -1,7 +1,7 @@
 import DashboardLayout from "@/components/DashboardLayout";
 import { motion } from "framer-motion";
 import { Button } from "@/components/ui/button";
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { ArrowRight, ChevronDown, MapPin, Calendar, Ruler, Thermometer, Droplets, Radar, LocateFixed, ShieldCheck } from "lucide-react";
 import { useNavigate } from "react-router-dom";
 import { api, SpeciesPredictionResponse } from "@/lib/api";
@@ -9,8 +9,8 @@ import { useAuth } from "@/context/AuthContext";
 import { CircleMarker, MapContainer, TileLayer, useMapEvents } from "react-leaflet";
 import "leaflet/dist/leaflet.css";
 
-const seasons = ["Pre-Monsoon", "Monsoon", "Post-Monsoon", "Winter"];
-const locations = [
+const defaultSeasons = ["Pre-Monsoon", "Monsoon", "Post-Monsoon", "Winter"];
+const defaultLocations = [
   "Gulf of Mannar",
   "Palk Bay",
   "Lakshadweep",
@@ -84,6 +84,8 @@ function MapClickHandler({ onPick }: { onPick: (lat: number, lon: number) => voi
 
 export default function PredictPage() {
   const [showAdvanced, setShowAdvanced] = useState(false);
+  const [locations, setLocations] = useState<string[]>(defaultLocations);
+  const [seasons, setSeasons] = useState<string[]>(defaultSeasons);
   const [location, setLocation] = useState("");
   const [season, setSeason] = useState("");
   const [depth, setDepth] = useState("");
@@ -102,8 +104,50 @@ export default function PredictPage() {
   const [error, setError] = useState("");
   const [lastPrediction, setLastPrediction] = useState<SpeciesPredictionResponse | null>(null);
   const [lastUpdated, setLastUpdated] = useState<string>("");
+  const [envSource, setEnvSource] = useState<string>("");
   const navigate = useNavigate();
   const { token } = useAuth();
+
+  useEffect(() => {
+    let mounted = true;
+    const loadReference = async () => {
+      if (!token) return;
+      try {
+        const out = await api.predictReference(token);
+        if (!mounted) return;
+        if (Array.isArray(out.locations) && out.locations.length) setLocations(out.locations);
+        if (Array.isArray(out.seasons) && out.seasons.length) setSeasons(out.seasons);
+        if (!season && out.currentSeason) setSeason(out.currentSeason);
+      } catch {
+        // keep defaults
+      }
+    };
+    void loadReference();
+    return () => {
+      mounted = false;
+    };
+  }, [token, season]);
+
+  useEffect(() => {
+    let mounted = true;
+    const loadEnvironment = async () => {
+      if (!token || !coords) return;
+      try {
+        const env = await api.predictEnvironment(coords.lat, coords.lon, token);
+        if (!mounted) return;
+        setTemperatureC(env.temperatureC === null ? "" : String(env.temperatureC));
+        setSalinityPpt(env.salinityPpt === null ? "" : String(env.salinityPpt));
+        setEnvSource(env.provider || "");
+      } catch {
+        if (!mounted) return;
+        setEnvSource("");
+      }
+    };
+    void loadEnvironment();
+    return () => {
+      mounted = false;
+    };
+  }, [coords, token]);
 
   const handlePickCoords = (lat: number, lon: number) => {
     setCoords({ lat, lon });
@@ -121,7 +165,13 @@ export default function PredictPage() {
         setCoords({ lat: pos.coords.latitude, lon: pos.coords.longitude });
         if (!location) setLocation("Auto-detected location");
       },
-      () => setError("Unable to auto-detect your location. Please click on map."),
+      (geoErr) => {
+        const code = geoErr?.code;
+        if (code === 1) setError("Location permission denied in browser. Allow location access and try again.");
+        else if (code === 2) setError("Location service unavailable. Turn on device GPS/network location.");
+        else if (code === 3) setError("Location request timed out. Try again or click the map.");
+        else setError("Unable to auto-detect your location. Please click on map.");
+      },
       { enableHighAccuracy: true, timeout: 12000 },
     );
   };
@@ -238,9 +288,9 @@ export default function PredictPage() {
                           }}
                           className={fieldClass(!!location) + " appearance-none cursor-pointer"}
                         >
-                          <option value="">Select location...</option>
+                          <option value="" className="text-slate-900 bg-white">Select location...</option>
                           {locations.map((l) => (
-                            <option key={l} value={l}>
+                            <option key={l} value={l} className="text-slate-900 bg-white">
                               {l}
                             </option>
                           ))}
@@ -252,9 +302,9 @@ export default function PredictPage() {
                       <label className="mb-1.5 block text-xs uppercase tracking-[0.14em] text-[#A7CCE4]">Season</label>
                       <div className="relative">
                         <select value={season} onChange={(e) => setSeason(e.target.value)} className={fieldClass(!!season) + " appearance-none cursor-pointer"}>
-                          <option value="">Select season...</option>
+                          <option value="" className="text-slate-900 bg-white">Select season...</option>
                           {seasons.map((s) => (
-                            <option key={s} value={s}>
+                            <option key={s} value={s} className="text-slate-900 bg-white">
                               {s}
                             </option>
                           ))}
@@ -269,7 +319,7 @@ export default function PredictPage() {
                       Auto-detect my location
                     </Button>
                     <span className="text-xs text-[#D7EEFF]">
-                      {coords ? `Selected: ${coords.lat.toFixed(4)}, ${coords.lon.toFixed(4)}` : "No coordinates selected yet"}
+                      {coords ? `Selected: ${coords.lat.toFixed(4)}, ${coords.lon.toFixed(4)}${envSource ? ` | Live env: ${envSource}` : ""}` : "No coordinates selected yet"}
                     </span>
                   </div>
                 </div>
