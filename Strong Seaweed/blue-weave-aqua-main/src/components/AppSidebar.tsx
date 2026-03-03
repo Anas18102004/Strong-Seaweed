@@ -202,7 +202,6 @@ export function AppSidebar() {
                   </div>
                 )}
               </button>
-              {compact && <p className="pb-1 text-center text-[10px] uppercase tracking-[0.18em] text-[#7FA9C4]">Ctrl/Cmd + B</p>}
             </>
           )}
         </div>
