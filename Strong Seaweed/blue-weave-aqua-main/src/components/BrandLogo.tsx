@@ -21,6 +21,7 @@ export default function BrandLogo({
 }: BrandLogoProps) {
   const gradA = useId().replace(/:/g, "");
   const gradB = useId().replace(/:/g, "");
+  const gradC = useId().replace(/:/g, "");
   const icon = sizeMap[size];
 
   return (
@@ -32,27 +33,29 @@ export default function BrandLogo({
         <svg viewBox="0 0 64 64" className="w-full h-full" role="img" aria-hidden="true">
           <defs>
             <linearGradient id={gradA} x1="6" y1="6" x2="58" y2="58" gradientUnits="userSpaceOnUse">
-              <stop offset="0" stopColor="#14D8FF" />
-              <stop offset="0.55" stopColor="#1D8BFF" />
-              <stop offset="1" stopColor="#0F5BD8" />
+              <stop offset="0" stopColor="#1AE4FF" />
+              <stop offset="0.55" stopColor="#1D7FFF" />
+              <stop offset="1" stopColor="#2046C8" />
             </linearGradient>
             <linearGradient id={gradB} x1="8" y1="12" x2="56" y2="44" gradientUnits="userSpaceOnUse">
-              <stop offset="0" stopColor="#EBFCFF" />
-              <stop offset="1" stopColor="#B8E8FF" />
+              <stop offset="0" stopColor="#EEFDFF" />
+              <stop offset="1" stopColor="#B8F0FF" />
+            </linearGradient>
+            <linearGradient id={gradC} x1="14" y1="18" x2="50" y2="50" gradientUnits="userSpaceOnUse">
+              <stop offset="0" stopColor="#90DBFF" />
+              <stop offset="1" stopColor="#D7F8FF" />
             </linearGradient>
           </defs>
-          <rect x="0" y="0" width="64" height="64" rx="14" fill={`url(#${gradA})`} />
+          <rect width="64" height="64" rx="14" fill={`url(#${gradA})`} />
           <path
-            d="M8 36c4 0 6-1.6 8-3.2 2.2-1.8 4.4-3.6 9.2-3.6 4.9 0 7.1 1.8 9.4 3.6 2.1 1.6 4.2 3.2 8.6 3.2s6.4-1.6 8.5-3.2c1.2-.9 2.4-1.9 4.3-2.6v6.7c-1.4.6-2.4 1.4-3.5 2.2-2.2 1.7-4.7 3.7-9.3 3.7s-7.2-2-9.4-3.7c-2.1-1.7-4.1-3.1-8.6-3.1-4.4 0-6.4 1.4-8.6 3.1-2.2 1.7-4.7 3.7-9.4 3.7V36z"
+            d="M20 14h9.5c7.2 0 11.5 3.4 11.5 9.2 0 3.6-1.8 6.3-4.7 7.8 3.9 1.4 6.5 4.6 6.5 9.6 0 6.2-4.8 10.4-12.6 10.4H20V14zm9.1 14.1c3.4 0 5.3-1.5 5.3-4.2 0-2.5-1.9-3.9-5.3-3.9h-2.8v8.1h2.8zm1.3 16.8c3.9 0 6-1.6 6-4.8 0-3-2.2-4.6-6-4.6h-4.1v9.4h4.1z"
             fill={`url(#${gradB})`}
-            fillOpacity="0.95"
           />
           <path
-            d="M8 25.5c4 0 6-1.6 8-3.2 2.2-1.8 4.4-3.6 9.2-3.6 4.9 0 7.1 1.8 9.4 3.6 2.1 1.6 4.2 3.2 8.6 3.2s6.4-1.6 8.5-3.2c1.1-.9 2.4-1.9 4.3-2.6v5.8c-1.5.6-2.5 1.4-3.6 2.2-2.2 1.7-4.6 3.7-9.2 3.7s-7.2-2-9.4-3.7c-2.2-1.7-4.2-3.1-8.7-3.1-4.4 0-6.4 1.4-8.6 3.1-2.2 1.7-4.7 3.7-9.4 3.7v-5.9z"
-            fill="#FFFFFF"
-            fillOpacity="0.75"
+            d="M45.6 13.5c2.2 0 4 1.8 4 4s-1.8 4-4 4a4 4 0 1 1 0-8zM50.5 23.8l-6.4 8.3 5.2 5.3-2.2 2.3-5.4-5.5-5.9 7.7-2.5-1.9 6.1-7.9-4.8-4.9 2.2-2.3 5 5.1 6.1-7.9 2.6 1.8z"
+            fill={`url(#${gradC})`}
+            fillOpacity="0.98"
           />
-          <circle cx="49.5" cy="17" r="4.2" fill="#F7FDFF" fillOpacity="0.95" />
         </svg>
       </div>
       {showWordmark && (

@@ -597,7 +597,7 @@ export default function Chatbot() {
                   <div className="voice-orb-core">
                     <div className="voice-monogram" role="img" aria-label="BlueWeave Voice Monogram">
                       <span className="voice-monogram-text">BW</span>
-                      <span className="voice-monogram-wave">~~~</span>
+                      <span className="voice-monogram-wave">AI</span>
                       <span className="voice-monogram-glint" />
                     </div>
                   </div>

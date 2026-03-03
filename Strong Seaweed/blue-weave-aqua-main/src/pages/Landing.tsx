@@ -1,7 +1,7 @@
 import { motion } from "framer-motion";
 import { Button } from "@/components/ui/button";
 import { FloatingSpeciesCards } from "@/components/FloatingSpeciesCards";
-import { ArrowRight, Microscope, MapPin, BarChart3, Brain, FileText, Waves } from "lucide-react";
+import { ArrowRight, Microscope, MapPin, BarChart3, Brain, FileText, Globe } from "lucide-react";
 import { useNavigate } from "react-router-dom";
 import { useAuth } from "@/context/AuthContext";
 import BrandLogo from "@/components/BrandLogo";
@@ -12,7 +12,7 @@ const features = [
   { icon: BarChart3, title: "See Season Risk", desc: "Understand monsoon and storm risk before you deploy." },
   { icon: Brain, title: "Get AI Guidance", desc: "Ask beginner-friendly assistants for step-by-step decisions." },
   { icon: FileText, title: "Download Reports", desc: "Export clear summaries for teams, investors, or officials." },
-  { icon: Waves, title: "Use Ocean Data", desc: "Combine environmental layers with model intelligence." },
+  { icon: Globe, title: "Use Ocean Data", desc: "Combine environmental layers with model intelligence." },
 ];
 
 export default function LandingPage() {
