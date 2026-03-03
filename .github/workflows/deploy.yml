@@ -127,6 +127,20 @@ jobs:
               tar -xzf /tmp/blueweave-dist.tgz -C .
               test -f dist/index.html || { echo "Frontend artifact missing dist/index.html"; exit 1; }
               ls -lah dist | sed -n '1,40p'
+              echo "Syncing frontend dist to live nginx root (/var/www/blueweave)..."
+              sudo mkdir -p /var/www/blueweave
+              if command -v rsync >/dev/null 2>&1; then
+                sudo rsync -a --delete dist/ /var/www/blueweave/
+              else
+                sudo rm -rf /var/www/blueweave/*
+                sudo cp -a dist/. /var/www/blueweave/
+              fi
+              sudo chown -R www-data:www-data /var/www/blueweave
+              sudo find /var/www/blueweave -type d -exec chmod 755 {} \;
+              sudo find /var/www/blueweave -type f -exec chmod 644 {} \;
+              echo "Frontend checksums (source -> live):"
+              sha256sum dist/index.html || true
+              sha256sum /var/www/blueweave/index.html || true
               cd ../..
               echo "Fixing frontend file permissions for nginx..."
               sudo chmod o+rx /home/ubuntu || true
@@ -185,5 +199,9 @@ jobs:
             fi
             if [[ "${SERVICE}" == "blueweave-backend" || "${SERVICE}" == "all" ]]; then
               curl -fsS http://127.0.0.1:4000/health || true
+            fi
+            if [[ "${SERVICE}" == "blueweave-frontend" || "${SERVICE}" == "all" ]]; then
+              curl -fsSI http://127.0.0.1/ | head -n 1
+              test -f /var/www/blueweave/index.html
             fi
           EOF
