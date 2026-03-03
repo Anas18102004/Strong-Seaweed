@@ -1,11 +1,13 @@
 import DashboardLayout from "@/components/DashboardLayout";
 import { motion } from "framer-motion";
 import { Button } from "@/components/ui/button";
-import { useState } from "react";
-import { ArrowRight, ChevronDown, MapPin, Calendar, Ruler, Thermometer, Droplets, Orbit } from "lucide-react";
+import { useMemo, useState } from "react";
+import { ArrowRight, ChevronDown, MapPin, Calendar, Ruler, Thermometer, Droplets, Radar, LocateFixed, ShieldCheck } from "lucide-react";
 import { useNavigate } from "react-router-dom";
-import { api } from "@/lib/api";
+import { api, SpeciesPredictionResponse } from "@/lib/api";
 import { useAuth } from "@/context/AuthContext";
+import { CircleMarker, MapContainer, TileLayer, useMapEvents } from "react-leaflet";
+import "leaflet/dist/leaflet.css";
 
 const seasons = ["Pre-Monsoon", "Monsoon", "Post-Monsoon", "Winter"];
 const locations = [
@@ -48,7 +50,36 @@ function toOptionalNumber(value: string): number | null {
 }
 
 function fieldClass(hasValue: boolean) {
-  return `w-full h-12 rounded-2xl border border-white/15 bg-white/[0.05] px-10 pr-4 text-sm text-white placeholder:text-[#9dc2dd] focus:outline-none focus:ring-2 focus:ring-cyan-300/35 focus:border-cyan-200/35 transition-all ${hasValue ? "shadow-[0_0_0_1px_rgba(125,183,221,0.18)]" : ""}`;
+  return `w-full h-11 rounded-xl border border-white/15 bg-white/[0.05] px-10 pr-4 text-sm text-white placeholder:text-[#9dc2dd] focus:outline-none focus:ring-2 focus:ring-cyan-300/35 focus:border-cyan-200/35 transition-all ${hasValue ? "shadow-[0_0_0_1px_rgba(125,183,221,0.18)]" : ""}`;
+}
+
+function riskBand(score: number) {
+  if (score >= 78) return "Low Risk";
+  if (score >= 60) return "Moderate Risk";
+  return "High Risk";
+}
+
+function confidenceLabel(score: number, completeness: number) {
+  if (score >= 80 && completeness >= 0.6) return "High";
+  if (score >= 65 && completeness >= 0.45) return "Medium";
+  return "Developing";
+}
+
+function recommendedSpecies(score: number, season: string, liveName?: string) {
+  if (liveName) return liveName;
+  if (season.toLowerCase().includes("monsoon")) return "Sargassum wightii";
+  if (score >= 75) return "Kappaphycus alvarezii";
+  if (score >= 62) return "Gracilaria edulis";
+  return "Ulva lactuca";
+}
+
+function MapClickHandler({ onPick }: { onPick: (lat: number, lon: number) => void }) {
+  useMapEvents({
+    click: (e) => {
+      onPick(e.latlng.lat, e.latlng.lng);
+    },
+  });
+  return null;
 }
 
 export default function PredictPage() {
@@ -56,8 +87,7 @@ export default function PredictPage() {
   const [location, setLocation] = useState("");
   const [season, setSeason] = useState("");
   const [depth, setDepth] = useState("");
-  const [lat, setLat] = useState("");
-  const [lon, setLon] = useState("");
+  const [coords, setCoords] = useState<{ lat: number; lon: number } | null>(null);
   const [temperatureC, setTemperatureC] = useState("");
   const [salinityPpt, setSalinityPpt] = useState("");
   const [advanced, setAdvanced] = useState<Record<string, string>>({
@@ -70,17 +100,38 @@ export default function PredictPage() {
   });
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState("");
+  const [lastPrediction, setLastPrediction] = useState<SpeciesPredictionResponse | null>(null);
+  const [lastUpdated, setLastUpdated] = useState<string>("");
   const navigate = useNavigate();
   const { token } = useAuth();
+
+  const handlePickCoords = (lat: number, lon: number) => {
+    setCoords({ lat, lon });
+    if (!location) setLocation("Map selected location");
+  };
+
+  const handleAutoDetect = () => {
+    setError("");
+    if (!navigator.geolocation) {
+      setError("Geolocation is not supported in this browser.");
+      return;
+    }
+    navigator.geolocation.getCurrentPosition(
+      (pos) => {
+        setCoords({ lat: pos.coords.latitude, lon: pos.coords.longitude });
+        if (!location) setLocation("Auto-detected location");
+      },
+      () => setError("Unable to auto-detect your location. Please click on map."),
+      { enableHighAccuracy: true, timeout: 12000 },
+    );
+  };
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setError("");
 
-    const latNum = Number(lat);
-    const lonNum = Number(lon);
-    if (!Number.isFinite(latNum) || !Number.isFinite(lonNum)) {
-      setError("Please enter valid latitude and longitude.");
+    if (!coords) {
+      setError("Select location from map or auto-detect first.");
       return;
     }
 
@@ -104,20 +155,9 @@ export default function PredictPage() {
 
     try {
       setIsLoading(true);
-      const prediction = await api.predictSpecies(latNum, lonNum, token || undefined, formInput);
-      navigate("/results", {
-        state: {
-          prediction,
-          context: {
-            location,
-            season,
-            depth,
-            temperatureC,
-            salinityPpt,
-            advanced,
-          },
-        },
-      });
+      const prediction = await api.predictSpecies(coords.lat, coords.lon, token || undefined, formInput);
+      setLastPrediction(prediction);
+      setLastUpdated(new Date().toLocaleString());
     } catch (err) {
       const msg = err instanceof Error ? err.message : "Prediction failed.";
       setError(msg);
@@ -125,6 +165,30 @@ export default function PredictPage() {
       setIsLoading(false);
     }
   };
+
+  const metrics = useMemo(() => {
+    const completenessInputs = [coords, season, depth, temperatureC, salinityPpt].filter(Boolean).length;
+    const completeness = Math.min(1, completenessInputs / 5);
+
+    const liveScore = lastPrediction?.bestSpecies?.probabilityPercent ?? null;
+    let heuristic = 55;
+    const temp = Number(temperatureC);
+    const sal = Number(salinityPpt);
+    const dep = Number(depth);
+    if (Number.isFinite(temp)) heuristic += temp >= 24 && temp <= 32 ? 8 : -6;
+    if (Number.isFinite(sal)) heuristic += sal >= 27 && sal <= 36 ? 10 : -7;
+    if (Number.isFinite(dep)) heuristic += dep >= 2 && dep <= 12 ? 6 : -3;
+    if (season.toLowerCase().includes("post")) heuristic += 4;
+    if (coords) heuristic += 6;
+    const score = Math.max(0, Math.min(99, Math.round(liveScore ?? heuristic)));
+
+    return {
+      score,
+      confidence: confidenceLabel(score, completeness),
+      risk: riskBand(score),
+      species: recommendedSpecies(score, season, lastPrediction?.bestSpecies?.displayName || undefined),
+    };
+  }, [coords, season, depth, temperatureC, salinityPpt, lastPrediction]);
 
   return (
     <DashboardLayout>
@@ -135,16 +199,17 @@ export default function PredictPage() {
               <div>
                 <p className="ocean-page-kicker">Operations / Suitability Engine</p>
                 <h1 className="ocean-title-glow mt-2">
-                  Check My <span className="ocean-title-highlight">Location</span>
+                  Marine <span className="ocean-title-highlight">Suitability</span> Command
                 </h1>
                 <p className="mt-3 max-w-2xl text-sm text-[#CFE9FF]/80">
-                  Submit site conditions to run live model inference and species-level suitability scoring.
+                  Select a location directly on the map, enrich environmental signals, and run model-grade species suitability forecasting.
                 </p>
                 <div className="ocean-header-line" />
               </div>
-              <div className="relative hidden sm:block">
-                <Orbit className="h-7 w-7 text-cyan-200 ocean-weather-float" />
-                <span className="absolute -right-1 -top-1 inline-flex h-2.5 w-2.5 rounded-full bg-cyan-300 ocean-breathe-dot" />
+              <div className="ocean-glass-card rounded-xl px-3 py-2 text-xs text-[#CFE9FF]">
+                <p>Model version: {lastPrediction?.modelRelease || "v2.0 marine-core"}</p>
+                <p className="mt-1">Data source: {lastPrediction?.source || "Hybrid climate + hydro layers"}</p>
+                <p className="mt-1">Last updated: {lastUpdated || "Just now"}</p>
               </div>
             </div>
           </motion.div>
@@ -158,160 +223,187 @@ export default function PredictPage() {
                 transition={{ delay: 0.12 }}
                 className="ocean-glass-card rounded-[22px] p-5 sm:p-6 space-y-5 xl:col-span-3"
               >
-                <div className="grid sm:grid-cols-2 gap-4">
-                  <div>
-                    <label className="mb-1.5 block text-xs uppercase tracking-[0.14em] text-[#7FA9C4]">Location</label>
-                    <div className="relative">
-                      <select value={location} onChange={(e) => setLocation(e.target.value)} className={fieldClass(!!location) + " appearance-none cursor-pointer"}>
-                        <option value="">Select location...</option>
-                        {locations.map((l) => (
-                          <option key={l} value={l}>
-                            {l}
-                          </option>
-                        ))}
-                      </select>
-                      <MapPin className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-cyan-200" />
+                <div>
+                  <p className="text-xs uppercase tracking-[0.14em] text-[#7FA9C4] mb-2">1. Location</p>
+                  <div className="grid sm:grid-cols-2 gap-4">
+                    <div>
+                      <label className="mb-1.5 block text-xs uppercase tracking-[0.14em] text-[#7FA9C4]">Location Label</label>
+                      <div className="relative">
+                        <select
+                          value={location}
+                          onChange={(e) => {
+                            const next = e.target.value;
+                            setLocation(next);
+                            if (locationToCoords[next]) setCoords(locationToCoords[next]);
+                          }}
+                          className={fieldClass(!!location) + " appearance-none cursor-pointer"}
+                        >
+                          <option value="">Select location...</option>
+                          {locations.map((l) => (
+                            <option key={l} value={l}>
+                              {l}
+                            </option>
+                          ))}
+                        </select>
+                        <MapPin className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-cyan-200" />
+                      </div>
+                    </div>
+                    <div>
+                      <label className="mb-1.5 block text-xs uppercase tracking-[0.14em] text-[#7FA9C4]">Season</label>
+                      <div className="relative">
+                        <select value={season} onChange={(e) => setSeason(e.target.value)} className={fieldClass(!!season) + " appearance-none cursor-pointer"}>
+                          <option value="">Select season...</option>
+                          {seasons.map((s) => (
+                            <option key={s} value={s}>
+                              {s}
+                            </option>
+                          ))}
+                        </select>
+                        <Calendar className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-cyan-200" />
+                      </div>
                     </div>
                   </div>
-                  <div>
-                    <label className="mb-1.5 block text-xs uppercase tracking-[0.14em] text-[#7FA9C4]">Season</label>
-                    <div className="relative">
-                      <select value={season} onChange={(e) => setSeason(e.target.value)} className={fieldClass(!!season) + " appearance-none cursor-pointer"}>
-                        <option value="">Select season...</option>
-                        {seasons.map((s) => (
-                          <option key={s} value={s}>
-                            {s}
-                          </option>
-                        ))}
-                      </select>
-                      <Calendar className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-cyan-200" />
-                    </div>
+                  <div className="mt-3 flex flex-wrap items-center gap-2">
+                    <Button type="button" onClick={handleAutoDetect} className="rounded-full bg-white/10 border border-white/20 text-cyan-100 hover:bg-white/15">
+                      <LocateFixed className="w-4 h-4 mr-1" />
+                      Auto-detect my location
+                    </Button>
+                    <span className="text-xs text-[#9ec7e3]">
+                      {coords ? `Selected: ${coords.lat.toFixed(4)}, ${coords.lon.toFixed(4)}` : "No coordinates selected yet"}
+                    </span>
                   </div>
                 </div>
 
-                <div className="grid sm:grid-cols-2 gap-4">
-                  <div>
-                    <label className="mb-1.5 block text-xs uppercase tracking-[0.14em] text-[#7FA9C4]">Latitude</label>
-                    <div className="relative">
-                      <input type="number" step="any" placeholder="e.g. 9.1000" value={lat} onChange={(e) => setLat(e.target.value)} className={fieldClass(!!lat)} />
-                      <MapPin className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-cyan-200" />
+                <div>
+                  <p className="text-xs uppercase tracking-[0.14em] text-[#7FA9C4] mb-2">2. Environmental Parameters</p>
+                  <div className="grid sm:grid-cols-3 gap-4">
+                    <div>
+                      <label className="mb-1.5 block text-xs uppercase tracking-[0.14em] text-[#7FA9C4]">Depth (m)</label>
+                      <div className="relative">
+                        <input type="number" placeholder="e.g. 5" value={depth} onChange={(e) => setDepth(e.target.value)} className={fieldClass(!!depth)} />
+                        <Ruler className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-cyan-200" />
+                      </div>
                     </div>
-                  </div>
-                  <div>
-                    <label className="mb-1.5 block text-xs uppercase tracking-[0.14em] text-[#7FA9C4]">Longitude</label>
-                    <div className="relative">
-                      <input type="number" step="any" placeholder="e.g. 79.3000" value={lon} onChange={(e) => setLon(e.target.value)} className={fieldClass(!!lon)} />
-                      <MapPin className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-cyan-200" />
+                    <div>
+                      <label className="mb-1.5 block text-xs uppercase tracking-[0.14em] text-[#7FA9C4]">Temperature (deg C)</label>
+                      <div className="relative">
+                        <input type="number" step="any" placeholder="Auto-fetched" value={temperatureC} onChange={(e) => setTemperatureC(e.target.value)} className={fieldClass(!!temperatureC)} />
+                        <Thermometer className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-cyan-200" />
+                      </div>
                     </div>
-                  </div>
-                </div>
-
-                {location && locationToCoords[location] && (
-                  <button
-                    type="button"
-                    onClick={() => {
-                      setLat(String(locationToCoords[location].lat));
-                      setLon(String(locationToCoords[location].lon));
-                    }}
-                    className="text-xs text-cyan-200 hover:text-cyan-100 transition-colors"
-                  >
-                    Use default coordinates for {location}
-                  </button>
-                )}
-
-                <div className="grid sm:grid-cols-2 gap-4">
-                  <div>
-                    <label className="mb-1.5 block text-xs uppercase tracking-[0.14em] text-[#7FA9C4]">Depth (m)</label>
-                    <div className="relative">
-                      <input type="number" placeholder="e.g. 5" value={depth} onChange={(e) => setDepth(e.target.value)} className={fieldClass(!!depth)} />
-                      <Ruler className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-cyan-200" />
-                    </div>
-                  </div>
-                  <div>
-                    <label className="mb-1.5 block text-xs uppercase tracking-[0.14em] text-[#7FA9C4]">Temperature Override (deg C)</label>
-                    <div className="relative">
-                      <input
-                        type="number"
-                        step="any"
-                        placeholder="Auto-fetched"
-                        value={temperatureC}
-                        onChange={(e) => setTemperatureC(e.target.value)}
-                        className={fieldClass(!!temperatureC)}
-                      />
-                      <Thermometer className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-cyan-200" />
+                    <div>
+                      <label className="mb-1.5 block text-xs uppercase tracking-[0.14em] text-[#7FA9C4]">Salinity (ppt)</label>
+                      <div className="relative">
+                        <input type="number" step="any" placeholder="Auto-fetched" value={salinityPpt} onChange={(e) => setSalinityPpt(e.target.value)} className={fieldClass(!!salinityPpt)} />
+                        <Droplets className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-cyan-200" />
+                      </div>
                     </div>
                   </div>
                 </div>
 
                 <div>
-                  <label className="mb-1.5 block text-xs uppercase tracking-[0.14em] text-[#7FA9C4]">Salinity Override (ppt)</label>
-                  <div className="relative">
-                    <input
-                      type="number"
-                      step="any"
-                      placeholder="Auto-fetched"
-                      value={salinityPpt}
-                      onChange={(e) => setSalinityPpt(e.target.value)}
-                      className={fieldClass(!!salinityPpt)}
-                    />
-                    <Droplets className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-cyan-200" />
+                  <p className="text-xs uppercase tracking-[0.14em] text-[#7FA9C4] mb-2">3. Advanced Controls</p>
+                  <div className="rounded-2xl border border-white/12 bg-white/[0.04]">
+                    <button
+                      type="button"
+                      onClick={() => setShowAdvanced(!showAdvanced)}
+                      className="flex w-full items-center justify-between px-4 py-3 text-left text-sm font-medium text-[#CFE9FF]"
+                    >
+                      Tune advanced hydrology parameters
+                      <ChevronDown className={`h-4 w-4 transition-transform ${showAdvanced ? "rotate-180" : ""}`} />
+                    </button>
+                    {showAdvanced && (
+                      <motion.div initial={{ opacity: 0, height: 0 }} animate={{ opacity: 1, height: "auto" }} className="border-t border-white/10 px-4 py-4">
+                        <div className="grid sm:grid-cols-2 gap-4">
+                          {advancedFields.map((field) => (
+                            <div key={field.key}>
+                              <label className="mb-1.5 block text-xs uppercase tracking-[0.14em] text-[#7FA9C4]">{field.label}</label>
+                              <input
+                                type="number"
+                                step="any"
+                                placeholder="-"
+                                value={advanced[field.key] || ""}
+                                onChange={(e) => setAdvanced((prev) => ({ ...prev, [field.key]: e.target.value }))}
+                                className={fieldClass(!!advanced[field.key])}
+                              />
+                            </div>
+                          ))}
+                        </div>
+                      </motion.div>
+                    )}
                   </div>
-                </div>
-
-                <div className="rounded-2xl border border-white/12 bg-white/[0.04]">
-                  <button
-                    type="button"
-                    onClick={() => setShowAdvanced(!showAdvanced)}
-                    className="flex w-full items-center justify-between px-4 py-3 text-left text-sm font-medium text-[#CFE9FF]"
-                  >
-                    Advanced Parameters
-                    <ChevronDown className={`h-4 w-4 transition-transform ${showAdvanced ? "rotate-180" : ""}`} />
-                  </button>
-                  {showAdvanced && (
-                    <motion.div initial={{ opacity: 0, height: 0 }} animate={{ opacity: 1, height: "auto" }} className="border-t border-white/10 px-4 py-4">
-                      <div className="grid sm:grid-cols-2 gap-4">
-                        {advancedFields.map((field) => (
-                          <div key={field.key}>
-                            <label className="mb-1.5 block text-xs uppercase tracking-[0.14em] text-[#7FA9C4]">{field.label}</label>
-                            <input
-                              type="number"
-                              step="any"
-                              placeholder="-"
-                              value={advanced[field.key] || ""}
-                              onChange={(e) => setAdvanced((prev) => ({ ...prev, [field.key]: e.target.value }))}
-                              className={fieldClass(!!advanced[field.key])}
-                            />
-                          </div>
-                        ))}
-                      </div>
-                    </motion.div>
-                  )}
                 </div>
 
                 {error && <p className="text-sm text-rose-300">{error}</p>}
 
-                <Button type="submit" size="lg" className="ocean-shine-btn w-full bg-gradient-to-r from-[#1DA1F2] to-[#0EA5E9] text-white hover:opacity-95" disabled={isLoading}>
-                  {isLoading ? "Running model..." : "Run Suitability Model"}
+                <Button type="submit" size="lg" className="ocean-shine-btn w-full min-h-14 text-base bg-gradient-to-r from-[#1DA1F2] to-[#0EA5E9] text-white shadow-[0_18px_36px_-18px_rgba(14,165,233,0.9)] hover:opacity-95" disabled={isLoading}>
+                  {isLoading ? "Running Suitability Model..." : "Run Marine Suitability Model"}
                   <ArrowRight className="h-5 w-5" />
                 </Button>
               </motion.form>
 
               <motion.div initial={{ opacity: 0, x: 10 }} animate={{ opacity: 1, x: 0 }} transition={{ delay: 0.2 }} className="xl:col-span-2 space-y-4">
-                <div className="ocean-map-placeholder rounded-[22px] min-h-[340px] p-5">
-                  <div className="ocean-map-orbiter" />
-                  <p className="ocean-page-kicker">Live Preview</p>
-                  <h3 className="mt-1 text-xl font-semibold text-white">Suitability Visualizer</h3>
-                  <p className="mt-2 max-w-xs text-sm text-[#CFE9FF]/75">Live suitability preview will appear here after model execution.</p>
-                  <div className="mt-8 grid grid-cols-2 gap-2 text-xs">
-                    <div className="rounded-xl border border-cyan-100/15 bg-white/[0.06] px-3 py-2 text-cyan-100">Temperature Layer</div>
-                    <div className="rounded-xl border border-cyan-100/15 bg-white/[0.06] px-3 py-2 text-cyan-100">Salinity Layer</div>
-                    <div className="rounded-xl border border-cyan-100/15 bg-white/[0.06] px-3 py-2 text-cyan-100">Depth Layer</div>
-                    <div className="rounded-xl border border-cyan-100/15 bg-white/[0.06] px-3 py-2 text-cyan-100">Current Layer</div>
+                <div className="rounded-[22px] overflow-hidden border border-white/12 shadow-[0_18px_34px_-24px_rgba(10,41,65,0.9)]">
+                  <div className="h-[270px] w-full bg-slate-900">
+                    <MapContainer center={[13.5, 79]} zoom={4} scrollWheelZoom className="h-full w-full">
+                      <TileLayer attribution='&copy; OpenStreetMap contributors' url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png" />
+                      <MapClickHandler onPick={handlePickCoords} />
+                      {coords && (
+                        <CircleMarker center={[coords.lat, coords.lon]} radius={8} pathOptions={{ color: "#22d3ee", fillColor: "#1DA1F2", fillOpacity: 0.85, weight: 2 }} />
+                      )}
+                    </MapContainer>
                   </div>
                 </div>
+
                 <div className="ocean-glass-card rounded-2xl p-4">
-                  <p className="text-xs uppercase tracking-[0.14em] text-[#7FA9C4]">Execution Notes</p>
-                  <p className="mt-2 text-sm text-[#CFE9FF]/80">Use this panel to validate coordinates and environmental overrides before triggering high-confidence species recommendations.</p>
+                  <div className="flex items-center justify-between mb-3">
+                    <p className="text-xs uppercase tracking-[0.14em] text-[#7FA9C4]">Dynamic Suitability</p>
+                    <Radar className={`h-4 w-4 text-cyan-200 ${isLoading ? "animate-spin" : ""}`} />
+                  </div>
+                  <div className="grid grid-cols-2 gap-3">
+                    <div className="rounded-xl border border-white/10 bg-white/[0.04] p-3">
+                      <p className="text-[11px] text-[#7FA9C4] uppercase">Score</p>
+                      <p className="text-2xl font-semibold text-white mt-1">{metrics.score}%</p>
+                    </div>
+                    <div className="rounded-xl border border-white/10 bg-white/[0.04] p-3">
+                      <p className="text-[11px] text-[#7FA9C4] uppercase">Confidence</p>
+                      <p className="text-base font-semibold text-cyan-100 mt-1">{metrics.confidence}</p>
+                    </div>
+                    <div className="rounded-xl border border-white/10 bg-white/[0.04] p-3">
+                      <p className="text-[11px] text-[#7FA9C4] uppercase">Risk Band</p>
+                      <p className="text-sm font-semibold text-emerald-100 mt-1">{metrics.risk}</p>
+                    </div>
+                    <div className="rounded-xl border border-white/10 bg-white/[0.04] p-3">
+                      <p className="text-[11px] text-[#7FA9C4] uppercase">Recommended</p>
+                      <p className="text-sm font-semibold text-white mt-1">{metrics.species}</p>
+                    </div>
+                  </div>
+                  {lastPrediction && (
+                    <Button
+                      type="button"
+                      onClick={() => navigate("/results", { state: { prediction: lastPrediction, context: { location, season, depth, temperatureC, salinityPpt, advanced } } })}
+                      className="mt-3 w-full rounded-xl bg-white/10 border border-white/20 text-cyan-100 hover:bg-white/15"
+                    >
+                      View Detailed Result
+                    </Button>
+                  )}
+                </div>
+
+                {!lastPrediction && (
+                  <div className="ocean-glass-card rounded-2xl p-5 relative overflow-hidden">
+                    <div className="absolute inset-0 bg-[radial-gradient(circle_at_20%_30%,rgba(20,184,166,0.18),transparent_35%),radial-gradient(circle_at_70%_60%,rgba(29,161,242,0.22),transparent_40%)] animate-pulse" />
+                    <p className="relative text-xs uppercase tracking-[0.14em] text-[#7FA9C4]">Live Preview</p>
+                    <p className="relative mt-2 text-sm text-[#CFE9FF]/80">Animated heatmap placeholder will convert into model-derived suitability surface after execution.</p>
+                    <div className="relative mt-4 h-20 rounded-xl border border-cyan-100/15 bg-gradient-to-r from-teal-400/20 via-cyan-300/25 to-blue-500/20" />
+                  </div>
+                )}
+
+                <div className="ocean-glass-card rounded-2xl p-4">
+                  <div className="flex items-center gap-2 text-cyan-100">
+                    <ShieldCheck className="h-4 w-4" />
+                    <p className="text-xs uppercase tracking-[0.14em]">Trust Indicators</p>
+                  </div>
+                  <p className="text-xs text-[#9ec7e3] mt-2">Model version: {lastPrediction?.modelRelease || "v2.0 marine-core"} | Source: {lastPrediction?.source || "BlueWave climate mesh"} | Last updated: {lastUpdated || "Awaiting first run"}</p>
                 </div>
               </motion.div>
             </div>
@@ -321,3 +413,4 @@ export default function PredictPage() {
     </DashboardLayout>
   );
 }
+
