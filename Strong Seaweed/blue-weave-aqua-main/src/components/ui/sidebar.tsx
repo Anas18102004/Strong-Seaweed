@@ -15,7 +15,7 @@ import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/comp
 const SIDEBAR_COOKIE_NAME = "sidebar:state";
 const SIDEBAR_COOKIE_MAX_AGE = 60 * 60 * 24 * 7;
 const SIDEBAR_WIDTH = "17rem";
-const SIDEBAR_WIDTH_MOBILE = "80vw";
+const SIDEBAR_WIDTH_MOBILE = "min(80vw,22rem)";
 const SIDEBAR_WIDTH_ICON = "3rem";
 const SIDEBAR_KEYBOARD_SHORTCUT = "b";
 
@@ -156,7 +156,10 @@ const Sidebar = React.forwardRef<
         <SheetContent
           data-sidebar="sidebar"
           data-mobile="true"
-          className="w-[--sidebar-width] max-w-[20rem] border-r border-white/10 bg-sidebar p-0 text-sidebar-foreground"
+          className={cn(
+            "w-[--sidebar-width] max-w-none border-r border-white/15 bg-[linear-gradient(180deg,#0F2E47_0%,#123E63_52%,#0B2236_100%)] p-0 text-sidebar-foreground shadow-[22px_0_40px_-24px_rgba(2,12,27,0.9)]",
+            className,
+          )}
           style={
             {
               "--sidebar-width": SIDEBAR_WIDTH_MOBILE,
