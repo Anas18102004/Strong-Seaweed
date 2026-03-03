@@ -88,7 +88,7 @@ function renderInline(text: string) {
   return parts.map((part, idx) => {
     if (part.startsWith("**") && part.endsWith("**") && part.length > 4) {
       return (
-        <strong key={idx} className="font-semibold text-cyan-100">
+        <strong key={idx} className="font-semibold text-[#0F2E47]">
           {part.slice(2, -2)}
         </strong>
       );
@@ -110,7 +110,7 @@ function renderResponse(raw: string) {
         if (/^#{1,3}\s+/.test(line)) {
           const clean = line.replace(/^#{1,3}\s+/, "");
           return (
-            <p key={idx} className="font-semibold text-cyan-100">
+            <p key={idx} className="font-semibold text-[#0F2E47]">
               {renderInline(clean)}
             </p>
           );
@@ -118,8 +118,8 @@ function renderResponse(raw: string) {
         if (/^[-*]\s+/.test(line) || /^\u2022\s+/.test(line)) {
           const clean = line.replace(/^[-*]\s+/, "").replace(/^\u2022\s+/, "");
           return (
-            <div key={idx} className="flex items-start gap-2 text-[#CFE9FF]">
-              <span className="mt-1 text-cyan-300">-</span>
+            <div key={idx} className="flex items-start gap-2 text-slate-700">
+              <span className="mt-1 text-cyan-700">-</span>
               <p className="leading-relaxed">{renderInline(clean)}</p>
             </div>
           );
@@ -128,14 +128,14 @@ function renderResponse(raw: string) {
           const clean = line.replace(/^\d+\.\s+/, "");
           const n = line.match(/^(\d+\.)/)?.[1] || "";
           return (
-            <div key={idx} className="flex items-start gap-2 text-[#CFE9FF]">
-              <span className="mt-0.5 text-cyan-300 font-semibold min-w-[1.1rem]">{n}</span>
+            <div key={idx} className="flex items-start gap-2 text-slate-700">
+              <span className="mt-0.5 text-cyan-700 font-semibold min-w-[1.1rem]">{n}</span>
               <p className="leading-relaxed">{renderInline(clean)}</p>
             </div>
           );
         }
         return (
-          <p key={idx} className="leading-relaxed text-[#CFE9FF]">
+          <p key={idx} className="leading-relaxed text-slate-700">
             {renderInline(line)}
           </p>
         );
@@ -223,8 +223,8 @@ export default function AIAgents() {
 
         <div className="grid lg:grid-cols-5 gap-4 sm:gap-6">
           <div className="lg:col-span-2">
-            <div className="ocean-glass-card rounded-2xl p-4 space-y-3">
-              <p className="px-1 text-xs uppercase tracking-[0.14em] text-[#7FA9C4]">Choose Task</p>
+            <div className="ocean-glass-card rounded-2xl p-4 space-y-3 border border-[#c2d8e8] bg-white/95">
+              <p className="px-1 text-xs uppercase tracking-[0.14em] text-slate-600">Choose Task</p>
               {taskCatalog.map((task) => {
                 const activeCard = task.id === selectedTask;
                 return (
@@ -234,20 +234,20 @@ export default function AIAgents() {
                     className={`task-select-tile group w-full text-left rounded-xl p-4 border transition-all duration-200 ${
                       activeCard
                         ? "border-cyan-200/35 bg-gradient-to-r from-cyan-400/22 to-blue-500/32 text-white shadow-[0_20px_34px_-16px_rgba(14,165,233,0.75)]"
-                        : "border-white/15 bg-white/[0.09] hover:-translate-y-0.5 hover:border-cyan-200/30 hover:shadow-[0_14px_26px_-20px_rgba(15,52,88,0.95)] text-[#DBEEFD]"
+                        : "border-[#c6dbea] bg-white text-slate-800 hover:-translate-y-0.5 hover:border-cyan-300/60 hover:shadow-[0_14px_26px_-20px_rgba(15,52,88,0.45)]"
                     }`}
                   >
                     <span className="task-shine" />
                     {activeCard && <span className="task-active-line" />}
                     <div className="flex items-start gap-3">
-                      <div className={`relative w-10 h-10 rounded-xl flex items-center justify-center ${activeCard ? "bg-white/20 text-white" : "bg-cyan-400/15 text-cyan-100"}`}>
+                      <div className={`relative w-10 h-10 rounded-xl flex items-center justify-center ${activeCard ? "bg-white/20 text-white" : "bg-cyan-100 text-cyan-700"}`}>
                         <span className="absolute inset-0 rounded-xl bg-cyan-300/25 blur-md opacity-0 group-hover:opacity-100 transition-opacity" />
                         <task.icon className="w-5 h-5" />
                       </div>
                       <div className="min-w-0">
-                        <p className={`font-semibold text-sm ${activeCard ? "text-white" : "text-[#E7F5FF]"}`}>{task.name}</p>
-                        <p className={`mt-0.5 text-xs ${activeCard ? "text-white/85" : "text-[#9fc6e2]"}`}>{task.short}</p>
-                        <p className={`mt-2 text-[11px] ${activeCard ? "text-white/90" : "text-cyan-100"}`}>Outcome: {task.outcome}</p>
+                        <p className={`font-semibold text-sm ${activeCard ? "text-white" : "text-slate-900"}`}>{task.name}</p>
+                        <p className={`mt-0.5 text-xs ${activeCard ? "text-white/90" : "text-slate-600"}`}>{task.short}</p>
+                        <p className={`mt-2 text-[11px] ${activeCard ? "text-white/95" : "text-cyan-700"}`}>Outcome: {task.outcome}</p>
                       </div>
                     </div>
                   </button>
@@ -312,36 +312,36 @@ export default function AIAgents() {
                 </Button>
                 <Button
                   onClick={() => navigate("/chat", { state: { prefill: lastQuestion || active.defaultPrompt } })}
-                  className="min-h-12 rounded-full border border-white/25 bg-white/[0.08] text-[#CFE9FF] transition-all duration-200 hover:bg-white/[0.14] hover:-translate-y-0.5"
+                  className="min-h-12 rounded-full border border-white/30 bg-white/[0.14] text-white transition-all duration-200 hover:bg-white/[0.2] hover:-translate-y-0.5"
                 >
                   Continue in Chat <MessageSquare className="w-4 h-4" />
                 </Button>
               </div>
             </div>
 
-            <div className="ocean-glass-card rounded-2xl overflow-hidden">
-              <div className="px-5 py-3 border-b border-white/10 bg-white/[0.06]">
-                <p className="text-sm font-semibold text-white">Task Output</p>
+            <div className="ocean-glass-card rounded-2xl overflow-hidden border border-[#c2d8e8] bg-white/96">
+              <div className="px-5 py-3 border-b border-[#d6e8f3] bg-[#f5fbff]">
+                <p className="text-sm font-semibold text-[#0F2E47]">Task Output</p>
               </div>
-              <div className="p-5 min-h-[18rem] bg-gradient-to-b from-white/[0.08] to-white/[0.03]">
+              <div className="p-5 min-h-[18rem] bg-gradient-to-b from-[#fbfeff] to-[#f5fbff]">
                 {!output && !loading && (
-                  <div className="ai-output-empty relative overflow-hidden rounded-xl border border-dashed border-cyan-100/30 bg-white/[0.04] p-4">
+                  <div className="ai-output-empty relative overflow-hidden rounded-xl border border-dashed border-cyan-300/50 bg-white p-4">
                     <div className="ai-output-shimmer" />
-                    <div className="relative z-10 flex items-center gap-2 text-cyan-100">
+                    <div className="relative z-10 flex items-center gap-2 text-cyan-800">
                       <WandSparkles className="h-4 w-4" />
                       <p className="text-sm font-medium">AI generation preview</p>
                     </div>
-                    <p className="relative z-10 mt-2 text-sm text-[#A8D0EA]">Run a task to generate a structured action plan here.</p>
-                    <div className="relative z-10 mt-3 rounded-lg border border-cyan-100/20 bg-[#0e2d47]/75 p-3 text-xs text-[#CBE6FA]">
-                      <p className="font-semibold text-cyan-100">Example Output</p>
+                    <p className="relative z-10 mt-2 text-sm text-slate-600">Run a task to generate a structured action plan here.</p>
+                    <div className="relative z-10 mt-3 rounded-lg border border-cyan-100/40 bg-[#f4fbff] p-3 text-xs text-slate-700">
+                      <p className="font-semibold text-cyan-800">Example Output</p>
                       <p className="mt-1">1. Site readiness checklist</p>
                       <p>2. 30-day execution milestones</p>
                       <p>3. Risk mitigation actions</p>
                     </div>
                   </div>
                 )}
-                {loading && <p className="text-sm text-[#9fc6e2]">Assistant is preparing your plan...</p>}
-                {output && <div className="text-sm text-[#CFE9FF]">{renderResponse(output)}</div>}
+                {loading && <p className="text-sm text-slate-600">Assistant is preparing your plan...</p>}
+                {output && <div className="text-sm text-slate-800">{renderResponse(output)}</div>}
               </div>
             </div>
           </div>
