@@ -160,6 +160,40 @@ export type SettingsResponse = {
   };
 };
 
+export type DashboardSummaryResponse = {
+  totals: {
+    predictions: number;
+    predictions24h: number;
+    sessions: number;
+  };
+  metrics: {
+    avgConfidence: number | null;
+    topSpecies: string;
+  };
+  updatedAt: string;
+};
+
+export type DashboardActivityItem = {
+  id: string;
+  createdAt: string;
+  location: string;
+  species: string;
+  score: number;
+  status: string;
+};
+
+export type DashboardActivityResponse = {
+  predictions: DashboardActivityItem[];
+  updatedAt: string;
+};
+
+export type DashboardHealthResponse = {
+  backend: { ok: boolean; detail: string };
+  modelApi: { ok: boolean; detail: string };
+  aiGateway: { ok: boolean; detail: string };
+  updatedAt: string;
+};
+
 type ChatStreamEvent =
   | { type: "delta"; token?: string }
   | {
@@ -389,6 +423,15 @@ export const api = {
       },
       token,
     ),
+
+  dashboardSummary: (token?: string) =>
+    request<DashboardSummaryResponse>("/api/dashboard/summary", { method: "GET" }, token),
+
+  dashboardActivity: (token?: string) =>
+    request<DashboardActivityResponse>("/api/dashboard/activity", { method: "GET" }, token),
+
+  dashboardHealth: (token?: string) =>
+    request<DashboardHealthResponse>("/api/dashboard/health", { method: "GET" }, token),
 };
 
 export { API_BASE_URL };

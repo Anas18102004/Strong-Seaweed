@@ -6,6 +6,7 @@ import authRoutes from "./routes/auth.js";
 import aiRoutes from "./routes/ai.js";
 import predictRoutes from "./routes/predict.js";
 import settingsRoutes from "./routes/settings.js";
+import dashboardRoutes from "./routes/dashboard.js";
 
 const app = express();
 
@@ -39,6 +40,7 @@ app.use("/api/auth", authRoutes);
 app.use("/api/ai", aiRoutes);
 app.use("/api/predict", predictRoutes);
 app.use("/api/settings", settingsRoutes);
+app.use("/api/dashboard", dashboardRoutes);
 
 async function start() {
   await mongoose.connect(config.mongoUri);

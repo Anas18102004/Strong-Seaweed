@@ -1,8 +1,8 @@
 import DashboardLayout from "@/components/DashboardLayout";
 import { motion } from "framer-motion";
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useState } from "react";
 import { TrendingUp, Droplets, Activity, MessageSquare, Cpu, ArrowRight, Sparkles, Radar } from "lucide-react";
-import { api, PredictionSubmissionItem } from "@/lib/api";
+import { api, type DashboardActivityItem } from "@/lib/api";
 import { useAuth } from "@/context/AuthContext";
 import { useNavigate } from "react-router-dom";
 
@@ -11,23 +11,31 @@ export default function Dashboard() {
   const navigate = useNavigate();
   const [loading, setLoading] = useState(true);
   const [apiUp, setApiUp] = useState(false);
+  const [predictionsTotal, setPredictionsTotal] = useState(0);
+  const [predictions24h, setPredictions24h] = useState(0);
   const [sessionsCount, setSessionsCount] = useState(0);
-  const [submissions, setSubmissions] = useState<PredictionSubmissionItem[]>([]);
+  const [topSpecies, setTopSpecies] = useState("-");
+  const [avgScore, setAvgScore] = useState<number | null>(null);
+  const [recentPredictions, setRecentPredictions] = useState<DashboardActivityItem[]>([]);
 
   useEffect(() => {
     let mounted = true;
     const load = async () => {
       if (!token) return;
       try {
-        const [health, pred, sessions] = await Promise.all([
-          api.health(),
-          api.mySubmissions(token, 20),
-          api.getChatSessions(token),
+        const [summary, activity, health] = await Promise.all([
+          api.dashboardSummary(token),
+          api.dashboardActivity(token),
+          api.dashboardHealth(token),
         ]);
         if (!mounted) return;
-        setApiUp((health.status || "").toLowerCase() === "ok");
-        setSubmissions(pred.submissions || []);
-        setSessionsCount((sessions.sessions || []).length);
+        setApiUp(Boolean(health.backend?.ok && health.modelApi?.ok));
+        setPredictionsTotal(summary.totals?.predictions || 0);
+        setPredictions24h(summary.totals?.predictions24h || 0);
+        setSessionsCount(summary.totals?.sessions || 0);
+        setTopSpecies(summary.metrics?.topSpecies || "-");
+        setAvgScore(typeof summary.metrics?.avgConfidence === "number" ? summary.metrics.avgConfidence : null);
+        setRecentPredictions(activity.predictions || []);
       } catch {
         if (!mounted) return;
         setApiUp(false);
@@ -43,26 +51,8 @@ export default function Dashboard() {
     };
   }, [token]);
 
-  const topSpecies = useMemo(() => {
-    const counts: Record<string, number> = {};
-    for (const s of submissions) {
-      const name = s.bestSpecies?.displayName || "Unknown";
-      counts[name] = (counts[name] || 0) + 1;
-    }
-    const sorted = Object.entries(counts).sort((a, b) => b[1] - a[1]);
-    return sorted[0]?.[0] || "-";
-  }, [submissions]);
-
-  const avgScore = useMemo(() => {
-    const vals = submissions
-      .map((s) => s.bestSpecies?.probabilityPercent)
-      .filter((v): v is number => typeof v === "number");
-    if (!vals.length) return null;
-    return vals.reduce((a, b) => a + b, 0) / vals.length;
-  }, [submissions]);
-
   const stats = [
-    { label: "Live Predictions", value: String(submissions.length), icon: Activity, change: "+12% this cycle" },
+    { label: "Live Predictions", value: String(predictionsTotal), icon: Activity, change: `${predictions24h} in last 24h` },
     {
       label: "Top Suggested Species",
       value: topSpecies,
@@ -72,17 +62,6 @@ export default function Dashboard() {
     { label: "Backend API", value: apiUp ? "Online" : "Offline", icon: Cpu, change: apiUp ? "Realtime mode active" : "Check service health" },
     { label: "Chat Sessions", value: String(sessionsCount), icon: MessageSquare, change: "Assistant history retained" },
   ];
-
-  const recentPredictions = submissions.slice(0, 8).map((s) => {
-    const p = s.bestSpecies?.probabilityPercent ?? 0;
-    const status = p >= 80 ? "Optimal" : p >= 65 ? "Good" : p >= 50 ? "Moderate" : "Fair";
-    return {
-      location: s.locationName || `${s.lat.toFixed(3)}, ${s.lon.toFixed(3)}`,
-      species: s.bestSpecies?.displayName || "Unknown",
-      score: Math.max(0, Math.min(100, Math.round(p))),
-      status,
-    };
-  });
 
   return (
     <DashboardLayout>
@@ -173,8 +152,8 @@ export default function Dashboard() {
                       </tr>
                     </thead>
                     <tbody>
-                      {recentPredictions.map((p, i) => (
-                        <tr key={i} className="border-t border-white/5 text-[#DDEEFF] hover:bg-white/[0.04] transition-colors">
+                      {recentPredictions.map((p) => (
+                        <tr key={p.id} className="border-t border-white/5 text-[#DDEEFF] hover:bg-white/[0.04] transition-colors">
                           <td className="px-4 py-3 font-medium">{p.location}</td>
                           <td className="px-4 py-3 italic text-[#D2E8F8]">{p.species}</td>
                           <td className="px-4 py-3">
