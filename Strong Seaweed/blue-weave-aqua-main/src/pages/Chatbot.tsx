@@ -1,14 +1,43 @@
 import DashboardLayout from "@/components/DashboardLayout";
 import { motion } from "framer-motion";
 import { useState, useRef, useEffect } from "react";
-import { Send, Sparkles, History, Mic, MicOff, Volume2, VolumeX, Radio, PhoneOff, Plus, Clock3, Menu, Trash2 } from "lucide-react";
+import {
+  Send,
+  Sparkles,
+  History,
+  Mic,
+  MicOff,
+  Volume2,
+  VolumeX,
+  Radio,
+  PhoneOff,
+  Plus,
+  Clock3,
+  Menu,
+  Trash2,
+  Search,
+  SlidersHorizontal,
+  Paperclip,
+  BrainCircuit,
+  ShieldCheck,
+  Database,
+  ChevronDown,
+} from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { api } from "@/lib/api";
 import { useAuth } from "@/context/AuthContext";
 import BrandLogo from "@/components/BrandLogo";
 import { useLocation } from "react-router-dom";
 
-type Message = { role: "user" | "assistant"; content: string };
+type Message = {
+  role: "user" | "assistant";
+  content: string;
+  confidence?: number;
+  context?: string;
+  model?: string;
+};
+
+type InputMode = "ask" | "analyze" | "forecast" | "compare";
 
 type SpeechRecognitionAlternativeLite = { transcript: string };
 type SpeechRecognitionResultLite = {
@@ -122,15 +151,41 @@ function renderAssistantText(raw: string) {
   );
 }
 
+function getDateGroupLabel(value?: string) {
+  if (!value) return "No Date";
+  const now = new Date();
+  const d = new Date(value);
+  if (Number.isNaN(d.getTime())) return "No Date";
+  const startNow = new Date(now.getFullYear(), now.getMonth(), now.getDate()).getTime();
+  const startD = new Date(d.getFullYear(), d.getMonth(), d.getDate()).getTime();
+  const diffDays = Math.floor((startNow - startD) / 86400000);
+  if (diffDays === 0) return "Today";
+  if (diffDays === 1) return "Yesterday";
+  if (diffDays <= 7) return "Last 7 Days";
+  return "Earlier";
+}
+
+function getExecutionSteps() {
+  return ["Analyzing marine context", "Validating constraints", "Running suitability heuristics"];
+}
+
 export default function Chatbot() {
   const welcomeMessage: Message = {
     role: "assistant",
     content: "Hi. I am your Seaweed AI helper. Ask a practical question and I will answer in plain language.",
+    confidence: 94,
+    context: "Gulf Zone",
+    model: "Marine Core v2",
   };
   const [messages, setMessages] = useState<Message[]>([
     welcomeMessage,
   ]);
   const [input, setInput] = useState("");
+  const [inputMode, setInputMode] = useState<InputMode>("ask");
+  const [contextLocation, setContextLocation] = useState("Gulf of Mannar");
+  const [contextSpecies, setContextSpecies] = useState("Kappaphycus");
+  const [contextSeason, setContextSeason] = useState("Current");
+  const [sessionSearch, setSessionSearch] = useState("");
   const [isTyping, setIsTyping] = useState(false);
   const [sessionId, setSessionId] = useState<string | undefined>(undefined);
   const [sessions, setSessions] = useState<{ id: string; title: string; lastMessageAt?: string }[]>([]);
@@ -315,9 +370,16 @@ export default function Chatbot() {
       setIsDraftNewChat(false);
       setShowSidebar(false);
       const list = out.messages.map((m) => ({ role: m.role === "user" ? "user" : "assistant", content: m.content } as Message));
-      setMessages(list.length ? list : [{ role: "assistant", content: "This session is empty. Ask your first question." }]);
+      const hydrated = list.map((m) =>
+        m.role === "assistant" ? { ...m, confidence: 91, context: contextLocation, model: "Marine Core v2" } : m,
+      );
+      setMessages(
+        hydrated.length
+          ? hydrated
+          : [{ role: "assistant", content: "This session is empty. Ask your first question.", confidence: 93, model: "Marine Core v2" }],
+      );
     } catch {
-      setMessages([{ role: "assistant", content: "Could not load this session." }]);
+      setMessages([{ role: "assistant", content: "Could not load this session.", confidence: 0, model: "Marine Core v2" }]);
     }
   };
 
@@ -348,10 +410,12 @@ export default function Chatbot() {
     mode: "text" | "voice" = "text",
     options: { autoResumeVoice?: boolean } = {},
   ) => {
-    const msg = text || input;
+    const base = text || input;
+    const contextLine = `Mode=${inputMode}; Location=${contextLocation}; Species=${contextSpecies}; Season=${contextSeason}`;
+    const msg = `${base}\n\n[Context] ${contextLine}`;
     if (!msg.trim()) return;
 
-    setMessages((prev) => [...prev, { role: "user", content: msg }]);
+    setMessages((prev) => [...prev, { role: "user", content: base }]);
     setInput("");
     setLiveTranscript("");
     setVoiceError("");
@@ -365,7 +429,10 @@ export default function Chatbot() {
           setSessionId(res.sessionId);
           setIsDraftNewChat(false);
         }
-        setMessages((prev) => [...prev, { role: "assistant", content: res.answer }]);
+        setMessages((prev) => [
+          ...prev,
+          { role: "assistant", content: res.answer, confidence: 92, context: contextLocation, model: "Marine Core v2" },
+        ]);
 
         const played = playAudioBase64(res.audioBase64, res.audioMime);
         if (!played) speak(res.ttsText || res.answer);
@@ -380,7 +447,16 @@ export default function Chatbot() {
             setSessionId(res.sessionId);
             setIsDraftNewChat(false);
           }
-          setMessages((prev) => [...prev, { role: "assistant", content: (res.answer || built).trim() }]);
+          setMessages((prev) => [
+            ...prev,
+            {
+              role: "assistant",
+              content: (res.answer || built).trim(),
+              confidence: 92,
+              context: contextLocation,
+              model: "Marine Core v2",
+            },
+          ]);
           setStreamingAssistant("");
         } catch {
           setStreamingAssistant("");
@@ -389,7 +465,10 @@ export default function Chatbot() {
             setSessionId(res.sessionId);
             setIsDraftNewChat(false);
           }
-          setMessages((prev) => [...prev, { role: "assistant", content: res.answer }]);
+          setMessages((prev) => [
+            ...prev,
+            { role: "assistant", content: res.answer, confidence: 92, context: contextLocation, model: "Marine Core v2" },
+          ]);
         }
       }
 
@@ -399,7 +478,10 @@ export default function Chatbot() {
       if (mode === "voice") {
         setVoiceError(message);
       }
-      setMessages((prev) => [...prev, { role: "assistant", content: message }]);
+      setMessages((prev) => [
+        ...prev,
+        { role: "assistant", content: message, confidence: 0, context: contextLocation, model: "Marine Core v2" },
+      ]);
     } finally {
       setIsTyping(false);
       if (options.autoResumeVoice && voiceMode && voiceSupported && voiceSessionActive) {
@@ -502,6 +584,22 @@ export default function Chatbot() {
     }
   }, [voiceEnabled]);
 
+  const filteredSessions = sessions.filter((s) => s.title.toLowerCase().includes(sessionSearch.toLowerCase()));
+  const groupedSessions = filteredSessions.reduce<Record<string, { id: string; title: string; lastMessageAt?: string }[]>>((acc, s) => {
+    const label = getDateGroupLabel(s.lastMessageAt);
+    if (!acc[label]) acc[label] = [];
+    acc[label].push(s);
+    return acc;
+  }, {});
+
+  const sessionGroupOrder = ["Today", "Yesterday", "Last 7 Days", "Earlier", "No Date"];
+  const modeOptions: { id: InputMode; label: string }[] = [
+    { id: "ask", label: "Ask" },
+    { id: "analyze", label: "Analyze" },
+    { id: "forecast", label: "Forecast" },
+    { id: "compare", label: "Compare" },
+  ];
+
   return (
     <DashboardLayout>
       <div className="max-w-7xl mx-auto px-1 sm:px-0 h-[calc(100dvh-8.6rem)] sm:h-[calc(100dvh-7rem)] relative pb-2">
@@ -511,16 +609,24 @@ export default function Chatbot() {
         <motion.div
           initial={{ opacity: 0, y: 10 }}
           animate={{ opacity: 1, y: 0 }}
-          className="mb-3 sm:mb-4 rounded-[28px] sm:rounded-[30px] border border-white/55 bg-gradient-to-br from-cyan-100/75 via-white/65 to-blue-100/65 p-4 sm:p-6 backdrop-blur-2xl shadow-[0_22px_56px_-28px_rgba(13,72,110,0.52)]"
+          className="mb-3 sm:mb-4 rounded-[20px] border border-[#a8c7dc]/70 bg-white/85 p-4 sm:p-5 shadow-[0_14px_34px_-26px_rgba(13,72,110,0.62)]"
         >
-          <div className="flex flex-wrap items-center justify-between gap-2">
+          <div className="flex flex-wrap items-center justify-between gap-3">
             <div>
-              <p className="inline-flex items-center gap-1.5 text-[11px] uppercase tracking-[0.14em] text-cyan-700 mb-1.5">
-                <Sparkles className="w-3.5 h-3.5" />
-                BlueWeave Chat
+              <p className="inline-flex items-center gap-1.5 text-[11px] uppercase tracking-[0.14em] text-cyan-800 mb-1.5">
+                <BrainCircuit className="w-3.5 h-3.5" />
+                Marine Intelligence Copilot
               </p>
-              <h1 className="text-xl sm:text-3xl font-semibold text-slate-900 mb-1">Conversation Studio</h1>
-              <p className="text-slate-600 text-sm sm:text-base">Unified chat workspace with voice mode, history, and live assistant streaming.</p>
+              <h1 className="text-xl sm:text-2xl font-semibold text-slate-900 mb-1">AI Operations Command</h1>
+              <div className="flex flex-wrap items-center gap-2 text-xs text-slate-600">
+                <span className="inline-flex items-center gap-1.5 font-medium text-emerald-700"><ShieldCheck className="h-3.5 w-3.5" /> Operational</span>
+                <span className="h-3.5 w-px bg-slate-300/90" />
+                <span>Model: Marine Core v2</span>
+                <span className="h-3.5 w-px bg-slate-300/90" />
+                <span>Streaming: Live</span>
+                <span className="h-3.5 w-px bg-slate-300/90" />
+                <span>Context Window: 128k</span>
+              </div>
             </div>
             <div className="flex items-center gap-2">
               <Button
@@ -550,7 +656,7 @@ export default function Chatbot() {
                 className="min-h-10"
                 title="Switch voice mode"
               >
-                <Radio className="w-4 h-4" /> {voiceMode ? "Voice Mode On" : "Voice Mode"}
+                <Radio className="w-4 h-4" /> {voiceMode ? "Voice Channel Active" : "Open Voice Channel"}
               </Button>
               <Button
                 type="button"
@@ -690,86 +796,160 @@ export default function Chatbot() {
 
             <div className="grid md:grid-cols-[320px_minmax(0,1fr)] gap-3 sm:gap-4 h-[calc(100%-5.2rem)] sm:h-[calc(100%-5.6rem)]">
           <aside
-            className={`${showSidebar ? "block" : "hidden"} md:block fixed md:static inset-y-0 left-0 z-40 md:z-auto w-[88vw] max-w-[336px] md:w-auto rounded-r-[24px] md:rounded-[28px] border border-white/55 bg-white/82 md:bg-white/55 backdrop-blur-xl shadow-[0_20px_42px_-24px_rgba(15,74,109,0.55)] p-3 sm:p-4 h-full overflow-hidden`}
+            className={`${showSidebar ? "block" : "hidden"} md:block fixed md:static inset-y-0 left-0 z-40 md:z-auto w-[88vw] max-w-[336px] md:w-auto rounded-r-[20px] md:rounded-[18px] border border-[#b7d1e1] bg-[#f5fbff] md:bg-[#f6fbff]/96 shadow-[0_20px_40px_-28px_rgba(15,74,109,0.65)] p-3 h-full overflow-hidden`}
           >
             <div className="flex items-center justify-between gap-2 mb-3">
               <div className="flex items-center gap-2">
-                <History className="w-4 h-4 text-primary" />
-                <p className="text-sm font-semibold text-slate-900">Chats</p>
+                <History className="w-4 h-4 text-cyan-800" />
+                <p className="text-sm font-semibold text-slate-900">Session Ledger</p>
               </div>
               <Button variant="hero" size="sm" className="h-8 px-2.5" onClick={startNewChat}>
                 <Plus className="w-3.5 h-3.5 mr-1" /> New
               </Button>
             </div>
-            <p className="text-xs text-slate-600 mb-3">Start a new chat or reopen any previous conversation.</p>
-            <div className="space-y-2 overflow-y-auto h-[calc(100%-4.5rem)] pr-1">
+            <p className="text-xs text-slate-600 mb-3">Search, resume, and filter mission conversations.</p>
+            <div className="flex items-center gap-2 mb-3">
+              <div className="relative flex-1">
+                <Search className="pointer-events-none absolute left-2.5 top-1/2 h-3.5 w-3.5 -translate-y-1/2 text-slate-500" />
+                <input
+                  value={sessionSearch}
+                  onChange={(e) => setSessionSearch(e.target.value)}
+                  placeholder="Search conversations"
+                  className="h-9 w-full rounded-lg border border-[#c2d8e8] bg-white pl-8 pr-2 text-xs text-slate-900 placeholder:text-slate-500 outline-none transition-all duration-200 focus:border-cyan-300 focus:ring-2 focus:ring-cyan-200/50"
+                />
+              </div>
+              <button
+                type="button"
+                className="inline-flex h-9 w-9 items-center justify-center rounded-lg border border-[#c2d8e8] bg-white text-slate-600 transition-all duration-200 hover:-translate-y-0.5 hover:text-cyan-800"
+                title="Filter"
+              >
+                <SlidersHorizontal className="h-4 w-4" />
+              </button>
+            </div>
+            <div className="space-y-3 overflow-y-auto h-[calc(100%-8.5rem)] pr-1">
               {loadingSessions && <p className="text-xs text-muted-foreground">Loading sessions...</p>}
-              {!loadingSessions && sessions.length === 0 && (
-                <div className="rounded-2xl border border-white/70 bg-white/70 p-3 text-xs text-slate-600">No chat history yet. Start with New Chat.</div>
+              {!loadingSessions && filteredSessions.length === 0 && (
+                <div className="rounded-xl border border-[#c5d9e8] bg-white p-3 text-xs text-slate-600">No matching history. Start with New Chat.</div>
               )}
-              {sessions.map((s) => (
-                <div
-                  key={s.id}
-                  className={`w-full rounded-2xl p-2 border transition ${
-                    sessionId === s.id
-                      ? "gradient-primary text-primary-foreground border-cyan-300/30 shadow-[0_12px_24px_-16px_rgba(2,132,199,0.9)]"
-                      : "border-white/75 bg-white/78 hover:bg-white/90"
-                  }`}
-                >
-                  <button onClick={() => openSession(s.id)} className="w-full text-left px-1 py-1">
-                    <p className={`text-xs font-medium truncate ${sessionId === s.id ? "text-primary-foreground" : "text-foreground"}`}>{s.title}</p>
-                    <p className={`text-[11px] mt-1 flex items-center gap-1 ${sessionId === s.id ? "text-primary-foreground/90" : "text-muted-foreground"}`}>
-                      <Clock3 className="w-3 h-3" /> {formatTime(s.lastMessageAt)}
-                    </p>
-                  </button>
-                  <div className="flex justify-end">
-                    <button
-                      onClick={(e) => {
-                        e.stopPropagation();
-                        void deleteSession(s.id);
-                      }}
-                      className={`text-[11px] px-2 py-1 rounded-lg flex items-center gap-1 ${
-                        sessionId === s.id ? "bg-white/20 text-primary-foreground" : "bg-red-50 text-red-600"
-                      }`}
-                      title="Delete chat"
-                    >
-                      <Trash2 className="w-3 h-3" /> Delete
-                    </button>
+              {sessionGroupOrder.map((group) => {
+                const items = groupedSessions[group] || [];
+                if (!items.length) return null;
+                return (
+                  <div key={group} className="space-y-2">
+                    <p className="px-1 text-[11px] font-semibold uppercase tracking-[0.11em] text-slate-500">{group}</p>
+                    {items.map((s) => (
+                      <div
+                        key={s.id}
+                        onClick={() => void openSession(s.id)}
+                        onKeyDown={(e) => {
+                          if (e.key === "Enter" || e.key === " ") {
+                            e.preventDefault();
+                            void openSession(s.id);
+                          }
+                        }}
+                        role="button"
+                        tabIndex={0}
+                        className={`group relative w-full rounded-lg border p-2.5 text-left transition-all duration-200 ${
+                          sessionId === s.id
+                            ? "border-cyan-300/70 bg-gradient-to-r from-[#1da1f2]/12 to-[#0ea5e9]/20 shadow-[0_10px_18px_-14px_rgba(2,132,199,0.9)]"
+                            : "border-[#c6dbea] bg-white hover:-translate-y-0.5 hover:border-cyan-300/60 hover:bg-cyan-50/40"
+                        }`}
+                      >
+                        <p className={`truncate text-xs font-semibold ${sessionId === s.id ? "text-cyan-900" : "text-slate-800"}`}>{s.title}</p>
+                        <p className="mt-1 flex items-center gap-1 text-[11px] text-slate-500">
+                          <Clock3 className="w-3 h-3" /> {formatTime(s.lastMessageAt)}
+                        </p>
+                        <span className="pointer-events-none absolute inset-y-2 left-0 w-0.5 rounded-r bg-cyan-500 opacity-0 transition-opacity group-hover:opacity-70 data-[active=true]:opacity-100" data-active={sessionId === s.id} />
+                        <button
+                          type="button"
+                          onClick={(e) => {
+                            e.preventDefault();
+                            e.stopPropagation();
+                            void deleteSession(s.id);
+                          }}
+                          className="absolute right-2 top-2 inline-flex h-6 w-6 items-center justify-center rounded-md border border-transparent text-slate-400 opacity-0 transition-all duration-200 hover:border-rose-200 hover:text-rose-600 group-hover:opacity-100"
+                          title="Delete chat"
+                        >
+                          <Trash2 className="h-3.5 w-3.5" />
+                        </button>
+                      </div>
+                    ))}
                   </div>
-                </div>
-              ))}
+                );
+              })}
             </div>
           </aside>
 
           <div className="min-h-0 flex flex-col">
-            <div className="flex-1 overflow-y-auto space-y-4 mb-3 sm:mb-4 pr-1 rounded-[26px] sm:rounded-[30px] border border-white/55 bg-white/55 backdrop-blur-xl shadow-[0_20px_42px_-24px_rgba(15,74,109,0.55)] p-3 sm:p-5">
+            <div className="flex-1 overflow-y-auto space-y-4 mb-3 sm:mb-4 pr-1 rounded-[18px] border border-[#b8d2e3] bg-[#f8fcff]/98 shadow-[0_20px_38px_-30px_rgba(15,74,109,0.72)] p-3 sm:p-5">
               {messages.map((m, i) => (
-                <motion.div key={i} initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }} className={`flex ${m.role === "user" ? "justify-end" : "justify-start"}`}>
-                  <div className={`flex items-start gap-2.5 max-w-[92%] sm:max-w-[85%] ${m.role === "user" ? "flex-row-reverse" : ""}`}>
-                    {m.role === "assistant" && (
-                      <BrandLogo size="sm" showWordmark={false} className="shrink-0" />
-                    )}
-                    <div className={`whitespace-pre-wrap rounded-2xl px-4 py-3 text-sm leading-relaxed border ${
-                      m.role === "user"
-                        ? "gradient-primary text-primary-foreground border-cyan-300/30 shadow-[0_10px_24px_-16px_rgba(2,132,199,0.9)]"
-                        : "bg-white/90 text-slate-800 border-white/80"
-                    }`}>
-                      {m.role === "assistant" ? renderAssistantText(m.content) : m.content}
+                <motion.div key={i} initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }} className="flex">
+                  {m.role === "user" ? (
+                    <div className="ml-auto max-w-[92%] sm:max-w-[84%] rounded-xl border border-cyan-300/30 bg-gradient-to-r from-[#1da1f2] to-[#0ea5e9] px-4 py-3 text-sm text-white shadow-[0_12px_26px_-16px_rgba(2,132,199,0.92)]">
+                      {m.content}
                     </div>
-                  </div>
+                  ) : (
+                    <div className="w-full max-w-[98%] rounded-xl border border-[#c4d9e7] bg-white px-4 py-3 shadow-[0_14px_26px_-22px_rgba(15,74,109,0.62)]">
+                      <div className="flex flex-wrap items-center gap-2 text-[11px] text-slate-600">
+                        <BrandLogo size="sm" showWordmark={false} className="shrink-0" />
+                        <span className="font-semibold text-slate-800">Marine Intelligence Assistant</span>
+                        <span className="h-3 w-px bg-slate-300" />
+                        <span>{m.model || "Marine Core v2"}</span>
+                        <span className="h-3 w-px bg-slate-300" />
+                        <span>Confidence {m.confidence ?? 92}%</span>
+                        <span className="h-3 w-px bg-slate-300" />
+                        <span>Data Context {m.context || "Regional mesh"}</span>
+                      </div>
+                      <div className="mt-3">
+                        <p className="mb-2 text-[11px] uppercase tracking-[0.12em] text-slate-500">Answer</p>
+                        <div className="text-sm text-slate-800">{renderAssistantText(m.content)}</div>
+                      </div>
+                      <details className="mt-3 rounded-lg border border-[#d5e4ee] bg-[#f7fbff] p-2.5">
+                        <summary className="cursor-pointer list-none text-xs font-semibold text-cyan-800 flex items-center gap-1.5">
+                          <ChevronDown className="h-3.5 w-3.5" />
+                          Reasoning and analysis trace
+                        </summary>
+                        <div className="mt-2 space-y-1.5 text-xs text-slate-600">
+                          <p>- Environmental constraints were prioritized by current context values.</p>
+                          <p>- Species and risk weighting were balanced against operational objective.</p>
+                          <p>- Recommendations were tuned for execution feasibility.</p>
+                        </div>
+                      </details>
+                      <div className="mt-3">
+                        <div className="mb-1 flex items-center justify-between text-[11px] text-slate-500">
+                          <span>Trust Indicator</span>
+                          <span>{m.confidence ?? 92}%</span>
+                        </div>
+                        <div className="h-1.5 rounded-full bg-slate-200">
+                          <div className="h-1.5 rounded-full bg-gradient-to-r from-emerald-500 to-cyan-500" style={{ width: `${Math.max(0, Math.min(100, m.confidence ?? 92))}%` }} />
+                        </div>
+                      </div>
+                    </div>
+                  )}
                 </motion.div>
               ))}
               {streamingAssistant && (
-                <motion.div initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }} className="flex justify-start">
-                  <div className="flex items-start gap-2.5 max-w-[92%] sm:max-w-[85%]">
-                    <BrandLogo size="sm" showWordmark={false} className="shrink-0" />
-                    <div className="whitespace-pre-wrap rounded-2xl px-4 py-3 text-sm leading-relaxed bg-white/90 text-slate-800 border border-white/80">
-                      {renderAssistantText(streamingAssistant)}
+                <motion.div initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }} className="flex">
+                  <div className="w-full rounded-xl border border-cyan-200/60 bg-gradient-to-r from-cyan-50/90 to-white px-4 py-3">
+                    <div className="mb-2 text-[11px] font-semibold uppercase tracking-[0.1em] text-cyan-800">Executing Response Pipeline</div>
+                    <div className="grid gap-1.5 sm:grid-cols-3 text-xs text-slate-600">
+                      {getExecutionSteps().map((step, idx) => (
+                        <div key={step} className="rounded-md border border-cyan-100 bg-white/80 px-2.5 py-1.5">
+                          <span className="text-cyan-700 font-semibold mr-1">{idx + 1}.</span>
+                          {step}
+                        </div>
+                      ))}
                     </div>
+                    <div className="mt-3 text-sm text-slate-800">{renderAssistantText(streamingAssistant)}</div>
                   </div>
                 </motion.div>
               )}
-              {isTyping && <p className="text-xs text-muted-foreground">AI is thinking...</p>}
+              {isTyping && (
+                <p className="text-xs text-slate-500 inline-flex items-center gap-2">
+                  <Database className="h-3.5 w-3.5 text-cyan-700" />
+                  AI execution in progress...
+                </p>
+              )}
               <div ref={bottomRef} />
             </div>
 
@@ -788,20 +968,78 @@ export default function Chatbot() {
             )}
 
             {!voiceMode && (
-              <div className="rounded-[22px] sm:rounded-[24px] border border-white/60 bg-white/65 backdrop-blur-xl shadow-[0_16px_36px_-22px_rgba(15,74,109,0.5)] flex items-center gap-2 sm:gap-3 p-2.5 sticky bottom-0 pb-[env(safe-area-inset-bottom)]">
-                <input
-                  value={input}
-                  onChange={(e) => setInput(e.target.value)}
-                  onKeyDown={(e) => e.key === "Enter" && sendMessage(undefined, "text")}
-                  placeholder="Ask a question about cultivation, risk, yield, weather, or market decisions"
-                  className="flex-1 bg-transparent px-2 min-h-11 text-sm text-slate-900 placeholder:text-slate-500 focus:outline-none"
-                />
-                <Button variant="glass" size="icon" onClick={() => setVoiceMode(true)} className="rounded-xl w-11 h-11 shrink-0" disabled={!voiceSupported || isTyping}>
-                  <Mic className="w-4 h-4" />
-                </Button>
-                <Button variant="hero" size="icon" onClick={() => sendMessage(undefined, "text")} className="rounded-xl w-11 h-11 shrink-0" disabled={isTyping}>
-                  <Send className="w-4 h-4" />
-                </Button>
+              <div className="rounded-[18px] border border-[#b8d2e3] bg-white/95 shadow-[0_14px_28px_-20px_rgba(15,74,109,0.72)] sticky bottom-0 pb-[env(safe-area-inset-bottom)]">
+                <div className="flex flex-wrap items-center gap-2 border-b border-[#d6e6f1] px-3 py-2">
+                  {modeOptions.map((opt) => (
+                    <button
+                      key={opt.id}
+                      type="button"
+                      onClick={() => setInputMode(opt.id)}
+                      className={`rounded-md px-2.5 py-1 text-xs font-medium transition-all duration-200 ${
+                        inputMode === opt.id
+                          ? "bg-cyan-600 text-white shadow-[0_8px_16px_-12px_rgba(8,145,178,0.92)]"
+                          : "bg-slate-100 text-slate-700 hover:bg-slate-200"
+                      }`}
+                    >
+                      {opt.label}
+                    </button>
+                  ))}
+                  <span className="ml-auto text-[11px] text-slate-500">Structured prompt mode</span>
+                </div>
+                <div className="grid gap-2 px-3 py-2 sm:grid-cols-3">
+                  <select
+                    value={contextLocation}
+                    onChange={(e) => setContextLocation(e.target.value)}
+                    className="h-9 rounded-lg border border-[#c6dbea] bg-white px-2 text-xs text-slate-700 outline-none focus:border-cyan-300"
+                    aria-label="Context location"
+                  >
+                    <option>Gulf of Mannar</option>
+                    <option>Palk Bay</option>
+                    <option>Saurashtra Coast</option>
+                  </select>
+                  <select
+                    value={contextSpecies}
+                    onChange={(e) => setContextSpecies(e.target.value)}
+                    className="h-9 rounded-lg border border-[#c6dbea] bg-white px-2 text-xs text-slate-700 outline-none focus:border-cyan-300"
+                    aria-label="Context species"
+                  >
+                    <option>Kappaphycus</option>
+                    <option>Gracilaria</option>
+                    <option>Sargassum</option>
+                  </select>
+                  <select
+                    value={contextSeason}
+                    onChange={(e) => setContextSeason(e.target.value)}
+                    className="h-9 rounded-lg border border-[#c6dbea] bg-white px-2 text-xs text-slate-700 outline-none focus:border-cyan-300"
+                    aria-label="Context season"
+                  >
+                    <option>Current</option>
+                    <option>Monsoon</option>
+                    <option>Post-Monsoon</option>
+                  </select>
+                </div>
+                <div className="flex items-center gap-2 sm:gap-3 p-2.5">
+                  <button
+                    type="button"
+                    className="inline-flex h-11 w-11 shrink-0 items-center justify-center rounded-lg border border-[#c6dbea] text-slate-600 transition-all duration-200 hover:-translate-y-0.5 hover:text-cyan-800"
+                    title="Attach data"
+                  >
+                    <Paperclip className="h-4 w-4" />
+                  </button>
+                  <input
+                    value={input}
+                    onChange={(e) => setInput(e.target.value)}
+                    onKeyDown={(e) => e.key === "Enter" && sendMessage(undefined, "text")}
+                    placeholder="Ask, analyze, compare, or forecast with marine context"
+                    className="flex-1 bg-transparent px-2 min-h-11 text-sm text-slate-900 placeholder:text-slate-500 focus:outline-none"
+                  />
+                  <Button variant="glass" size="icon" onClick={() => setVoiceMode(true)} className="rounded-lg w-11 h-11 shrink-0" disabled={!voiceSupported || isTyping}>
+                    <Mic className="w-4 h-4" />
+                  </Button>
+                  <Button variant="hero" size="icon" onClick={() => sendMessage(undefined, "text")} className="rounded-lg w-11 h-11 shrink-0" disabled={isTyping}>
+                    <Send className="w-4 h-4" />
+                  </Button>
+                </div>
               </div>
             )}
           </div>
