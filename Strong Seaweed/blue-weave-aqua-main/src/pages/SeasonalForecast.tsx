@@ -99,7 +99,7 @@ export default function SeasonalForecast() {
             <h1 className="ocean-title-glow mt-2">
               Weather & <span className="ocean-title-highlight">Season</span> Intelligence
             </h1>
-            <p className="mt-3 max-w-2xl text-sm text-[#CFE9FF]/80">Quarterly risk outlook generated from your real prediction history and suitability behavior over time.</p>
+            <p className="mt-3 max-w-2xl text-sm text-[#E6F5FF]">Quarterly risk outlook generated from your real prediction history and suitability behavior over time.</p>
             <div className="ocean-header-line" />
             <div className="mt-4 inline-flex items-center gap-2 rounded-full border border-amber-200/20 bg-amber-300/10 px-3 py-1 text-xs text-amber-100">
               <AlertTriangle className="h-3.5 w-3.5" />
@@ -125,16 +125,16 @@ export default function SeasonalForecast() {
                         </div>
                         <div>
                           <p className="text-sm font-semibold text-white">{q.name}</p>
-                          <p className="text-xs text-[#7FA9C4]">{q.months}</p>
+                          <p className="text-xs text-[#A7CCE4]">{q.months}</p>
                         </div>
                       </div>
                       <span className={`text-xs font-semibold ${q.riskColor}`}>{q.risk} Risk</span>
                     </div>
 
-                    <p className="min-h-[56px] text-xs text-[#CFE9FF]/75 leading-relaxed">{q.summary}</p>
+                    <p className="min-h-[56px] text-xs text-[#E2F2FF] leading-relaxed">{q.summary}</p>
 
                     <div className="mt-3">
-                      <div className="mb-1.5 flex items-center justify-between text-[11px] text-[#7FA9C4]">
+                      <div className="mb-1.5 flex items-center justify-between text-[11px] text-[#A7CCE4]">
                         <span>Risk Level</span>
                         <span className={q.riskColor}>{q.riskValue}%</span>
                       </div>
@@ -147,7 +147,7 @@ export default function SeasonalForecast() {
                       {q.conditions.map((c) => (
                         <div key={c.label} className="rounded-xl border border-white/10 bg-white/[0.04] px-2.5 py-2">
                           <p className={`text-sm font-semibold ${c.color}`}>{c.value}</p>
-                          <p className="text-[11px] text-[#7FA9C4]">{c.label}</p>
+                          <p className="text-[11px] text-[#A7CCE4]">{c.label}</p>
                         </div>
                       ))}
                     </div>
@@ -158,7 +158,7 @@ export default function SeasonalForecast() {
 
             <motion.div initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.3 }} className="ocean-glass-card rounded-2xl p-4 flex items-center gap-2.5">
               <Sparkles className="h-4 w-4 text-cyan-200" />
-              <p className="text-sm text-[#CFE9FF]/85">Use this timeline to plan deployments, harvest windows, and mitigation actions before high-risk quarters.</p>
+              <p className="text-sm text-[#E2F2FF]">Use this timeline to plan deployments, harvest windows, and mitigation actions before high-risk quarters.</p>
             </motion.div>
           </div>
         </div>

@@ -95,7 +95,7 @@ export default function Dashboard() {
                 <h1 className="ocean-title-glow mt-2">
                   Marine <span className="ocean-title-highlight">Intelligence</span> Dashboard
                 </h1>
-                <p className="mt-3 max-w-2xl text-sm text-[#CFE9FF]/80">
+                <p className="mt-3 max-w-2xl text-sm text-[#E6F5FF]">
                   Unified live visibility into prediction performance, model confidence, and advisor activity across your ocean farming operations.
                 </p>
                 <div className="ocean-header-line" />
@@ -103,7 +103,7 @@ export default function Dashboard() {
               <div className="flex items-center gap-2.5">
                 <button
                   onClick={() => navigate("/predict")}
-                  className="ocean-glass-card rounded-xl px-3.5 py-2 text-xs font-semibold text-[#CFE9FF] transition-colors hover:text-white"
+                  className="ocean-glass-card rounded-xl px-3.5 py-2 text-xs font-semibold text-[#EAF7FF] transition-colors hover:text-white"
                 >
                   New Prediction
                 </button>
@@ -142,7 +142,7 @@ export default function Dashboard() {
                     </span>
                   </div>
                   <p className="mt-4 text-3xl font-bold text-white tracking-tight">{s.value}</p>
-                  <p className="mt-1 text-xs uppercase tracking-[0.13em] text-[#7FA9C4]">{s.label}</p>
+                  <p className="mt-1 text-xs uppercase tracking-[0.13em] text-[#A7CCE4]">{s.label}</p>
                 </motion.div>
               ))}
             </div>
@@ -165,7 +165,7 @@ export default function Dashboard() {
                 <div className="overflow-x-auto rounded-2xl border border-white/10 bg-white/[0.03]">
                   <table className="w-full text-sm">
                     <thead className="bg-white/[0.06]">
-                      <tr className="text-left text-[#CFE9FF]">
+                      <tr className="text-left text-[#E3F2FF]">
                         <th className="px-4 py-3 font-semibold rounded-l-xl">Location</th>
                         <th className="px-4 py-3 font-semibold">Species</th>
                         <th className="px-4 py-3 font-semibold">Score</th>
@@ -174,9 +174,9 @@ export default function Dashboard() {
                     </thead>
                     <tbody>
                       {recentPredictions.map((p, i) => (
-                        <tr key={i} className="border-t border-white/5 text-[#CFE9FF] hover:bg-white/[0.04] transition-colors">
+                        <tr key={i} className="border-t border-white/5 text-[#DDEEFF] hover:bg-white/[0.04] transition-colors">
                           <td className="px-4 py-3 font-medium">{p.location}</td>
-                          <td className="px-4 py-3 italic text-[#b6d8ef]">{p.species}</td>
+                          <td className="px-4 py-3 italic text-[#D2E8F8]">{p.species}</td>
                           <td className="px-4 py-3">
                             <div className="flex items-center gap-2">
                               <div className="h-2 w-20 rounded-full bg-white/10 overflow-hidden">
@@ -202,7 +202,7 @@ export default function Dashboard() {
                       <Sparkles className="h-6 w-6 text-cyan-100" />
                     </div>
                     <p className="text-white text-base font-semibold">No prediction stream yet</p>
-                    <p className="mt-2 text-sm text-[#CFE9FF]/70">Start your first prediction to unlock live region intelligence.</p>
+                    <p className="mt-2 text-sm text-[#DDEEFF]">Start your first prediction to unlock live region intelligence.</p>
                     <button
                       onClick={() => navigate("/predict")}
                       className="mt-5 inline-flex items-center gap-2 rounded-xl bg-gradient-to-r from-[#1DA1F2] to-[#0EA5E9] px-4 py-2 text-sm font-semibold text-white"

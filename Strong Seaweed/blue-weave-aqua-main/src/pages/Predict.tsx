@@ -50,7 +50,7 @@ function toOptionalNumber(value: string): number | null {
 }
 
 function fieldClass(hasValue: boolean) {
-  return `w-full h-11 rounded-xl border border-white/15 bg-white/[0.05] px-10 pr-4 text-sm text-white placeholder:text-[#9dc2dd] focus:outline-none focus:ring-2 focus:ring-cyan-300/35 focus:border-cyan-200/35 transition-all ${hasValue ? "shadow-[0_0_0_1px_rgba(125,183,221,0.18)]" : ""}`;
+  return `w-full h-11 rounded-xl border border-white/15 bg-white/[0.05] px-10 pr-4 text-sm text-white placeholder:text-[#c7e1f3] focus:outline-none focus:ring-2 focus:ring-cyan-300/35 focus:border-cyan-200/35 transition-all ${hasValue ? "shadow-[0_0_0_1px_rgba(125,183,221,0.18)]" : ""}`;
 }
 
 function riskBand(score: number) {
@@ -201,12 +201,12 @@ export default function PredictPage() {
                 <h1 className="ocean-title-glow mt-2">
                   Marine <span className="ocean-title-highlight">Suitability</span> Command
                 </h1>
-                <p className="mt-3 max-w-2xl text-sm text-[#CFE9FF]/80">
+                <p className="mt-3 max-w-2xl text-sm text-[#E6F5FF]">
                   Select a location directly on the map, enrich environmental signals, and run model-grade species suitability forecasting.
                 </p>
                 <div className="ocean-header-line" />
               </div>
-              <div className="ocean-glass-card rounded-xl px-3 py-2 text-xs text-[#CFE9FF]">
+              <div className="ocean-glass-card rounded-xl px-3 py-2 text-xs text-[#EAF7FF]">
                 <p>Model version: {lastPrediction?.modelRelease || "v2.0 marine-core"}</p>
                 <p className="mt-1">Data source: {lastPrediction?.source || "Hybrid climate + hydro layers"}</p>
                 <p className="mt-1">Last updated: {lastUpdated || "Just now"}</p>
@@ -224,10 +224,10 @@ export default function PredictPage() {
                 className="ocean-glass-card rounded-[22px] p-5 sm:p-6 space-y-5 xl:col-span-3"
               >
                 <div>
-                  <p className="text-xs uppercase tracking-[0.14em] text-[#7FA9C4] mb-2">1. Location</p>
+                  <p className="text-xs uppercase tracking-[0.14em] text-[#A7CCE4] mb-2">1. Location</p>
                   <div className="grid sm:grid-cols-2 gap-4">
                     <div>
-                      <label className="mb-1.5 block text-xs uppercase tracking-[0.14em] text-[#7FA9C4]">Location Label</label>
+                      <label className="mb-1.5 block text-xs uppercase tracking-[0.14em] text-[#A7CCE4]">Location Label</label>
                       <div className="relative">
                         <select
                           value={location}
@@ -249,7 +249,7 @@ export default function PredictPage() {
                       </div>
                     </div>
                     <div>
-                      <label className="mb-1.5 block text-xs uppercase tracking-[0.14em] text-[#7FA9C4]">Season</label>
+                      <label className="mb-1.5 block text-xs uppercase tracking-[0.14em] text-[#A7CCE4]">Season</label>
                       <div className="relative">
                         <select value={season} onChange={(e) => setSeason(e.target.value)} className={fieldClass(!!season) + " appearance-none cursor-pointer"}>
                           <option value="">Select season...</option>
@@ -268,31 +268,31 @@ export default function PredictPage() {
                       <LocateFixed className="w-4 h-4 mr-1" />
                       Auto-detect my location
                     </Button>
-                    <span className="text-xs text-[#9ec7e3]">
+                    <span className="text-xs text-[#D7EEFF]">
                       {coords ? `Selected: ${coords.lat.toFixed(4)}, ${coords.lon.toFixed(4)}` : "No coordinates selected yet"}
                     </span>
                   </div>
                 </div>
 
                 <div>
-                  <p className="text-xs uppercase tracking-[0.14em] text-[#7FA9C4] mb-2">2. Environmental Parameters</p>
+                  <p className="text-xs uppercase tracking-[0.14em] text-[#A7CCE4] mb-2">2. Environmental Parameters</p>
                   <div className="grid sm:grid-cols-3 gap-4">
                     <div>
-                      <label className="mb-1.5 block text-xs uppercase tracking-[0.14em] text-[#7FA9C4]">Depth (m)</label>
+                      <label className="mb-1.5 block text-xs uppercase tracking-[0.14em] text-[#A7CCE4]">Depth (m)</label>
                       <div className="relative">
                         <input type="number" placeholder="e.g. 5" value={depth} onChange={(e) => setDepth(e.target.value)} className={fieldClass(!!depth)} />
                         <Ruler className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-cyan-200" />
                       </div>
                     </div>
                     <div>
-                      <label className="mb-1.5 block text-xs uppercase tracking-[0.14em] text-[#7FA9C4]">Temperature (deg C)</label>
+                      <label className="mb-1.5 block text-xs uppercase tracking-[0.14em] text-[#A7CCE4]">Temperature (deg C)</label>
                       <div className="relative">
                         <input type="number" step="any" placeholder="Auto-fetched" value={temperatureC} onChange={(e) => setTemperatureC(e.target.value)} className={fieldClass(!!temperatureC)} />
                         <Thermometer className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-cyan-200" />
                       </div>
                     </div>
                     <div>
-                      <label className="mb-1.5 block text-xs uppercase tracking-[0.14em] text-[#7FA9C4]">Salinity (ppt)</label>
+                      <label className="mb-1.5 block text-xs uppercase tracking-[0.14em] text-[#A7CCE4]">Salinity (ppt)</label>
                       <div className="relative">
                         <input type="number" step="any" placeholder="Auto-fetched" value={salinityPpt} onChange={(e) => setSalinityPpt(e.target.value)} className={fieldClass(!!salinityPpt)} />
                         <Droplets className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-cyan-200" />
@@ -302,12 +302,12 @@ export default function PredictPage() {
                 </div>
 
                 <div>
-                  <p className="text-xs uppercase tracking-[0.14em] text-[#7FA9C4] mb-2">3. Advanced Controls</p>
+                  <p className="text-xs uppercase tracking-[0.14em] text-[#A7CCE4] mb-2">3. Advanced Controls</p>
                   <div className="rounded-2xl border border-white/12 bg-white/[0.04]">
                     <button
                       type="button"
                       onClick={() => setShowAdvanced(!showAdvanced)}
-                      className="flex w-full items-center justify-between px-4 py-3 text-left text-sm font-medium text-[#CFE9FF]"
+                      className="flex w-full items-center justify-between px-4 py-3 text-left text-sm font-medium text-[#E6F5FF]"
                     >
                       Tune advanced hydrology parameters
                       <ChevronDown className={`h-4 w-4 transition-transform ${showAdvanced ? "rotate-180" : ""}`} />
@@ -317,7 +317,7 @@ export default function PredictPage() {
                         <div className="grid sm:grid-cols-2 gap-4">
                           {advancedFields.map((field) => (
                             <div key={field.key}>
-                              <label className="mb-1.5 block text-xs uppercase tracking-[0.14em] text-[#7FA9C4]">{field.label}</label>
+                              <label className="mb-1.5 block text-xs uppercase tracking-[0.14em] text-[#A7CCE4]">{field.label}</label>
                               <input
                                 type="number"
                                 step="any"
@@ -357,24 +357,24 @@ export default function PredictPage() {
 
                 <div className="ocean-glass-card rounded-2xl p-4">
                   <div className="flex items-center justify-between mb-3">
-                    <p className="text-xs uppercase tracking-[0.14em] text-[#7FA9C4]">Dynamic Suitability</p>
+                    <p className="text-xs uppercase tracking-[0.14em] text-[#A7CCE4]">Dynamic Suitability</p>
                     <Radar className={`h-4 w-4 text-cyan-200 ${isLoading ? "animate-spin" : ""}`} />
                   </div>
                   <div className="grid grid-cols-2 gap-3">
                     <div className="rounded-xl border border-white/10 bg-white/[0.04] p-3">
-                      <p className="text-[11px] text-[#7FA9C4] uppercase">Score</p>
+                      <p className="text-[11px] text-[#A7CCE4] uppercase">Score</p>
                       <p className="text-2xl font-semibold text-white mt-1">{metrics.score}%</p>
                     </div>
                     <div className="rounded-xl border border-white/10 bg-white/[0.04] p-3">
-                      <p className="text-[11px] text-[#7FA9C4] uppercase">Confidence</p>
+                      <p className="text-[11px] text-[#A7CCE4] uppercase">Confidence</p>
                       <p className="text-base font-semibold text-cyan-100 mt-1">{metrics.confidence}</p>
                     </div>
                     <div className="rounded-xl border border-white/10 bg-white/[0.04] p-3">
-                      <p className="text-[11px] text-[#7FA9C4] uppercase">Risk Band</p>
+                      <p className="text-[11px] text-[#A7CCE4] uppercase">Risk Band</p>
                       <p className="text-sm font-semibold text-emerald-100 mt-1">{metrics.risk}</p>
                     </div>
                     <div className="rounded-xl border border-white/10 bg-white/[0.04] p-3">
-                      <p className="text-[11px] text-[#7FA9C4] uppercase">Recommended</p>
+                      <p className="text-[11px] text-[#A7CCE4] uppercase">Recommended</p>
                       <p className="text-sm font-semibold text-white mt-1">{metrics.species}</p>
                     </div>
                   </div>
@@ -392,8 +392,8 @@ export default function PredictPage() {
                 {!lastPrediction && (
                   <div className="ocean-glass-card rounded-2xl p-5 relative overflow-hidden">
                     <div className="absolute inset-0 bg-[radial-gradient(circle_at_20%_30%,rgba(20,184,166,0.18),transparent_35%),radial-gradient(circle_at_70%_60%,rgba(29,161,242,0.22),transparent_40%)] animate-pulse" />
-                    <p className="relative text-xs uppercase tracking-[0.14em] text-[#7FA9C4]">Live Preview</p>
-                    <p className="relative mt-2 text-sm text-[#CFE9FF]/80">Animated heatmap placeholder will convert into model-derived suitability surface after execution.</p>
+                    <p className="relative text-xs uppercase tracking-[0.14em] text-[#A7CCE4]">Live Preview</p>
+                    <p className="relative mt-2 text-sm text-[#E1F2FF]">Animated heatmap placeholder will convert into model-derived suitability surface after execution.</p>
                     <div className="relative mt-4 h-20 rounded-xl border border-cyan-100/15 bg-gradient-to-r from-teal-400/20 via-cyan-300/25 to-blue-500/20" />
                   </div>
                 )}
@@ -403,7 +403,7 @@ export default function PredictPage() {
                     <ShieldCheck className="h-4 w-4" />
                     <p className="text-xs uppercase tracking-[0.14em]">Trust Indicators</p>
                   </div>
-                  <p className="text-xs text-[#9ec7e3] mt-2">Model version: {lastPrediction?.modelRelease || "v2.0 marine-core"} | Source: {lastPrediction?.source || "BlueWave climate mesh"} | Last updated: {lastUpdated || "Awaiting first run"}</p>
+                  <p className="text-xs text-[#D6ECFB] mt-2">Model version: {lastPrediction?.modelRelease || "v2.0 marine-core"} | Source: {lastPrediction?.source || "BlueWave climate mesh"} | Last updated: {lastUpdated || "Awaiting first run"}</p>
                 </div>
               </motion.div>
             </div>
@@ -413,4 +413,3 @@ export default function PredictPage() {
     </DashboardLayout>
   );
 }
-

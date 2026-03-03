@@ -101,7 +101,7 @@ export default function SiteIntelligence() {
             <h1 className="ocean-title-glow mt-2">
               Top Farming <span className="ocean-title-highlight">Areas</span>
             </h1>
-            <p className="mt-3 max-w-2xl text-sm text-[#CFE9FF]/80">
+            <p className="mt-3 max-w-2xl text-sm text-[#E6F5FF]">
               Compare regional suitability using historical inference data and quickly identify high-confidence cultivation zones.
             </p>
             <div className="ocean-header-line" />
@@ -111,8 +111,8 @@ export default function SiteIntelligence() {
             <div className="grid xl:grid-cols-5 gap-6">
               <div className="xl:col-span-2 space-y-4">
                 <div className="ocean-glass-card rounded-2xl p-4">
-                  <p className="text-xs uppercase tracking-[0.14em] text-[#7FA9C4]">Region Selector</p>
-                  <p className="mt-1 text-sm text-[#CFE9FF]/80">Choose a region to inspect model confidence and advisory signals.</p>
+                  <p className="text-xs uppercase tracking-[0.14em] text-[#A7CCE4]">Region Selector</p>
+                  <p className="mt-1 text-sm text-[#E6F5FF]">Choose a region to inspect model confidence and advisory signals.</p>
                 </div>
                 <div className="space-y-3">
                   {regions.map((r, i) => (
@@ -133,7 +133,7 @@ export default function SiteIntelligence() {
                           <div className={`h-2.5 w-2.5 rounded-full ${levelColors[r.level]}`} />
                           <div>
                             <p className="text-sm font-semibold text-white">{r.name}</p>
-                            <p className="text-xs text-[#9fc6e2] italic">{r.species}</p>
+                            <p className="text-xs text-[#D2E8F8] italic">{r.species}</p>
                           </div>
                         </div>
                         <span className="text-sm font-bold text-cyan-100">{r.score}%</span>
@@ -143,7 +143,7 @@ export default function SiteIntelligence() {
                   {!loading && regions.length === 0 && (
                     <div className="ocean-glass-card rounded-2xl p-6 text-center">
                       <MapPin className="mx-auto h-8 w-8 text-cyan-200" />
-                      <p className="mt-2 text-sm text-[#CFE9FF]/80">No site data yet. Save prediction runs to unlock ranking.</p>
+                      <p className="mt-2 text-sm text-[#E6F5FF]">No site data yet. Save prediction runs to unlock ranking.</p>
                     </div>
                   )}
                 </div>
@@ -181,7 +181,7 @@ export default function SiteIntelligence() {
                       </div>
                       <div className="text-right">
                         <p className="text-3xl font-bold text-cyan-100">{selected.score}%</p>
-                        <p className="text-xs text-[#7FA9C4]">Suitability Score</p>
+                        <p className="text-xs text-[#A7CCE4]">Suitability Score</p>
                       </div>
                     </div>
 
@@ -189,23 +189,23 @@ export default function SiteIntelligence() {
                       <div className="rounded-2xl border border-white/10 bg-white/[0.04] p-3 text-center">
                         <Thermometer className="mx-auto mb-1 h-5 w-5 text-cyan-100" />
                         <p className="text-sm font-semibold text-white">{selected.temp}</p>
-                        <p className="text-xs text-[#7FA9C4]">Temperature</p>
+                        <p className="text-xs text-[#A7CCE4]">Temperature</p>
                       </div>
                       <div className="rounded-2xl border border-white/10 bg-white/[0.04] p-3 text-center">
                         <Droplets className="mx-auto mb-1 h-5 w-5 text-cyan-100" />
                         <p className="text-sm font-semibold text-white">{selected.salinity}</p>
-                        <p className="text-xs text-[#7FA9C4]">Salinity</p>
+                        <p className="text-xs text-[#A7CCE4]">Salinity</p>
                       </div>
                       <div className="rounded-2xl border border-white/10 bg-white/[0.04] p-3 text-center">
                         <Layers className="mx-auto mb-1 h-5 w-5 text-cyan-100" />
                         <p className="text-sm font-semibold text-white italic">{selected.species}</p>
-                        <p className="text-xs text-[#7FA9C4]">Top Species</p>
+                        <p className="text-xs text-[#A7CCE4]">Top Species</p>
                       </div>
                     </div>
 
                     <div className="rounded-2xl border border-white/10 bg-white/[0.04] p-4">
-                      <p className="text-xs font-semibold uppercase tracking-[0.14em] text-[#7FA9C4]">Advisory</p>
-                      <p className="mt-2 text-sm text-[#CFE9FF]">{selected.advisory}</p>
+                      <p className="text-xs font-semibold uppercase tracking-[0.14em] text-[#A7CCE4]">Advisory</p>
+                      <p className="mt-2 text-sm text-[#E6F5FF]">{selected.advisory}</p>
                     </div>
                   </motion.div>
                 ) : (
@@ -214,7 +214,7 @@ export default function SiteIntelligence() {
                       <MapPin className="h-6 w-6 text-cyan-100" />
                     </div>
                     <p className="text-base font-semibold text-white">Analyze a Region</p>
-                    <p className="mt-2 text-sm text-[#CFE9FF]/70">Select a region from the left panel to generate intelligence insights.</p>
+                    <p className="mt-2 text-sm text-[#DDEEFF]">Select a region from the left panel to generate intelligence insights.</p>
                     <button
                       onClick={() => navigate("/predict")}
                       className="mt-5 inline-flex items-center gap-2 rounded-xl bg-gradient-to-r from-[#1DA1F2] to-[#0EA5E9] px-4 py-2 text-sm font-semibold text-white"
