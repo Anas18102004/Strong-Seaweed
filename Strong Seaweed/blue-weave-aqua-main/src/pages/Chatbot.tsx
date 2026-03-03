@@ -6,6 +6,7 @@ import { Button } from "@/components/ui/button";
 import { api } from "@/lib/api";
 import { useAuth } from "@/context/AuthContext";
 import BrandLogo from "@/components/BrandLogo";
+import { useLocation } from "react-router-dom";
 
 type Message = { role: "user" | "assistant"; content: string };
 
@@ -151,6 +152,7 @@ export default function Chatbot() {
   const activeAudioRef = useRef<HTMLAudioElement | null>(null);
   const bottomRef = useRef<HTMLDivElement>(null);
   const { token } = useAuth();
+  const location = useLocation();
 
   useEffect(() => {
     const browserLang = (navigator.language || "").toLowerCase();
@@ -166,6 +168,14 @@ export default function Chatbot() {
       setSttLocale("en-GB");
     }
   }, []);
+
+  useEffect(() => {
+    const prefill = (location.state as { prefill?: string } | null)?.prefill;
+    if (prefill && !input.trim()) {
+      setInput(prefill);
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [location.state]);
 
   useEffect(() => {
     if (voiceMode) return;
