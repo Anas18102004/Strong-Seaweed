@@ -245,7 +245,7 @@ export default function Settings() {
                   <div className="mb-2 flex items-center gap-4 rounded-2xl border border-[#c9deec] bg-[#f8fcff] p-3">
                     <div className="flex h-16 w-16 items-center justify-center rounded-2xl bg-gradient-to-br from-[#1DA1F2] to-[#0F2E47] text-xl font-bold text-white">{userInitial}</div>
                     <div>
-                      <p className="font-semibold text-[#0f2e47]">{profile.name || "BlueWeave User"}</p>
+                      <p className="font-semibold text-[#0f2e47]">{profile.name || "Akuara User"}</p>
                       <p className="text-sm text-slate-500">{profile.role || "Researcher"} {profile.state ? `- ${profile.state}` : ""}</p>
                     </div>
                   </div>

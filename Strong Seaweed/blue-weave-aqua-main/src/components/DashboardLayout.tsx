@@ -31,7 +31,7 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
       "/chat": "AI Chat",
       "/settings": "Settings",
     };
-    return map[location.pathname] || "BlueWeave";
+    return map[location.pathname] || "Akuara";
   })();
 
   return (

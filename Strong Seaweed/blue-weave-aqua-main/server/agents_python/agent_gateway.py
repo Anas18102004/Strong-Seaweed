@@ -145,7 +145,7 @@ AGENT_SYSTEM = {
         "Style: commercial, pragmatic, concrete."
     ),
     "copilot": (
-        "Role: BlueWeave Operations Copilot (orchestrator).\n"
+        "Role: Akuara Operations Copilot (orchestrator).\n"
         "Mission: Understand user intent, route to the best specialist lens, and deliver one cohesive execution plan.\n"
         "Routing policy:\n"
         "- Cultivation setup/questions -> cultivation lens\n"
@@ -430,7 +430,7 @@ class AgentOrchestrator:
         model = _env("OPENROUTER_MODEL", "meta-llama/llama-3.1-8b-instruct:free")
         timeout_s = float(_env("OPENROUTER_TIMEOUT_S", "12") or "12")
         site_url = _env("OPENROUTER_SITE_URL", "http://localhost")
-        app_name = _env("OPENROUTER_APP_NAME", "BlueWeave")
+        app_name = _env("OPENROUTER_APP_NAME", "Akuara")
 
         style = (
             "Respond for voice output: short sentences, no markdown tables, no long lists."
@@ -641,7 +641,7 @@ class AgentOrchestrator:
         system = AGENT_SYSTEM.get(agent, AGENT_SYSTEM["copilot"])
         if agent == "copilot" and self._is_smalltalk(question):
             system = (
-                "Role: BlueWeave assistant.\n"
+                "Role: Akuara assistant.\n"
                 "For greetings/small-talk, respond naturally in 1-2 short lines.\n"
                 "Do not use numbered headings/sections.\n"
                 "Invite the user to ask a specific seaweed farming question."
@@ -697,7 +697,7 @@ class AgentOrchestrator:
 
 
 orchestrator = AgentOrchestrator()
-app = FastAPI(title="BlueWeave Agent Gateway", version="2.0.0")
+app = FastAPI(title="Akuara Agent Gateway", version="2.0.0")
 _log_provider_bootstrap()
 
 

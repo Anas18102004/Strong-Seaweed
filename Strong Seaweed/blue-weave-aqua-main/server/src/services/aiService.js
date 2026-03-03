@@ -356,7 +356,7 @@ export async function runChat(question, context = {}) {
   }
 
   const routed = await runAgent(routedAgent, question, context);
-  const fallbackModelName = routed.provider === "fallback" ? "blueweave-assistant" : `hybrid-${routed.provider}`;
+  const fallbackModelName = routed.provider === "fallback" ? "akuara-assistant" : `hybrid-${routed.provider}`;
   const answer = routed.provider === "fallback" ? unavailableAnswer(routedAgent) : routed.answer;
   const out = {
     answer: normalizeUiAnswer(answer),

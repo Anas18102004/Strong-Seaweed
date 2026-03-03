@@ -1,4 +1,4 @@
-# BlueWeave App
+# Akuara App
 
 This folder contains:
 

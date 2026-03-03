@@ -459,7 +459,7 @@ export default function PredictPage() {
                     <ShieldCheck className="h-4 w-4" />
                     <p className="text-xs uppercase tracking-[0.14em]">Trust Indicators</p>
                   </div>
-                  <p className="text-xs text-[#D6ECFB] mt-2">Model version: {lastPrediction?.modelRelease || "v2.0 marine-core"} | Source: {lastPrediction?.source || "BlueWave climate mesh"} | Last updated: {lastUpdated || "Awaiting first run"}</p>
+                  <p className="text-xs text-[#D6ECFB] mt-2">Model version: {lastPrediction?.modelRelease || "v2.0 marine-core"} | Source: {lastPrediction?.source || "Akuara climate mesh"} | Last updated: {lastUpdated || "Awaiting first run"}</p>
                 </div>
               </motion.div>
             </div>

@@ -28,7 +28,7 @@ export default function BrandLogo({
     <div className={`flex items-center gap-2.5 ${className}`}>
       <div
         className={`${icon.box} rounded-xl overflow-hidden shadow-[0_10px_24px_-14px_rgba(2,132,199,0.95)]`}
-        aria-label="BlueWeave Logo"
+        aria-label="Akuara Logo"
       >
         <svg viewBox="0 0 64 64" className="w-full h-full" role="img" aria-hidden="true">
           <defs>
@@ -60,7 +60,7 @@ export default function BrandLogo({
       </div>
       {showWordmark && (
         <span className={`${icon.text} font-bold tracking-tight text-foreground whitespace-nowrap ${textClassName}`}>
-          BlueWeave<span className="gradient-text"> AI</span>
+          Akuara<span className="gradient-text"> AI</span>
         </span>
       )}
     </div>

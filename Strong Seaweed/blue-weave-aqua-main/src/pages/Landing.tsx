@@ -110,7 +110,7 @@ export default function LandingPage() {
       </section>
 
       <footer className="relative z-10 border-t border-border/50 py-8 text-center text-sm text-muted-foreground px-4">
-        <p>© 2026 BlueWeave AI - Climate Intelligence Platform</p>
+        <p>© 2026 Akuara AI - Climate Intelligence Platform</p>
       </footer>
     </div>
   );
