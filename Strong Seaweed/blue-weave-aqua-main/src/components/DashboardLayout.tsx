@@ -1,6 +1,6 @@
 import { SidebarProvider, SidebarTrigger } from "@/components/ui/sidebar";
 import { AppSidebar } from "@/components/AppSidebar";
-import { Bell, LogOut, LayoutDashboard, FlaskConical, MapPin, Brain, MessageSquare } from "lucide-react";
+import { Bell, LogOut, LayoutDashboard, FlaskConical, MapPin, Brain, MessageSquare, Activity, ChevronRight } from "lucide-react";
 import { useAuth } from "@/context/AuthContext";
 import { useLocation, useNavigate } from "react-router-dom";
 import { NavLink } from "@/components/NavLink";
@@ -17,6 +17,8 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
   const { user, signOut } = useAuth();
   const navigate = useNavigate();
   const location = useLocation();
+  const userLabel = user?.name || user?.email || "User";
+  const userInitial = userLabel.trim().charAt(0).toUpperCase();
   const pageLabel = (() => {
     const map: Record<string, string> = {
       "/dashboard": "Live Dashboard",
@@ -39,31 +41,57 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
         <div className="pointer-events-none absolute top-32 right-[-7rem] h-80 w-80 rounded-full bg-blue-300/20 blur-3xl" />
         <AppSidebar />
         <div className="flex-1 flex flex-col relative z-10">
-          <header className="min-h-16 flex items-center justify-between border-b border-white/50 px-3 sm:px-5 py-2.5 glass-strong">
-            <div className="flex items-center gap-3 min-w-0">
-              <SidebarTrigger className="text-slate-500 hover:text-slate-800" />
-              <div className="min-w-0">
-                <p className="text-[11px] uppercase tracking-[0.15em] text-cyan-700/90">BlueWeave Workspace</p>
-                <h1 className="text-sm sm:text-base font-semibold text-slate-900 truncate">{pageLabel}</h1>
+          <header className="relative px-3 sm:px-6 py-3 sm:py-4 border-b border-[#c1d9ea]/70 bg-white/80 backdrop-blur-md">
+            <div className="absolute inset-x-0 bottom-0 h-px bg-gradient-to-r from-transparent via-cyan-300/35 to-transparent" />
+            <div className="flex items-start justify-between gap-4">
+              <div className="min-w-0 flex items-start gap-3 sm:gap-4">
+                <SidebarTrigger className="mt-0.5 text-slate-500 hover:text-[#123E63] hover:bg-cyan-50/70 transition-all duration-200" />
+                <div className="min-w-0 space-y-1.5">
+                  <div className="flex items-center gap-2 text-[11px] text-slate-500 tracking-[0.08em] uppercase">
+                    <span className="font-semibold text-slate-600">Workspace</span>
+                    <ChevronRight className="h-3 w-3 text-slate-400" />
+                    <span className="truncate text-slate-500">Marine Operations</span>
+                  </div>
+                  <h1 className="text-lg sm:text-xl font-semibold text-[#0F2E47] leading-tight truncate">{pageLabel}</h1>
+                  <div className="hidden sm:flex items-center gap-3 text-xs text-slate-600">
+                    <span className="inline-flex items-center gap-1.5">
+                      <Activity className="h-3.5 w-3.5 text-emerald-500" />
+                      <span className="font-medium text-slate-700">Operational</span>
+                    </span>
+                    <span className="h-3.5 w-px bg-slate-300/80" />
+                    <span>Marine Core v2</span>
+                    <span className="h-3.5 w-px bg-slate-300/80" />
+                    <span>Last updated 3 min ago</span>
+                  </div>
+                </div>
               </div>
-            </div>
-            <div className="flex items-center gap-2.5">
-              <span className="hidden lg:inline-flex text-xs font-medium text-slate-700 glass rounded-full px-3 py-1">Glass UI</span>
-              <span className="hidden sm:inline-flex text-xs font-medium text-slate-700 glass rounded-full px-3 py-1">v1.1 Gulf Model</span>
-              <button className="w-9 h-9 rounded-xl glass flex items-center justify-center text-slate-500 hover:text-slate-900 transition-colors">
-                <Bell className="w-4 h-4" />
-              </button>
-              <div className="text-xs text-slate-600 hidden sm:block max-w-[11rem] truncate">{user?.name || user?.email || "User"}</div>
-              <button
-                onClick={() => {
-                  signOut();
-                  navigate("/signin");
-                }}
-                className="w-9 h-9 rounded-xl glass flex items-center justify-center text-slate-500 hover:text-slate-900 transition-colors"
-                title="Sign out"
-              >
-                <LogOut className="w-4 h-4" />
-              </button>
+              <div className="flex items-center gap-2 sm:gap-3">
+                <button
+                  className="relative inline-flex h-9 w-9 items-center justify-center rounded-lg border border-slate-200 bg-white text-slate-500 transition-all duration-200 hover:-translate-y-0.5 hover:border-cyan-200 hover:text-[#123E63] hover:shadow-[0_8px_16px_-12px_rgba(15,46,71,0.5)]"
+                  title="Notifications"
+                >
+                  <Bell className="w-4 h-4" />
+                </button>
+                <div className="hidden sm:flex items-center gap-2 pl-1">
+                  <div className="inline-flex h-9 w-9 items-center justify-center rounded-lg bg-gradient-to-br from-[#1DA1F2] to-[#0F2E47] text-white text-sm font-semibold shadow-[0_10px_18px_-12px_rgba(15,46,71,0.85)]">
+                    {userInitial}
+                  </div>
+                  <div className="max-w-[11rem]">
+                    <p className="truncate text-sm font-medium text-[#0F2E47]">{userLabel}</p>
+                    <p className="truncate text-[11px] text-slate-500">Enterprise Access</p>
+                  </div>
+                </div>
+                <button
+                  onClick={() => {
+                    signOut();
+                    navigate("/signin");
+                  }}
+                  className="inline-flex h-9 w-9 items-center justify-center rounded-lg border border-slate-200 bg-white text-slate-500 transition-all duration-200 hover:-translate-y-0.5 hover:border-rose-200 hover:text-rose-600 hover:shadow-[0_8px_16px_-12px_rgba(244,63,94,0.45)]"
+                  title="Sign out"
+                >
+                  <LogOut className="w-4 h-4" />
+                </button>
+              </div>
             </div>
           </header>
           <main className="flex-1 p-3 sm:p-6 pb-24 md:pb-6 overflow-auto">{children}</main>
