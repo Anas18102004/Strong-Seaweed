@@ -163,10 +163,10 @@ jobs:
               cd ../..
               echo "Fixing frontend file permissions for nginx..."
               sudo chmod o+rx /home/ubuntu || true
-              sudo chmod o+rx "/home/ubuntu/Strong Seaweed" || true
-              sudo chmod o+rx "/home/ubuntu/Strong Seaweed/Strong Seaweed" || true
-              sudo chmod o+rx "/home/ubuntu/Strong Seaweed/Strong Seaweed/blue-weave-aqua-main" || true
-              sudo chmod -R o+rX "/home/ubuntu/Strong Seaweed/Strong Seaweed/blue-weave-aqua-main/dist" || true
+              sudo chmod o+rx "${DEPLOY_ROOT}" || true
+              sudo chmod o+rx "${DEPLOY_ROOT}/Strong Seaweed" || true
+              sudo chmod o+rx "${DEPLOY_ROOT}/Strong Seaweed/blue-weave-aqua-main" || true
+              sudo chmod -R o+rX "${DEPLOY_ROOT}/Strong Seaweed/blue-weave-aqua-main/dist" || true
             fi
 
             echo "Deployment complete."
@@ -195,7 +195,11 @@ jobs:
             fi
 
             if [[ "${SERVICE}" == "blueweave-frontend" || "${SERVICE}" == "all" ]]; then
-              sudo systemctl reload nginx || echo "nginx not configured yet"
+              if systemctl list-unit-files | grep -q '^nginx\.service'; then
+                sudo systemctl reload nginx || true
+              else
+                echo "nginx service not configured; skipping reload"
+              fi
             fi
           EOF
 
@@ -220,7 +224,11 @@ jobs:
               curl -fsS http://127.0.0.1:4000/api/health || true
             fi
             if [[ "${SERVICE}" == "blueweave-frontend" || "${SERVICE}" == "all" ]]; then
-              curl -fsSI http://127.0.0.1/ | head -n 1
+              if systemctl list-unit-files | grep -q '^nginx\.service'; then
+                curl -fsSI http://127.0.0.1/ | head -n 1
+              else
+                echo "nginx service not configured; skipping localhost:80 check"
+              fi
               test -f /var/www/blueweave/index.html
             fi
           EOF
