@@ -111,7 +111,12 @@ jobs:
             if [[ "${SERVICE}" == "ml-apis" || "${SERVICE}" == "all" ]]; then
               echo "Setting up ML backend Python environment..."
               cd "Strong Seaweed/Strong-Seaweed-main"
-              python3 -m venv .venv_model_api || true
+              if ! python3 -m venv .venv_model_api; then
+                echo "python3-venv missing; installing prerequisites..."
+                sudo apt-get update -y
+                sudo apt-get install -y python3-venv python3-pip python3.12-venv || true
+                python3 -m venv .venv_model_api
+              fi
               source .venv_model_api/bin/activate
               python -m pip install --upgrade pip
               python -m pip install -r requirements-model-api.txt
@@ -121,7 +126,12 @@ jobs:
             if [[ "${SERVICE}" == "python-agents" || "${SERVICE}" == "all" ]]; then
               echo "Setting up Python agent gateway..."
               cd "Strong Seaweed/blue-weave-aqua-main/server/agents_python"
-              python3 -m venv .venv || true
+              if ! python3 -m venv .venv; then
+                echo "python3-venv missing; installing prerequisites..."
+                sudo apt-get update -y
+                sudo apt-get install -y python3-venv python3-pip python3.12-venv || true
+                python3 -m venv .venv
+              fi
               source .venv/bin/activate
               pip install --upgrade pip
               pip install -r requirements.txt
