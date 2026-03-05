@@ -111,6 +111,8 @@ jobs:
             if [[ "${SERVICE}" == "ml-apis" || "${SERVICE}" == "all" ]]; then
               echo "Setting up ML backend Python environment..."
               cd "Strong Seaweed/Strong-Seaweed-main"
+              sudo apt-get update -y
+              sudo apt-get install -y libgomp1
               if ! python3 -m venv .venv_model_api; then
                 echo "python3-venv missing; installing prerequisites..."
                 sudo apt-get update -y
@@ -264,6 +266,7 @@ jobs:
 
             if [[ "${SERVICE}" == "ml-apis" || "${SERVICE}" == "all" ]]; then
               sudo systemctl restart akuara-model-api || echo "akuara-model-api service not configured yet"
+              sudo systemctl --no-pager -l status akuara-model-api || true
             fi
 
             if [[ "${SERVICE}" == "python-agents" || "${SERVICE}" == "all" ]]; then
@@ -272,6 +275,7 @@ jobs:
 
             if [[ "${SERVICE}" == "blueweave-backend" || "${SERVICE}" == "all" ]]; then
               sudo systemctl restart akuara-backend || echo "akuara-backend service not configured yet"
+              sudo systemctl --no-pager -l status akuara-backend || true
             fi
 
             if [[ "${SERVICE}" == "blueweave-frontend" || "${SERVICE}" == "all" ]]; then
@@ -295,13 +299,23 @@ jobs:
           ssh -i ~/.ssh/deploy_key "${AWS_USER}@${AWS_HOST}" "SERVICE='${SERVICE}' bash -s" << 'EOF'
             set -e
             if [[ "${SERVICE}" == "ml-apis" || "${SERVICE}" == "all" ]]; then
-              curl -fsS http://127.0.0.1:8000/health
+              curl -fsS http://127.0.0.1:8000/health || {
+                echo "Model API health check failed. Service diagnostics:"
+                sudo systemctl --no-pager -l status akuara-model-api || true
+                sudo journalctl -u akuara-model-api -n 120 --no-pager -l || true
+                exit 1
+              }
             fi
             if [[ "${SERVICE}" == "python-agents" || "${SERVICE}" == "all" ]]; then
               curl -fsS http://127.0.0.1:8101/health || true
             fi
             if [[ "${SERVICE}" == "blueweave-backend" || "${SERVICE}" == "all" ]]; then
-              curl -fsS http://127.0.0.1:4000/api/health || true
+              curl -fsS http://127.0.0.1:4000/api/health || {
+                echo "Backend health check failed. Service diagnostics:"
+                sudo systemctl --no-pager -l status akuara-backend || true
+                sudo journalctl -u akuara-backend -n 120 --no-pager -l || true
+                exit 1
+              }
             fi
             if [[ "${SERVICE}" == "blueweave-frontend" || "${SERVICE}" == "all" ]]; then
               if systemctl list-unit-files | grep -q '^nginx\.service'; then
