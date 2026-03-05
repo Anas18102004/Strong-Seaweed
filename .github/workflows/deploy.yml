@@ -155,6 +155,66 @@ jobs:
               cd ../../..
             fi
 
+            # Ensure stable no-space alias path for systemd units.
+            if [[ -d "${DEPLOY_ROOT}/Strong Seaweed" ]]; then
+              ln -sfn "${DEPLOY_ROOT}/Strong Seaweed" "${HOME}/strongseaweed_root"
+            else
+              ln -sfn "${DEPLOY_ROOT}" "${HOME}/strongseaweed_root"
+            fi
+
+            if [[ "${SERVICE}" == "ml-apis" || "${SERVICE}" == "all" ]]; then
+              echo "Provisioning akuara-model-api systemd unit..."
+              sudo tee /etc/systemd/system/akuara-model-api.service >/dev/null <<EOT
+[Unit]
+Description=Akuara Species Model API
+After=network.target
+
+[Service]
+Type=simple
+User=${USER}
+WorkingDirectory=${HOME}/strongseaweed_root/Strong-Seaweed-main
+ExecStart=${HOME}/strongseaweed_root/Strong-Seaweed-main/.venv_model_api/bin/python ${HOME}/strongseaweed_root/Strong-Seaweed-main/serve_species_api.py
+Restart=always
+RestartSec=3
+StandardOutput=append:${HOME}/model_api.log
+StandardError=append:${HOME}/model_api.err.log
+
+[Install]
+WantedBy=multi-user.target
+EOT
+            fi
+
+            if [[ "${SERVICE}" == "blueweave-backend" || "${SERVICE}" == "all" ]]; then
+              echo "Provisioning akuara-backend systemd unit..."
+              sudo tee /etc/systemd/system/akuara-backend.service >/dev/null <<EOT
+[Unit]
+Description=Akuara Node Backend
+After=network.target
+
+[Service]
+Type=simple
+User=${USER}
+WorkingDirectory=${HOME}/strongseaweed_root/blue-weave-aqua-main/server
+Environment=NODE_ENV=production
+ExecStart=/usr/bin/npm start
+Restart=always
+RestartSec=3
+StandardOutput=append:${HOME}/backend.log
+StandardError=append:${HOME}/backend.err.log
+
+[Install]
+WantedBy=multi-user.target
+EOT
+            fi
+
+            sudo systemctl daemon-reload
+            if [[ "${SERVICE}" == "ml-apis" || "${SERVICE}" == "all" ]]; then
+              sudo systemctl enable akuara-model-api || true
+            fi
+            if [[ "${SERVICE}" == "blueweave-backend" || "${SERVICE}" == "all" ]]; then
+              sudo systemctl enable akuara-backend || true
+            fi
+
             if [[ "${SERVICE}" == "blueweave-frontend" || "${SERVICE}" == "all" ]]; then
               echo "Deploying prebuilt frontend artifact..."
               cd "Strong Seaweed/blue-weave-aqua-main"
