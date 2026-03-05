@@ -25,6 +25,67 @@ INDIA_PHYSICS_NC = BASE / "data" / "netcdf" / "india_physics_2025w01.nc"
 INDIA_WAVES_NC = BASE / "data" / "netcdf" / "india_waves_2025w01.nc"
 
 
+def _as_float(v):
+    try:
+        if v is None:
+            return None
+        out = float(v)
+        if np.isfinite(out):
+            return out
+        return None
+    except Exception:
+        return None
+
+
+def _normalize_form_input(form_input: dict | None) -> dict:
+    raw = form_input if isinstance(form_input, dict) else {}
+    overrides = raw.get("overrides") if isinstance(raw.get("overrides"), dict) else {}
+    advanced = raw.get("advanced") if isinstance(raw.get("advanced"), dict) else {}
+    return {
+        "temperatureC": _as_float(overrides.get("temperatureC")),
+        "salinityPpt": _as_float(overrides.get("salinityPpt")),
+        "depthM": _as_float(raw.get("depthM")),
+        "ph": _as_float(advanced.get("ph")),
+        "turbidityNtu": _as_float(advanced.get("turbidityNtu")),
+        "currentVelocityMs": _as_float(advanced.get("currentVelocityMs")),
+        "waveHeightM": _as_float(advanced.get("waveHeightM")),
+        "rainfallMm": _as_float(advanced.get("rainfallMm")),
+        "tidalAmplitudeM": _as_float(advanced.get("tidalAmplitudeM")),
+    }
+
+
+def _apply_overrides_to_vector(feature_names: list[str], user_inputs: dict, target_values: dict, source_label: str) -> dict:
+    feature_set = set(feature_names)
+    applied = []
+    ignored = []
+
+    # Candidate mappings from user inputs to model feature names.
+    mappings = [
+        ("salinityPpt", ["so_mean", "salinity", "salinity_ppt"]),
+        ("currentVelocityMs", ["current_mean", "current_velocity", "current_velocity_ms"]),
+        ("waveHeightM", ["wave_mean", "wave_height", "wave_height_m", "VHM0"]),
+        ("temperatureC", ["thetao_mean", "temperature", "temperature_c", "temp_mean", "temp_c"]),
+        ("depthM", ["depth", "depth_m", "bathymetry", "bathymetry_m"]),
+        ("ph", ["ph"]),
+        ("turbidityNtu", ["turbidity", "turbidity_ntu"]),
+        ("rainfallMm", ["rainfall", "rainfall_mm"]),
+        ("tidalAmplitudeM", ["tidal_amplitude", "tidal_amplitude_m", "tide_range_m"]),
+    ]
+
+    for input_key, candidates in mappings:
+        v = user_inputs.get(input_key)
+        if v is None:
+            continue
+        target = next((c for c in candidates if c in feature_set), None)
+        if target is None:
+            ignored.append({"input": input_key, "value": v, "reason": "no_matching_feature"})
+            continue
+        target_values[target] = float(v)
+        applied.append({"input": input_key, "feature": target, "value": float(v), "source": source_label})
+
+    return {"applied": applied, "ignored": ignored}
+
+
 def haversine_km(lat1: float, lon1: float, lat2: np.ndarray, lon2: np.ndarray) -> np.ndarray:
     r = 6371.0
     dlat = np.radians(lat2 - lat1)
@@ -229,7 +290,7 @@ def _priority(p_cal: float, high: float = 0.8, medium: float = 0.6) -> str:
     return "low"
 
 
-def predict_kappa(lat: float, lon: float) -> dict:
+def predict_kappa(lat: float, lon: float, user_inputs: dict | None = None) -> dict:
     master = KAPPA["master"]
     dist = haversine_km(
         lat,
@@ -239,7 +300,12 @@ def predict_kappa(lat: float, lon: float) -> dict:
     )
     idx = int(np.argmin(dist))
     row = master.iloc[idx]
-    x = row[KAPPA["features"]].to_numpy(dtype=np.float32).reshape(1, -1)
+    row_vals = {f: float(row[f]) for f in KAPPA["features"]}
+    kappa_override_diag = {"applied": [], "ignored": []}
+    if isinstance(user_inputs, dict):
+        kappa_override_diag = _apply_overrides_to_vector(KAPPA["features"], user_inputs, row_vals, "user_override")
+
+    x = np.array([[row_vals[f] for f in KAPPA["features"]]], dtype=np.float32)
     preds = [m.predict_proba(x)[:, 1][0] for m in KAPPA["models"]]
     p_raw = float(np.mean(preds))
     p_cal = float(KAPPA["calibrator"].predict(np.array([p_raw], dtype=np.float32))[0])
@@ -252,12 +318,14 @@ def predict_kappa(lat: float, lon: float) -> dict:
             "lon": float(row["lon"]),
             "distance_km": float(dist[idx]),
         },
+        "overrideDiagnostics": kappa_override_diag,
     }
 
 
-def extract_runtime_features(lat: float, lon: float) -> dict | None:
+def extract_runtime_features(lat: float, lon: float, user_inputs: dict | None = None) -> tuple[dict | None, dict]:
+    diagnostics = {"applied": [], "ignored": []}
     if not (COP["lat_min"] <= lat <= COP["lat_max"] and COP["lon_min"] <= lon <= COP["lon_max"]):
-        return None
+        return None, diagnostics
     vals = {"lon": float(lon), "lat": float(lat)}
     feature_keys = [
         "so_mean", "so_std", "so_min", "so_max", "so_p10", "so_p90", "so_range", "so_cv",
@@ -270,7 +338,9 @@ def extract_runtime_features(lat: float, lon: float) -> dict | None:
         if not np.isfinite(v):
             v = float(COP.get("_feature_medians", {}).get(k, 0.0))
         vals[k] = v
-    return vals
+    if isinstance(user_inputs, dict):
+        diagnostics = _apply_overrides_to_vector(list(vals.keys()), user_inputs, vals, "user_override")
+    return vals, diagnostics
 
 
 def predict_other(model_bundle: dict | None, feat_vals: dict | None) -> tuple[bool, float | None, str, str]:
@@ -288,13 +358,14 @@ def predict_other(model_bundle: dict | None, feat_vals: dict | None) -> tuple[bo
     return True, round(p_cal * 100.0, 2), _priority(p_cal), ("genus_proxy_positive" if p_cal >= thr else "genus_proxy_negative")
 
 
-def predict_species(lat: float, lon: float) -> dict:
+def predict_species(lat: float, lon: float, form_input: dict | None = None) -> dict:
+    user_inputs = _normalize_form_input(form_input)
     warnings = []
-    k = predict_kappa(lat, lon)
+    k = predict_kappa(lat, lon, user_inputs)
     kappa_in_coverage = bool(k.get("nearestGrid")) and float(k["nearestGrid"].get("distance_km", 1e9)) <= KAPPA_MAX_DISTANCE_KM
     if not kappa_in_coverage:
         warnings.append("kappaphycus_model_out_of_coverage")
-    feat_vals = extract_runtime_features(lat, lon)
+    feat_vals, proxy_override_diag = extract_runtime_features(lat, lon, user_inputs)
     if feat_vals is None:
         warnings.append("india_wide_proxy_models_out_of_coverage")
 
@@ -358,14 +429,23 @@ def predict_species(lat: float, lon: float) -> dict:
         {m["release"] for m in OTHER_MODELS.values() if isinstance(m, dict) and "release" in m}
     )
     multi_release_name = loaded_other_releases[0] if loaded_other_releases else "none"
+    provided_override_count = sum(1 for _, v in user_inputs.items() if v is not None)
+    applied_count = len(proxy_override_diag.get("applied", [])) + len(k.get("overrideDiagnostics", {}).get("applied", []))
+    if provided_override_count > 0 and applied_count == 0:
+        warnings.append("user_overrides_provided_but_not_mapped_to_model_features")
 
     return {
         "input": {"lat": lat, "lon": lon},
+        "inputMode": "lat_lon_plus_overrides" if provided_override_count > 0 else "lat_lon_only",
         "source": "species-orchestrator-production",
         "modelRelease": f"{KAPPA['release']}+{multi_release_name}",
         "nearestGrid": k["nearestGrid"],
         "species": species,
         "bestSpecies": best,
+        "appliedOverrides": {
+            "kappaphycus": k.get("overrideDiagnostics", {}),
+            "proxyModels": proxy_override_diag,
+        },
         "warnings": warnings,
     }
 
@@ -412,7 +492,7 @@ class Handler(BaseHTTPRequestHandler):
             except (TypeError, ValueError):
                 self._send_json(400, {"error": "lat and lon query params are required numeric values."})
                 return
-            self._send_json(200, predict_species(lat, lon))
+            self._send_json(200, predict_species(lat, lon, None))
             return
         self._send_json(404, {"error": "Not found"})
 
@@ -426,10 +506,11 @@ class Handler(BaseHTTPRequestHandler):
             payload = json.loads(self.rfile.read(length).decode("utf-8")) if length > 0 else {}
             lat = float(payload["lat"])
             lon = float(payload["lon"])
+            form_input = payload.get("formInput") if isinstance(payload.get("formInput"), dict) else None
         except Exception:
             self._send_json(400, {"error": "JSON body with numeric lat and lon is required."})
             return
-        self._send_json(200, predict_species(lat, lon))
+        self._send_json(200, predict_species(lat, lon, form_input))
 
 
 if __name__ == "__main__":

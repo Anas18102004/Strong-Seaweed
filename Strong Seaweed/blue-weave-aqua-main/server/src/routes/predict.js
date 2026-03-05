@@ -132,7 +132,7 @@ router.post("/species", authRequired, async (req, res) => {
 
   try {
     const formInput = normalizeFormInput(req.body?.formInput);
-    const out = await predictSpeciesAtPoint(lat, lon);
+    const out = await predictSpeciesAtPoint(lat, lon, formInput);
 
     await PredictionSubmission.create({
       userId: req.user.id,

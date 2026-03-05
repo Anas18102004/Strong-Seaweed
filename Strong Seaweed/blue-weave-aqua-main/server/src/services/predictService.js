@@ -6,19 +6,20 @@ function timeoutSignal(ms = 6000) {
   return { signal: controller.signal, clear: () => clearTimeout(t) };
 }
 
-export async function predictSpeciesAtPoint(lat, lon) {
+export async function predictSpeciesAtPoint(lat, lon, formInput = null) {
   const speciesUrl = `${config.modelApiUrl}/predict/species`;
   const kappaUrl = `${config.modelApiUrl}/predict/kappaphycus`;
   let orchestrated = null;
   let kapp = null;
   let modelError = "";
+  const payload = formInput ? { lat, lon, formInput } : { lat, lon };
 
   try {
     const t = timeoutSignal();
     const res = await fetch(speciesUrl, {
       method: "POST",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ lat, lon }),
+      body: JSON.stringify(payload),
       signal: t.signal,
     });
     t.clear();
@@ -42,7 +43,7 @@ export async function predictSpeciesAtPoint(lat, lon) {
     const res = await fetch(kappaUrl, {
       method: "POST",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ lat, lon }),
+      body: JSON.stringify(payload),
       signal: t.signal,
     });
     t.clear();
