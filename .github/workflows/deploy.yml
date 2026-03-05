@@ -165,46 +165,46 @@ jobs:
             if [[ "${SERVICE}" == "ml-apis" || "${SERVICE}" == "all" ]]; then
               echo "Provisioning akuara-model-api systemd unit..."
               sudo tee /etc/systemd/system/akuara-model-api.service >/dev/null <<EOT
-[Unit]
-Description=Akuara Species Model API
-After=network.target
+              [Unit]
+              Description=Akuara Species Model API
+              After=network.target
 
-[Service]
-Type=simple
-User=${USER}
-WorkingDirectory=${HOME}/strongseaweed_root/Strong-Seaweed-main
-ExecStart=${HOME}/strongseaweed_root/Strong-Seaweed-main/.venv_model_api/bin/python ${HOME}/strongseaweed_root/Strong-Seaweed-main/serve_species_api.py
-Restart=always
-RestartSec=3
-StandardOutput=append:${HOME}/model_api.log
-StandardError=append:${HOME}/model_api.err.log
+              [Service]
+              Type=simple
+              User=${USER}
+              WorkingDirectory=${HOME}/strongseaweed_root/Strong-Seaweed-main
+              ExecStart=${HOME}/strongseaweed_root/Strong-Seaweed-main/.venv_model_api/bin/python ${HOME}/strongseaweed_root/Strong-Seaweed-main/serve_species_api.py
+              Restart=always
+              RestartSec=3
+              StandardOutput=append:${HOME}/model_api.log
+              StandardError=append:${HOME}/model_api.err.log
 
-[Install]
-WantedBy=multi-user.target
-EOT
+              [Install]
+              WantedBy=multi-user.target
+              EOT
             fi
 
             if [[ "${SERVICE}" == "blueweave-backend" || "${SERVICE}" == "all" ]]; then
               echo "Provisioning akuara-backend systemd unit..."
               sudo tee /etc/systemd/system/akuara-backend.service >/dev/null <<EOT
-[Unit]
-Description=Akuara Node Backend
-After=network.target
+              [Unit]
+              Description=Akuara Node Backend
+              After=network.target
 
-[Service]
-Type=simple
-User=${USER}
-WorkingDirectory=${HOME}/strongseaweed_root/blue-weave-aqua-main/server
-Environment=NODE_ENV=production
-ExecStart=/usr/bin/npm start
-Restart=always
-RestartSec=3
-StandardOutput=append:${HOME}/backend.log
-StandardError=append:${HOME}/backend.err.log
+              [Service]
+              Type=simple
+              User=${USER}
+              WorkingDirectory=${HOME}/strongseaweed_root/blue-weave-aqua-main/server
+              Environment=NODE_ENV=production
+              ExecStart=/usr/bin/npm start
+              Restart=always
+              RestartSec=3
+              StandardOutput=append:${HOME}/backend.log
+              StandardError=append:${HOME}/backend.err.log
 
-[Install]
-WantedBy=multi-user.target
-EOT
+              [Install]
+              WantedBy=multi-user.target
+              EOT
             fi
 
             sudo systemctl daemon-reload
