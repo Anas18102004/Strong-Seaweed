@@ -82,7 +82,26 @@ jobs:
         run: |
           ssh -i ~/.ssh/deploy_key "${AWS_USER}@${AWS_HOST}" "DEPLOY_PATH='${DEPLOY_PATH}' SERVICE='${SERVICE}' bash -s" << 'EOF'
             set -euo pipefail
-            cd "${DEPLOY_PATH}"
+            DEPLOY_ROOT="${DEPLOY_PATH:-}"
+            if [[ -z "${DEPLOY_ROOT}" || ! -d "${DEPLOY_ROOT}" ]]; then
+              for c in \
+                "${HOME}/strongseaweed" \
+                "${HOME}/Strong Seaweed/Strong Seaweed" \
+                "${HOME}/Strong-Seaweed" \
+                "${HOME}/Strong Seaweed"; do
+                if [[ -d "${c}" ]]; then
+                  DEPLOY_ROOT="${c}"
+                  break
+                fi
+              done
+            fi
+            if [[ -z "${DEPLOY_ROOT}" || ! -d "${DEPLOY_ROOT}" ]]; then
+              echo "Could not resolve deployment root. DEPLOY_PATH='${DEPLOY_PATH}'"
+              exit 1
+            fi
+
+            cd "${DEPLOY_ROOT}"
+            echo "Using deployment root: ${DEPLOY_ROOT}"
 
             echo "Pulling latest code from beta branch..."
             git fetch origin beta
@@ -92,10 +111,10 @@ jobs:
             if [[ "${SERVICE}" == "ml-apis" || "${SERVICE}" == "all" ]]; then
               echo "Setting up ML backend Python environment..."
               cd "Strong Seaweed/Strong-Seaweed-main"
-              python3 -m venv .venv_model || true
-              source .venv_model/bin/activate
-              pip install --upgrade pip
-              pip install -r requirements-model-api.txt
+              python3 -m venv .venv_model_api || true
+              source .venv_model_api/bin/activate
+              python -m pip install --upgrade pip
+              python -m pip install -r requirements-model-api.txt
               cd ../..
             fi
 
@@ -164,7 +183,7 @@ jobs:
             echo "Restarting services..."
 
             if [[ "${SERVICE}" == "ml-apis" || "${SERVICE}" == "all" ]]; then
-              sudo systemctl restart ml-api || echo "ml-api service not configured yet"
+              sudo systemctl restart akuara-model-api || echo "akuara-model-api service not configured yet"
             fi
 
             if [[ "${SERVICE}" == "python-agents" || "${SERVICE}" == "all" ]]; then
@@ -172,7 +191,7 @@ jobs:
             fi
 
             if [[ "${SERVICE}" == "blueweave-backend" || "${SERVICE}" == "all" ]]; then
-              sudo systemctl restart blueweave-backend || echo "blueweave-backend service not configured yet"
+              sudo systemctl restart akuara-backend || echo "akuara-backend service not configured yet"
             fi
 
             if [[ "${SERVICE}" == "blueweave-frontend" || "${SERVICE}" == "all" ]]; then
@@ -198,7 +217,7 @@ jobs:
               curl -fsS http://127.0.0.1:8101/health || true
             fi
             if [[ "${SERVICE}" == "blueweave-backend" || "${SERVICE}" == "all" ]]; then
-              curl -fsS http://127.0.0.1:4000/health || true
+              curl -fsS http://127.0.0.1:4000/api/health || true
             fi
             if [[ "${SERVICE}" == "blueweave-frontend" || "${SERVICE}" == "all" ]]; then
               curl -fsSI http://127.0.0.1/ | head -n 1
