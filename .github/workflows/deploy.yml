@@ -295,27 +295,45 @@ jobs:
           SERVICE: ${{ (github.event_name == 'push' && 'all') || github.event.inputs.service || 'all' }}
         run: |
           echo "Running health check..."
-          sleep 5
           ssh -i ~/.ssh/deploy_key "${AWS_USER}@${AWS_HOST}" "SERVICE='${SERVICE}' bash -s" << 'EOF'
             set -e
+            wait_for_url() {
+              local url="$1"
+              local attempts="${2:-36}"
+              local sleep_s="${3:-5}"
+              local i=1
+              while [[ $i -le $attempts ]]; do
+                if curl -fsS "$url" >/dev/null 2>&1; then
+                  echo "Healthy: $url"
+                  return 0
+                fi
+                echo "Waiting for $url ($i/$attempts)..."
+                sleep "$sleep_s"
+                i=$((i + 1))
+              done
+              return 1
+            }
+
             if [[ "${SERVICE}" == "ml-apis" || "${SERVICE}" == "all" ]]; then
-              curl -fsS http://127.0.0.1:8000/health || {
+              wait_for_url "http://127.0.0.1:8000/health" 36 5 || {
                 echo "Model API health check failed. Service diagnostics:"
                 sudo systemctl --no-pager -l status akuara-model-api || true
                 sudo journalctl -u akuara-model-api -n 120 --no-pager -l || true
                 exit 1
               }
+              curl -fsS http://127.0.0.1:8000/health
             fi
             if [[ "${SERVICE}" == "python-agents" || "${SERVICE}" == "all" ]]; then
               curl -fsS http://127.0.0.1:8101/health || true
             fi
             if [[ "${SERVICE}" == "blueweave-backend" || "${SERVICE}" == "all" ]]; then
-              curl -fsS http://127.0.0.1:4000/api/health || {
+              wait_for_url "http://127.0.0.1:4000/api/health" 24 3 || {
                 echo "Backend health check failed. Service diagnostics:"
                 sudo systemctl --no-pager -l status akuara-backend || true
                 sudo journalctl -u akuara-backend -n 120 --no-pager -l || true
                 exit 1
               }
+              curl -fsS http://127.0.0.1:4000/api/health
             fi
             if [[ "${SERVICE}" == "blueweave-frontend" || "${SERVICE}" == "all" ]]; then
               if systemctl list-unit-files | grep -q '^nginx\.service'; then
