@@ -141,6 +141,16 @@ jobs:
             if [[ "${SERVICE}" == "blueweave-backend" || "${SERVICE}" == "all" ]]; then
               echo "Setting up Node.js backend..."
               cd "Strong Seaweed/blue-weave-aqua-main/server"
+              if ! command -v npm >/dev/null 2>&1; then
+                echo "npm not found; installing Node.js 20..."
+                sudo apt-get update -y
+                sudo apt-get install -y ca-certificates curl gnupg
+                sudo mkdir -p /etc/apt/keyrings
+                curl -fsSL https://deb.nodesource.com/gpgkey/nodesource-repo.gpg.key | sudo gpg --dearmor -o /etc/apt/keyrings/nodesource.gpg
+                echo "deb [signed-by=/etc/apt/keyrings/nodesource.gpg] https://deb.nodesource.com/node_20.x nodistro main" | sudo tee /etc/apt/sources.list.d/nodesource.list >/dev/null
+                sudo apt-get update -y
+                sudo apt-get install -y nodejs
+              fi
               npm ci --omit=dev || npm install --omit=dev --legacy-peer-deps
               cd ../../..
             fi
