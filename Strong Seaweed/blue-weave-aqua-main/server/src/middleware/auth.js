@@ -11,6 +11,6 @@ export function authRequired(req, res, next) {
     req.user = payload;
     return next();
   } catch {
-    return res.status(401).json({ error: "Invalid auth token" });
+    return res.status(401).json({ error: "Invalid auth  token" });
   }
 }
