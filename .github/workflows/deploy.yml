@@ -164,47 +164,47 @@ jobs:
 
             if [[ "${SERVICE}" == "ml-apis" || "${SERVICE}" == "all" ]]; then
               echo "Provisioning akuara-model-api systemd unit..."
-              sudo tee /etc/systemd/system/akuara-model-api.service >/dev/null <<EOT
-              [Unit]
-              Description=Akuara Species Model API
-              After=network.target
-
-              [Service]
-              Type=simple
-              User=${USER}
-              WorkingDirectory=${HOME}/strongseaweed_root/Strong-Seaweed-main
-              ExecStart=${HOME}/strongseaweed_root/Strong-Seaweed-main/.venv_model_api/bin/python ${HOME}/strongseaweed_root/Strong-Seaweed-main/serve_species_api.py
-              Restart=always
-              RestartSec=3
-              StandardOutput=append:${HOME}/model_api.log
-              StandardError=append:${HOME}/model_api.err.log
-
-              [Install]
-              WantedBy=multi-user.target
-              EOT
+              {
+                echo "[Unit]"
+                echo "Description=Akuara Species Model API"
+                echo "After=network.target"
+                echo ""
+                echo "[Service]"
+                echo "Type=simple"
+                echo "User=ubuntu"
+                echo "WorkingDirectory=/home/ubuntu/strongseaweed_root/Strong-Seaweed-main"
+                echo "ExecStart=/home/ubuntu/strongseaweed_root/Strong-Seaweed-main/.venv_model_api/bin/python /home/ubuntu/strongseaweed_root/Strong-Seaweed-main/serve_species_api.py"
+                echo "Restart=always"
+                echo "RestartSec=3"
+                echo "StandardOutput=append:/home/ubuntu/model_api.log"
+                echo "StandardError=append:/home/ubuntu/model_api.err.log"
+                echo ""
+                echo "[Install]"
+                echo "WantedBy=multi-user.target"
+              } | sudo tee /etc/systemd/system/akuara-model-api.service >/dev/null
             fi
 
             if [[ "${SERVICE}" == "blueweave-backend" || "${SERVICE}" == "all" ]]; then
               echo "Provisioning akuara-backend systemd unit..."
-              sudo tee /etc/systemd/system/akuara-backend.service >/dev/null <<EOT
-              [Unit]
-              Description=Akuara Node Backend
-              After=network.target
-
-              [Service]
-              Type=simple
-              User=${USER}
-              WorkingDirectory=${HOME}/strongseaweed_root/blue-weave-aqua-main/server
-              Environment=NODE_ENV=production
-              ExecStart=/usr/bin/npm start
-              Restart=always
-              RestartSec=3
-              StandardOutput=append:${HOME}/backend.log
-              StandardError=append:${HOME}/backend.err.log
-
-              [Install]
-              WantedBy=multi-user.target
-              EOT
+              {
+                echo "[Unit]"
+                echo "Description=Akuara Node Backend"
+                echo "After=network.target"
+                echo ""
+                echo "[Service]"
+                echo "Type=simple"
+                echo "User=ubuntu"
+                echo "WorkingDirectory=/home/ubuntu/strongseaweed_root/blue-weave-aqua-main/server"
+                echo "Environment=NODE_ENV=production"
+                echo "ExecStart=/usr/bin/npm start"
+                echo "Restart=always"
+                echo "RestartSec=3"
+                echo "StandardOutput=append:/home/ubuntu/backend.log"
+                echo "StandardError=append:/home/ubuntu/backend.err.log"
+                echo ""
+                echo "[Install]"
+                echo "WantedBy=multi-user.target"
+              } | sudo tee /etc/systemd/system/akuara-backend.service >/dev/null
             fi
 
             sudo systemctl daemon-reload
