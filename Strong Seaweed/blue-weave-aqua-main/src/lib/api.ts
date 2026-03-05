@@ -1,5 +1,16 @@
 const API_BASE_URL = import.meta.env.VITE_API_URL || "";
 
+function buildApiUrl(path: string): string {
+  const base = String(API_BASE_URL || "").replace(/\/+$/, "");
+  let p = String(path || "");
+  if (!p.startsWith("/")) p = `/${p}`;
+  // Guard against duplicated /api prefix when VITE_API_URL already includes /api.
+  if (/\/api$/i.test(base) && p.startsWith("/api/")) {
+    p = p.slice(4);
+  }
+  return `${base}${p}`;
+}
+
 export type AuthUser = {
   id: string;
   name: string;
@@ -227,7 +238,7 @@ async function request<T>(path: string, options: RequestInit = {}, token?: strin
   };
   if (token) headers.Authorization = `Bearer ${token}`;
 
-  const res = await fetch(`${API_BASE_URL}${path}`, {
+  const res = await fetch(buildApiUrl(path), {
     ...options,
     headers,
   });
@@ -289,7 +300,7 @@ export const api = {
     };
     if (token) headers.Authorization = `Bearer ${token}`;
 
-    const res = await fetch(`${API_BASE_URL}/api/ai/chat/stream`, {
+    const res = await fetch(buildApiUrl("/api/ai/chat/stream"), {
       method: "POST",
       headers,
       body: JSON.stringify({ question, sessionId }),
