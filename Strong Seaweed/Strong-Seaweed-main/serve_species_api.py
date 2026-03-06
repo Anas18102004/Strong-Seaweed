@@ -199,11 +199,18 @@ def _load_copernicus_grids():
         so_grad = _grad_mag_2d(so_mean)
         current_grad = _grad_mag_2d(current_mean)
         wave_grad = _grad_mag_2d(wave_mean)
+        time_max = None
+        if "time" in phys:
+            try:
+                time_max = pd.to_datetime(phys["time"].max().values).isoformat()
+            except Exception:
+                time_max = None
         features = {
             "lon_min": float(so_mean["longitude"].min().values),
             "lon_max": float(so_mean["longitude"].max().values),
             "lat_min": float(so_mean["latitude"].min().values),
             "lat_max": float(so_mean["latitude"].max().values),
+            "feature_timestamp": time_max,
             "so_mean": so_mean,
             "so_std": so_std,
             "so_min": so_min,
@@ -290,6 +297,27 @@ def _priority(p_cal: float, high: float = 0.8, medium: float = 0.6) -> str:
     return "low"
 
 
+def _confidence_band(probability_percent: float | None) -> str:
+    if probability_percent is None:
+        return "unknown"
+    p = float(probability_percent)
+    if p >= 80.0:
+        return "high"
+    if p >= 60.0:
+        return "medium"
+    return "low"
+
+
+def _species_actionability(ready: bool, reason: str, confidence_band: str) -> str:
+    if not ready:
+        return "insufficient_data"
+    if reason.endswith("_positive") and confidence_band in ("high", "medium"):
+        return "recommended"
+    if reason.endswith("_positive"):
+        return "test_pilot_only"
+    return "not_recommended"
+
+
 def predict_kappa(lat: float, lon: float, user_inputs: dict | None = None) -> dict:
     master = KAPPA["master"]
     dist = haversine_km(
@@ -343,19 +371,50 @@ def extract_runtime_features(lat: float, lon: float, user_inputs: dict | None = 
     return vals, diagnostics
 
 
-def predict_other(model_bundle: dict | None, feat_vals: dict | None) -> tuple[bool, float | None, str, str]:
+def predict_other(model_bundle: dict | None, feat_vals: dict | None) -> dict:
     if model_bundle is None:
-        return False, None, "pending", "model_not_trained"
+        return {
+            "ready": False,
+            "probabilityPercent": None,
+            "priority": "pending",
+            "reason": "model_not_trained",
+            "thresholdPercent": None,
+            "marginToThresholdPercent": None,
+        }
     if feat_vals is None:
-        return False, None, "unknown", "out_of_coverage"
+        return {
+            "ready": False,
+            "probabilityPercent": None,
+            "priority": "unknown",
+            "reason": "out_of_coverage",
+            "thresholdPercent": None,
+            "marginToThresholdPercent": None,
+        }
     features = model_bundle["features"]
     if not all(f in feat_vals for f in features):
-        return False, None, "unknown", "feature_unavailable"
+        return {
+            "ready": False,
+            "probabilityPercent": None,
+            "priority": "unknown",
+            "reason": "feature_unavailable",
+            "thresholdPercent": None,
+            "marginToThresholdPercent": None,
+        }
     x = np.array([[feat_vals[f] for f in features]], dtype=np.float32)
     p_raw = float(model_bundle["model"].predict_proba(x)[:, 1][0])
     p_cal = float(model_bundle["calibrator"].predict(np.array([p_raw], dtype=np.float32))[0])
     thr = float(model_bundle["report"]["threshold"]["threshold"])
-    return True, round(p_cal * 100.0, 2), _priority(p_cal), ("genus_proxy_positive" if p_cal >= thr else "genus_proxy_negative")
+    p_pct = round(p_cal * 100.0, 2)
+    thr_pct = round(thr * 100.0, 2)
+    margin_pct = round(p_pct - thr_pct, 2)
+    return {
+        "ready": True,
+        "probabilityPercent": p_pct,
+        "priority": _priority(p_cal),
+        "reason": "genus_proxy_positive" if p_cal >= thr else "genus_proxy_negative",
+        "thresholdPercent": thr_pct,
+        "marginToThresholdPercent": margin_pct,
+    }
 
 
 def predict_species(lat: float, lon: float, form_input: dict | None = None) -> dict:
@@ -369,48 +428,76 @@ def predict_species(lat: float, lon: float, form_input: dict | None = None) -> d
     if feat_vals is None:
         warnings.append("india_wide_proxy_models_out_of_coverage")
 
-    g_ready, g_prob, g_priority, g_reason = predict_other(OTHER_MODELS["gracilaria_spp"], feat_vals)
-    u_ready, u_prob, u_priority, u_reason = predict_other(OTHER_MODELS["ulva_spp"], feat_vals)
-    s_ready, s_prob, s_priority, s_reason = predict_other(OTHER_MODELS["sargassum_spp"], feat_vals)
+    g = predict_other(OTHER_MODELS["gracilaria_spp"], feat_vals)
+    u = predict_other(OTHER_MODELS["ulva_spp"], feat_vals)
+    s = predict_other(OTHER_MODELS["sargassum_spp"], feat_vals)
+
+    kappa_prob = k["probabilityPercent"] if kappa_in_coverage else None
+    kappa_thr_pct = round(float(KAPPA["threshold"]) * 100.0, 2) if kappa_in_coverage else None
+    kappa_margin = round(float(kappa_prob) - float(kappa_thr_pct), 2) if kappa_in_coverage else None
+    kappa_reason = (
+        "dedicated_production_model_positive"
+        if kappa_in_coverage and int(k.get("predLabel", 0)) == 1
+        else "dedicated_production_model_negative"
+        if kappa_in_coverage
+        else "out_of_coverage"
+    )
+    kappa_confidence = _confidence_band(kappa_prob)
 
     species = [
         {
             "speciesId": "kappaphycus_alvarezii",
             "displayName": "Kappaphycus alvarezii",
             "ready": bool(kappa_in_coverage),
-            "probabilityPercent": k["probabilityPercent"] if kappa_in_coverage else None,
+            "probabilityPercent": kappa_prob,
             "priority": k["priority"] if kappa_in_coverage else "unknown",
-            "reason": (
-                "dedicated_production_model_positive"
-                if kappa_in_coverage and int(k.get("predLabel", 0)) == 1
-                else "dedicated_production_model_negative"
-                if kappa_in_coverage
-                else "out_of_coverage"
-            ),
+            "reason": kappa_reason,
+            "thresholdPercent": kappa_thr_pct,
+            "marginToThresholdPercent": kappa_margin,
+            "confidenceBand": kappa_confidence,
+            "actionability": _species_actionability(bool(kappa_in_coverage), kappa_reason, kappa_confidence),
         },
         {
             "speciesId": "gracilaria_edulis",
             "displayName": "Gracilaria edulis",
-            "ready": g_ready,
-            "probabilityPercent": g_prob,
-            "priority": g_priority,
-            "reason": g_reason,
+            "ready": g["ready"],
+            "probabilityPercent": g["probabilityPercent"],
+            "priority": g["priority"],
+            "reason": g["reason"],
+            "thresholdPercent": g["thresholdPercent"],
+            "marginToThresholdPercent": g["marginToThresholdPercent"],
+            "confidenceBand": _confidence_band(g["probabilityPercent"]),
+            "actionability": _species_actionability(
+                g["ready"], g["reason"], _confidence_band(g["probabilityPercent"])
+            ),
         },
         {
             "speciesId": "ulva_lactuca",
             "displayName": "Ulva lactuca",
-            "ready": u_ready,
-            "probabilityPercent": u_prob,
-            "priority": u_priority,
-            "reason": u_reason,
+            "ready": u["ready"],
+            "probabilityPercent": u["probabilityPercent"],
+            "priority": u["priority"],
+            "reason": u["reason"],
+            "thresholdPercent": u["thresholdPercent"],
+            "marginToThresholdPercent": u["marginToThresholdPercent"],
+            "confidenceBand": _confidence_band(u["probabilityPercent"]),
+            "actionability": _species_actionability(
+                u["ready"], u["reason"], _confidence_band(u["probabilityPercent"])
+            ),
         },
         {
             "speciesId": "sargassum_wightii",
             "displayName": "Sargassum wightii",
-            "ready": s_ready,
-            "probabilityPercent": s_prob,
-            "priority": s_priority,
-            "reason": s_reason,
+            "ready": s["ready"],
+            "probabilityPercent": s["probabilityPercent"],
+            "priority": s["priority"],
+            "reason": s["reason"],
+            "thresholdPercent": s["thresholdPercent"],
+            "marginToThresholdPercent": s["marginToThresholdPercent"],
+            "confidenceBand": _confidence_band(s["probabilityPercent"]),
+            "actionability": _species_actionability(
+                s["ready"], s["reason"], _confidence_band(s["probabilityPercent"])
+            ),
         },
     ]
 
@@ -434,14 +521,36 @@ def predict_species(lat: float, lon: float, form_input: dict | None = None) -> d
     if provided_override_count > 0 and applied_count == 0:
         warnings.append("user_overrides_provided_but_not_mapped_to_model_features")
 
+    all_applied = k.get("overrideDiagnostics", {}).get("applied", []) + proxy_override_diag.get("applied", [])
+    unique_applied_inputs = {item.get("input") for item in all_applied if item.get("input")}
+    total_applied = len(all_applied)
+    override_coverage = (len(unique_applied_inputs) / provided_override_count) if provided_override_count > 0 else 1.0
+    if provided_override_count > 0 and override_coverage < 0.5:
+        warnings.append("low_override_mapping_coverage")
+
+    overall_actionability = "insufficient_data"
+    if best is not None:
+        overall_actionability = best.get("actionability", "test_pilot_only")
+        if float(best.get("marginToThresholdPercent", 0.0) or 0.0) < 5.0:
+            warnings.append("best_species_near_decision_boundary")
+
     return {
         "input": {"lat": lat, "lon": lon},
         "inputMode": "lat_lon_plus_overrides" if provided_override_count > 0 else "lat_lon_only",
         "source": "species-orchestrator-production",
         "modelRelease": f"{KAPPA['release']}+{multi_release_name}",
+        "featureTimestamp": COP.get("feature_timestamp"),
         "nearestGrid": k["nearestGrid"],
         "species": species,
         "bestSpecies": best,
+        "actionability": overall_actionability,
+        "dataQuality": {
+            "overrideCountProvided": provided_override_count,
+            "overrideCountApplied": total_applied,
+            "overrideCoverageScore": round(float(override_coverage), 3),
+            "kappaphycusCoverage": bool(kappa_in_coverage),
+            "proxyCoverage": bool(feat_vals is not None),
+        },
         "appliedOverrides": {
             "kappaphycus": k.get("overrideDiagnostics", {}),
             "proxyModels": proxy_override_diag,
