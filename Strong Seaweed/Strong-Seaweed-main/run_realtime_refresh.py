@@ -164,16 +164,47 @@ def main() -> None:
         ]
     )
     run(["python", "build_site_prior_policy_layers.py"])
+    training_aug_csv = TABULAR_DIR / (
+        f"training_dataset_{args.release_tag.strip()}_augmented.csv"
+        if args.release_tag.strip()
+        else "training_dataset_augmented.csv"
+    )
+    inference_feature_source = TABULAR_DIR / (
+        f"master_feature_matrix_{args.release_tag.strip()}_augmented.csv"
+        if args.release_tag.strip()
+        else "master_feature_matrix_augmented.csv"
+    )
+    base_training_aug_csv = TABULAR_DIR / "training_dataset_augmented.csv"
+    base_inference_feature_source = TABULAR_DIR / "master_feature_matrix_augmented.csv"
+    if args.release_tag.strip():
+        # build_site_prior_policy_layers currently writes base filenames; keep tagged snapshots deterministic.
+        if base_training_aug_csv.exists():
+            shutil.copyfile(base_training_aug_csv, training_aug_csv)
+        if base_inference_feature_source.exists():
+            shutil.copyfile(base_inference_feature_source, inference_feature_source)
+
     train_cmd = ["python", "train_realtime_production.py"]
     if args.release_tag.strip():
-        train_cmd.extend(["--release_tag", args.release_tag.strip()])
+        train_cmd.extend(
+            [
+                "--release_tag",
+                args.release_tag.strip(),
+                "--dataset_paths",
+                str(training_csv),
+                str(training_aug_csv),
+                "--inference_feature_source",
+                str(inference_feature_source),
+            ]
+        )
     run(train_cmd)
 
     score_input = TABULAR_DIR / "master_feature_matrix_augmented.csv"
     if args.release_tag.strip():
         # Prefer release-specific augmented matrix first, then release base matrix.
         candidate_aug = master_csv.with_name(f"{master_csv.stem}_augmented.csv")
-        if candidate_aug.exists():
+        if inference_feature_source.exists():
+            score_input = inference_feature_source
+        elif candidate_aug.exists():
             score_input = candidate_aug
         elif master_csv.exists():
             score_input = master_csv

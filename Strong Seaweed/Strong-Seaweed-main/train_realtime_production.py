@@ -15,6 +15,7 @@ from sklearn.metrics import (
     roc_auc_score,
 )
 from sklearn.model_selection import ParameterSampler
+from sklearn.model_selection import StratifiedKFold
 from xgboost import XGBClassifier
 from project_paths import TABULAR_DIR, REALTIME_MODELS_DIR, REPORTS_DIR, DIAGNOSTICS_DIR, DOCS_DIR, ensure_dirs, with_legacy
 
@@ -54,6 +55,12 @@ def parse_args() -> argparse.Namespace:
         type=float,
         default=0.50,
         help="Minimum allowed deployment threshold in production mode.",
+    )
+    p.add_argument(
+        "--max_threshold",
+        type=float,
+        default=0.98,
+        help="Maximum allowed deployment threshold to avoid degenerate ultra-high cutoffs.",
     )
     p.add_argument(
         "--release_tag",
@@ -153,6 +160,26 @@ def group_folds(groups: np.ndarray, y: np.ndarray, min_pos_test: int = 4):
     return folds
 
 
+def fold_coverage(folds: list[tuple[np.ndarray, np.ndarray, int]], n_rows: int) -> float:
+    if n_rows <= 0 or not folds:
+        return 0.0
+    covered = np.zeros(n_rows, dtype=bool)
+    for _, te, _ in folds:
+        covered[te] = True
+    return float(covered.mean())
+
+
+def stratified_folds(y: np.ndarray, n_splits: int = 5) -> list[tuple[np.ndarray, np.ndarray, int]]:
+    if len(np.unique(y)) < 2:
+        return []
+    skf = StratifiedKFold(n_splits=n_splits, shuffle=True, random_state=RANDOM_STATE)
+    X_dummy = np.zeros((len(y), 1), dtype=np.float32)
+    out: list[tuple[np.ndarray, np.ndarray, int]] = []
+    for i, (tr, te) in enumerate(skf.split(X_dummy, y)):
+        out.append((tr, te, i))
+    return out
+
+
 def fit_ensemble(X_train: np.ndarray, y_train: np.ndarray, params: dict, seeds: list[int]):
     models = []
     for seed in seeds:
@@ -208,26 +235,47 @@ def pick_threshold(
     min_precision: float = 0.75,
     min_threshold: float = 0.0,
     min_recall: float = 0.0,
+    max_threshold: float = 1.0,
 ) -> dict:
     precision, recall, thresholds = precision_recall_curve(y_true, y_prob)
+    if thresholds.size == 0:
+        # Degenerate case (constant scores): return a bounded neutral threshold.
+        bounded = float(min(max(min_threshold, 0.5), max_threshold))
+        return {
+            "threshold": bounded,
+            "precision": float(precision[0]),
+            "recall": float(recall[0]),
+        }
+
     # precision/recall has one extra element; align to thresholds.
     precision = precision[:-1]
     recall = recall[:-1]
     thresholds = thresholds
 
+    in_range = (thresholds >= min_threshold) & (thresholds <= max_threshold)
     valid = np.where(
         (precision >= min_precision)
         & (recall >= min_recall)
-        & (thresholds >= min_threshold)
+        & in_range
     )[0]
     if len(valid) > 0:
-        i = valid[np.argmax(recall[valid])]
+        # Prefer highest recall, then lower threshold for better practical sensitivity.
+        ranked = np.lexsort((thresholds[valid], -recall[valid]))
+        i = int(valid[ranked[0]])
     else:
-        # fallback: maximize F1 subject to threshold floor.
-        floor_valid = np.where(thresholds >= min_threshold)[0]
-        candidate_idx = floor_valid if len(floor_valid) > 0 else np.arange(len(thresholds))
+        # Fallback: maximize F1 within configured threshold bounds.
+        candidate_idx = np.where(in_range)[0]
+        if len(candidate_idx) == 0:
+            candidate_idx = np.where(thresholds >= min_threshold)[0]
+        if len(candidate_idx) == 0:
+            candidate_idx = np.where(thresholds <= max_threshold)[0]
+        if len(candidate_idx) == 0:
+            candidate_idx = np.arange(len(thresholds))
         f1 = 2 * precision * recall / np.clip(precision + recall, 1e-9, None)
-        i = int(candidate_idx[np.argmax(f1[candidate_idx])])
+        max_f1 = np.max(f1[candidate_idx])
+        tied = candidate_idx[np.where(np.isclose(f1[candidate_idx], max_f1))[0]]
+        # Tie-break toward lower threshold to preserve recall in operational use.
+        i = int(tied[np.argmin(thresholds[tied])])
 
     return {
         "threshold": float(thresholds[i]),
@@ -243,6 +291,7 @@ def train_dataset(
     n_iter_single: int,
     n_iter_ensemble: int,
     min_threshold: float,
+    max_threshold: float,
     min_recall_at_threshold: float,
     min_precision_at_threshold: float,
 ) -> dict:
@@ -260,7 +309,19 @@ def train_dataset(
     if len(folds) < 4:
         folds = group_folds(groups, y, min_pos_test=1)
     if len(folds) < 2:
-        raise RuntimeError(f"{name}: insufficient spatial folds ({len(folds)})")
+        folds = stratified_folds(y, n_splits=5)
+    coverage = fold_coverage(folds, len(y))
+    if coverage < 0.85:
+        fallback_folds = stratified_folds(y, n_splits=5)
+        if fallback_folds:
+            log(
+                f"{name}: spatial fold coverage={coverage:.3f} too low; "
+                "switching to stratified CV for full OOF coverage."
+            )
+            folds = fallback_folds
+            coverage = fold_coverage(folds, len(y))
+    if len(folds) < 2:
+        raise RuntimeError(f"{name}: insufficient folds ({len(folds)})")
 
     pos = int(y.sum())
     neg = int(len(y) - pos)
@@ -278,7 +339,10 @@ def train_dataset(
         "reg_lambda": [1.0, 2.0, 5.0, 10.0],
         "scale_pos_weight": [spw],
     }
-    log(f"{name}: rows={len(df)}, positives={int(y.sum())}, features={len(feat_cols)}, folds={len(folds)}")
+    log(
+        f"{name}: rows={len(df)}, positives={int(y.sum())}, "
+        f"features={len(feat_cols)}, folds={len(folds)}, fold_coverage={coverage:.3f}"
+    )
 
     best = None
     mode_specs = [
@@ -337,6 +401,7 @@ def train_dataset(
         min_precision=min_precision_at_threshold,
         min_threshold=min_threshold,
         min_recall=min_recall_at_threshold,
+        max_threshold=max_threshold,
     )
 
     final_models = fit_ensemble(X, y, best["params"], best["seeds"])
@@ -367,6 +432,7 @@ def train_dataset(
             "training_mode": best["mode"],
             "n_ensemble_members": int(len(best["seeds"])),
             "n_spatial_folds": int(len(folds)),
+            "fold_coverage": float(coverage),
             "best_params": best["params"],
             "spatial_auc_mean": best["auc_mean"],
             "spatial_auc_std": best["auc_std"],
@@ -435,6 +501,11 @@ def main() -> None:
     n_iter_single = args.n_iter_single if args.n_iter_single is not None else (20 if args.fast else 45)
     n_iter_ensemble = args.n_iter_ensemble if args.n_iter_ensemble is not None else (10 if args.fast else 25)
     min_threshold = float(args.min_threshold) if args.production else 0.0
+    max_threshold = float(args.max_threshold)
+    if max_threshold < min_threshold:
+        raise ValueError(
+            f"max_threshold ({max_threshold}) must be >= min_threshold ({min_threshold})."
+        )
     min_recall_at_threshold = float(args.min_recall_at_threshold)
     min_precision_at_threshold = float(args.min_precision_at_threshold)
 
@@ -442,6 +513,7 @@ def main() -> None:
         "Starting training | "
         f"fast={args.fast} | production={args.production} | "
         f"min_threshold={min_threshold:.3f} | "
+        f"max_threshold={max_threshold:.3f} | "
         f"min_recall_at_threshold={min_recall_at_threshold:.3f} | "
         f"min_precision_at_threshold={min_precision_at_threshold:.3f} | "
         f"n_iter_single={n_iter_single} | n_iter_ensemble={n_iter_ensemble}"
@@ -487,6 +559,7 @@ def main() -> None:
             n_iter_single,
             n_iter_ensemble,
             min_threshold,
+            max_threshold,
             min_recall_at_threshold,
             min_precision_at_threshold,
         )
@@ -543,6 +616,7 @@ def main() -> None:
             "recommended_threshold": best["metrics"]["threshold"]["threshold"],
             "production_mode": bool(args.production),
             "min_threshold_floor": float(min_threshold),
+            "max_threshold_cap": float(max_threshold),
             "high_confidence_cutoff": 0.80,
             "medium_confidence_cutoff": 0.60,
             "notes": "Use calibrated probabilities. Treat 0.60-0.80 as field-verification priority."
