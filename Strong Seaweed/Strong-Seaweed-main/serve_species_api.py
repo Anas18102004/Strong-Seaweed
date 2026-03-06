@@ -2,6 +2,7 @@ import json
 import os
 from http.server import BaseHTTPRequestHandler, HTTPServer
 from pathlib import Path
+from datetime import datetime, timezone
 from urllib.parse import parse_qs, urlparse
 
 import joblib
@@ -18,6 +19,9 @@ KAPPA_RELEASE_FALLBACK = "kappa_india_gulf_v2_prod_ready_v3"
 MULTI_RELEASE = os.getenv("MULTI_RELEASE", "multi_species_cop_india_v5b_rich_relaxed_soft_hn")
 MULTI_RELEASE_FALLBACK = "multi_species_cop_india_v2_prod"
 KAPPA_MAX_DISTANCE_KM = float(os.getenv("KAPPA_MAX_DISTANCE_KM", "250"))
+KAPPA_THRESHOLD_OFFSET = float(os.getenv("KAPPA_THRESHOLD_OFFSET", "0.0"))
+PROXY_THRESHOLD_OFFSET = float(os.getenv("PROXY_THRESHOLD_OFFSET", "0.0"))
+FEATURE_STALENESS_DAYS = int(os.getenv("FEATURE_STALENESS_DAYS", "45"))
 
 KAPPA_MASTER = BASE / "data" / "tabular" / "master_feature_matrix_kappa_india_gulf_v2_hardmerge4_augmented.csv"
 
@@ -61,14 +65,14 @@ def _apply_overrides_to_vector(feature_names: list[str], user_inputs: dict, targ
 
     # Candidate mappings from user inputs to model feature names.
     mappings = [
-        ("salinityPpt", ["so_mean", "salinity", "salinity_ppt"]),
+        ("salinityPpt", ["so_mean", "sal_mean", "salinity", "salinity_ppt"]),
         ("currentVelocityMs", ["current_mean", "current_velocity", "current_velocity_ms"]),
         ("waveHeightM", ["wave_mean", "wave_height", "wave_height_m", "VHM0"]),
-        ("temperatureC", ["thetao_mean", "temperature", "temperature_c", "temp_mean", "temp_c"]),
+        ("temperatureC", ["thetao_mean", "sst_mean", "temperature", "temperature_c", "temp_mean", "temp_c"]),
         ("depthM", ["depth", "depth_m", "bathymetry", "bathymetry_m"]),
-        ("ph", ["ph"]),
-        ("turbidityNtu", ["turbidity", "turbidity_ntu"]),
-        ("rainfallMm", ["rainfall", "rainfall_mm"]),
+        ("ph", ["ph"]),  # currently no trained model feature
+        ("turbidityNtu", ["turb_mean", "turbidity", "turbidity_ntu"]),
+        ("rainfallMm", ["rain_mean", "rainfall", "rainfall_mm"]),
         ("tidalAmplitudeM", ["tidal_amplitude", "tidal_amplitude_m", "tide_range_m"]),
     ]
 
@@ -318,6 +322,23 @@ def _species_actionability(ready: bool, reason: str, confidence_band: str) -> st
     return "not_recommended"
 
 
+def _clamp01(v: float) -> float:
+    return max(0.0, min(1.0, float(v)))
+
+
+def _feature_is_stale(ts_iso: str | None, max_age_days: int) -> bool:
+    if not ts_iso:
+        return False
+    try:
+        ts = datetime.fromisoformat(ts_iso.replace("Z", "+00:00"))
+        if ts.tzinfo is None:
+            ts = ts.replace(tzinfo=timezone.utc)
+        age_days = (datetime.now(timezone.utc) - ts).days
+        return age_days > max_age_days
+    except Exception:
+        return False
+
+
 def predict_kappa(lat: float, lon: float, user_inputs: dict | None = None) -> dict:
     master = KAPPA["master"]
     dist = haversine_km(
@@ -337,10 +358,14 @@ def predict_kappa(lat: float, lon: float, user_inputs: dict | None = None) -> di
     preds = [m.predict_proba(x)[:, 1][0] for m in KAPPA["models"]]
     p_raw = float(np.mean(preds))
     p_cal = float(KAPPA["calibrator"].predict(np.array([p_raw], dtype=np.float32))[0])
+    base_thr = float(KAPPA["threshold"])
+    effective_thr = _clamp01(base_thr + KAPPA_THRESHOLD_OFFSET)
     return {
         "probabilityPercent": round(p_cal * 100.0, 2),
         "priority": _priority(p_cal, KAPPA["high_cutoff"], KAPPA["medium_cutoff"]),
-        "predLabel": int(p_cal >= KAPPA["threshold"]),
+        "predLabel": int(p_cal >= effective_thr),
+        "baseThreshold": base_thr,
+        "effectiveThreshold": effective_thr,
         "nearestGrid": {
             "lat": float(row["lat"]),
             "lon": float(row["lon"]),
@@ -403,7 +428,8 @@ def predict_other(model_bundle: dict | None, feat_vals: dict | None) -> dict:
     x = np.array([[feat_vals[f] for f in features]], dtype=np.float32)
     p_raw = float(model_bundle["model"].predict_proba(x)[:, 1][0])
     p_cal = float(model_bundle["calibrator"].predict(np.array([p_raw], dtype=np.float32))[0])
-    thr = float(model_bundle["report"]["threshold"]["threshold"])
+    base_thr = float(model_bundle["report"]["threshold"]["threshold"])
+    thr = _clamp01(base_thr + PROXY_THRESHOLD_OFFSET)
     p_pct = round(p_cal * 100.0, 2)
     thr_pct = round(thr * 100.0, 2)
     margin_pct = round(p_pct - thr_pct, 2)
@@ -412,6 +438,7 @@ def predict_other(model_bundle: dict | None, feat_vals: dict | None) -> dict:
         "probabilityPercent": p_pct,
         "priority": _priority(p_cal),
         "reason": "genus_proxy_positive" if p_cal >= thr else "genus_proxy_negative",
+        "baseThresholdPercent": round(base_thr * 100.0, 2),
         "thresholdPercent": thr_pct,
         "marginToThresholdPercent": margin_pct,
     }
@@ -433,7 +460,8 @@ def predict_species(lat: float, lon: float, form_input: dict | None = None) -> d
     s = predict_other(OTHER_MODELS["sargassum_spp"], feat_vals)
 
     kappa_prob = k["probabilityPercent"] if kappa_in_coverage else None
-    kappa_thr_pct = round(float(KAPPA["threshold"]) * 100.0, 2) if kappa_in_coverage else None
+    kappa_thr_pct = round(float(k.get("effectiveThreshold", 0.0)) * 100.0, 2) if kappa_in_coverage else None
+    kappa_base_thr_pct = round(float(k.get("baseThreshold", 0.0)) * 100.0, 2) if kappa_in_coverage else None
     kappa_margin = round(float(kappa_prob) - float(kappa_thr_pct), 2) if kappa_in_coverage else None
     kappa_reason = (
         "dedicated_production_model_positive"
@@ -452,6 +480,7 @@ def predict_species(lat: float, lon: float, form_input: dict | None = None) -> d
             "probabilityPercent": kappa_prob,
             "priority": k["priority"] if kappa_in_coverage else "unknown",
             "reason": kappa_reason,
+            "baseThresholdPercent": kappa_base_thr_pct,
             "thresholdPercent": kappa_thr_pct,
             "marginToThresholdPercent": kappa_margin,
             "confidenceBand": kappa_confidence,
@@ -464,6 +493,7 @@ def predict_species(lat: float, lon: float, form_input: dict | None = None) -> d
             "probabilityPercent": g["probabilityPercent"],
             "priority": g["priority"],
             "reason": g["reason"],
+            "baseThresholdPercent": g.get("baseThresholdPercent"),
             "thresholdPercent": g["thresholdPercent"],
             "marginToThresholdPercent": g["marginToThresholdPercent"],
             "confidenceBand": _confidence_band(g["probabilityPercent"]),
@@ -478,6 +508,7 @@ def predict_species(lat: float, lon: float, form_input: dict | None = None) -> d
             "probabilityPercent": u["probabilityPercent"],
             "priority": u["priority"],
             "reason": u["reason"],
+            "baseThresholdPercent": u.get("baseThresholdPercent"),
             "thresholdPercent": u["thresholdPercent"],
             "marginToThresholdPercent": u["marginToThresholdPercent"],
             "confidenceBand": _confidence_band(u["probabilityPercent"]),
@@ -492,6 +523,7 @@ def predict_species(lat: float, lon: float, form_input: dict | None = None) -> d
             "probabilityPercent": s["probabilityPercent"],
             "priority": s["priority"],
             "reason": s["reason"],
+            "baseThresholdPercent": s.get("baseThresholdPercent"),
             "thresholdPercent": s["thresholdPercent"],
             "marginToThresholdPercent": s["marginToThresholdPercent"],
             "confidenceBand": _confidence_band(s["probabilityPercent"]),
@@ -527,6 +559,8 @@ def predict_species(lat: float, lon: float, form_input: dict | None = None) -> d
     override_coverage = (len(unique_applied_inputs) / provided_override_count) if provided_override_count > 0 else 1.0
     if provided_override_count > 0 and override_coverage < 0.5:
         warnings.append("low_override_mapping_coverage")
+    if _feature_is_stale(COP.get("feature_timestamp"), FEATURE_STALENESS_DAYS):
+        warnings.append("environmental_features_stale")
 
     overall_actionability = "insufficient_data"
     if best is not None:
@@ -538,6 +572,7 @@ def predict_species(lat: float, lon: float, form_input: dict | None = None) -> d
         "input": {"lat": lat, "lon": lon},
         "inputMode": "lat_lon_plus_overrides" if provided_override_count > 0 else "lat_lon_only",
         "source": "species-orchestrator-production",
+        "decisionPolicyVersion": "v2_threshold_offsets",
         "modelRelease": f"{KAPPA['release']}+{multi_release_name}",
         "featureTimestamp": COP.get("feature_timestamp"),
         "nearestGrid": k["nearestGrid"],
