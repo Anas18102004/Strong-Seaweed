@@ -320,9 +320,11 @@ jobs:
           AWS_HOST: ${{ secrets.AWS_HOST }}
           AWS_USER: ${{ secrets.AWS_USER }}
           SERVICE: ${{ (github.event_name == 'push' && 'all') || github.event.inputs.service || 'all' }}
+          FRONTEND_HOST: ${{ vars.FRONTEND_HOST }}
         run: |
           echo "Running health check..."
-          ssh -i ~/.ssh/deploy_key "${AWS_USER}@${AWS_HOST}" "SERVICE='${SERVICE}' bash -s" << 'EOF'
+          EFFECTIVE_FRONTEND_HOST="${FRONTEND_HOST:-akuara.publicvm.com}"
+          ssh -i ~/.ssh/deploy_key "${AWS_USER}@${AWS_HOST}" "SERVICE='${SERVICE}' FRONTEND_HOST='${EFFECTIVE_FRONTEND_HOST}' bash -s" << 'EOF'
             set -e
             wait_for_url() {
               local url="$1"
@@ -364,9 +366,9 @@ jobs:
             fi
             if [[ "${SERVICE}" == "blueweave-frontend" || "${SERVICE}" == "all" ]]; then
               if systemctl list-unit-files | grep -q '^nginx\.service'; then
-                # Check a concrete static file path that should return 200 when frontend is deployed.
-                curl -fsSI --max-time 5 http://127.0.0.1/index.html | head -n 1 || {
-                  echo "nginx localhost check failed for /index.html"
+                # Probe nginx with the production host header to avoid default-vhost 404 on localhost.
+                curl -fsSI --max-time 5 -H "Host: ${FRONTEND_HOST}" http://127.0.0.1/ | head -n 1 || {
+                  echo "nginx localhost check failed for host ${FRONTEND_HOST}"
                   exit 1
                 }
               else
