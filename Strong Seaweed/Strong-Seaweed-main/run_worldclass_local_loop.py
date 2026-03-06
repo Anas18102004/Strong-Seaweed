@@ -88,6 +88,19 @@ def main() -> None:
             )
             summary["steps"].append("kappa_refresh_retrain")
 
+            # Generate candidate-specific hard50 and non-overlap eval artifacts.
+            run(
+                [
+                    "python",
+                    "generate_release_hard_eval.py",
+                    "--release_tag",
+                    run_tag,
+                    "--training_csv",
+                    str(TABULAR_DIR / f"training_dataset_{run_tag}.csv"),
+                ]
+            )
+            summary["steps"].append("kappa_candidate_eval")
+
             readiness_json = REPORTS_DIR / f"real_world_readiness_check_{run_tag}.json"
             rc = run(
                 [
@@ -97,6 +110,12 @@ def main() -> None:
                     str(Path("releases") / run_tag / "reports" / f"xgboost_realtime_report_{run_tag}.json"),
                     "--training_csv",
                     str(TABULAR_DIR / f"training_dataset_{run_tag}.csv"),
+                    "--hard50_json",
+                    str(REPORTS_DIR / f"{run_tag}_hard50_eval.json"),
+                    "--independent_json",
+                    str(REPORTS_DIR / f"{run_tag}_hard50_eval_nonoverlap.json"),
+                    "--oof_csv",
+                    str(Path("releases") / run_tag / "reports" / f"xgboost_realtime_oof_predictions_{run_tag}.csv"),
                     "--output_json",
                     str(readiness_json),
                     "--output_md",
