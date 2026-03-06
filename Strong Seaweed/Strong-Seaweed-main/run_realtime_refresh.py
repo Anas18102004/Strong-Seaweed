@@ -163,7 +163,24 @@ def main() -> None:
             str(training_csv),
         ]
     )
-    run(["python", "build_site_prior_policy_layers.py"])
+    run(
+        [
+            "python",
+            "build_site_prior_policy_layers.py",
+            "--master_in",
+            str(master_csv),
+            "--train_in",
+            str(training_csv),
+            "--master_out",
+            str(TABULAR_DIR / (f"master_feature_matrix{suffix}_augmented.csv" if suffix else "master_feature_matrix_augmented.csv")),
+            "--train_out",
+            str(TABULAR_DIR / (f"training_dataset{suffix}_augmented.csv" if suffix else "training_dataset_augmented.csv")),
+            "--meta_out",
+            str(TABULAR_DIR.parent / "reports" / (f"site_prior_policy_metadata{suffix}.json" if suffix else "site_prior_policy_metadata.json")),
+            "--seasonal_out",
+            str(TABULAR_DIR / (f"seasonal_operational_weights{suffix}.csv" if suffix else "seasonal_operational_weights.csv")),
+        ]
+    )
     training_aug_csv = TABULAR_DIR / (
         f"training_dataset_{args.release_tag.strip()}_augmented.csv"
         if args.release_tag.strip()
@@ -177,10 +194,10 @@ def main() -> None:
     base_training_aug_csv = TABULAR_DIR / "training_dataset_augmented.csv"
     base_inference_feature_source = TABULAR_DIR / "master_feature_matrix_augmented.csv"
     if args.release_tag.strip():
-        # build_site_prior_policy_layers currently writes base filenames; keep tagged snapshots deterministic.
-        if base_training_aug_csv.exists():
+        # Backward-compatibility fallback for very old runs; should rarely trigger now.
+        if not training_aug_csv.exists() and base_training_aug_csv.exists():
             shutil.copyfile(base_training_aug_csv, training_aug_csv)
-        if base_inference_feature_source.exists():
+        if not inference_feature_source.exists() and base_inference_feature_source.exists():
             shutil.copyfile(base_inference_feature_source, inference_feature_source)
 
     train_cmd = ["python", "train_realtime_production.py"]
