@@ -582,6 +582,13 @@ def predict_species(lat: float, lon: float, form_input: dict | None = None) -> d
         },
     ]
 
+    ready_scored = [
+        s
+        for s in species
+        if s["ready"] and s["probabilityPercent"] is not None
+    ]
+    top_candidates = sorted(ready_scored, key=lambda x: float(x["probabilityPercent"]), reverse=True)
+
     eligible = [
         s
         for s in species
@@ -590,13 +597,9 @@ def predict_species(lat: float, lon: float, form_input: dict | None = None) -> d
         and str(s.get("reason", "")).endswith("_positive")
     ]
     best = sorted(eligible, key=lambda x: float(x["probabilityPercent"]), reverse=True)[0] if eligible else None
+    decision_source = "model_threshold"
     if best is None:
         # Screening fallback: if nothing crosses strict threshold, still return top candidate when probability is reasonable.
-        ready_scored = [
-            s
-            for s in species
-            if s["ready"] and s["probabilityPercent"] is not None
-        ]
         if ready_scored:
             top = sorted(ready_scored, key=lambda x: float(x["probabilityPercent"]), reverse=True)[0]
             if float(top["probabilityPercent"]) >= SCREENING_FALLBACK_FLOOR_PERCENT:
@@ -604,6 +607,7 @@ def predict_species(lat: float, lon: float, form_input: dict | None = None) -> d
                 top["reason"] = "screening_fallback_top_ranked"
                 top["actionability"] = "test_pilot_only"
                 best = top
+                decision_source = "screening_fallback"
                 warnings.append("no_species_meets_threshold_using_screening_fallback")
             else:
                 warnings.append("no_species_meets_suitability_threshold")
@@ -628,6 +632,7 @@ def predict_species(lat: float, lon: float, form_input: dict | None = None) -> d
                 adjusted["reason"] = "geo_prior_kappaphycus_screening"
                 adjusted["actionability"] = "test_pilot_only"
                 best = adjusted
+                decision_source = "geo_prior"
                 warnings.append("geo_prior_adjustment_applied")
                 warnings.append(f"geo_prior_anchor={anchor_name}")
 
@@ -664,7 +669,9 @@ def predict_species(lat: float, lon: float, form_input: dict | None = None) -> d
         "featureTimestamp": COP.get("feature_timestamp"),
         "nearestGrid": k["nearestGrid"],
         "species": species,
+        "topCandidatesByProbability": top_candidates,
         "bestSpecies": best,
+        "decisionSource": decision_source if best is not None else "none",
         "actionability": overall_actionability,
         "dataQuality": {
             "overrideCountProvided": provided_override_count,

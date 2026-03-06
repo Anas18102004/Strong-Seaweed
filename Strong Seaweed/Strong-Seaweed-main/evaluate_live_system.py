@@ -61,7 +61,7 @@ def run(base_url: str, email: str, password: str, use_https: bool = True) -> dic
 
     species_results = []
     top1_hits = 0
-    top3_hits = 0
+    top3_raw_hits = 0
 
     for case in CASES:
         payload = {
@@ -89,16 +89,18 @@ def run(base_url: str, email: str, password: str, use_https: bool = True) -> dic
 
         best = out.get("bestSpecies") or {}
         best_id = best.get("speciesId")
-        ranked = sorted(
-            [s for s in (out.get("species") or []) if isinstance(s, dict)],
-            key=lambda s: float(s.get("probabilityPercent") or 0.0),
-            reverse=True,
-        )
-        top3 = [s.get("speciesId") for s in ranked[:3]]
+        ranked_raw = [s for s in (out.get("topCandidatesByProbability") or []) if isinstance(s, dict)]
+        if not ranked_raw:
+            ranked_raw = sorted(
+                [s for s in (out.get("species") or []) if isinstance(s, dict)],
+                key=lambda s: float(s.get("probabilityPercent") or 0.0),
+                reverse=True,
+            )
+        top3_raw = [s.get("speciesId") for s in ranked_raw[:3]]
         top1_match = best_id == case.expected_species_id
-        top3_match = case.expected_species_id in top3
+        top3_raw_match = case.expected_species_id in top3_raw
         top1_hits += 1 if top1_match else 0
-        top3_hits += 1 if top3_match else 0
+        top3_raw_hits += 1 if top3_raw_match else 0
         species_results.append(
             {
                 "case": case.__dict__,
@@ -106,12 +108,13 @@ def run(base_url: str, email: str, password: str, use_https: bool = True) -> dic
                 "status": code,
                 "inputMode": out.get("inputMode"),
                 "modelRelease": out.get("modelRelease"),
+                "decisionSource": out.get("decisionSource"),
                 "bestSpeciesId": best_id,
                 "bestSpeciesProb": best.get("probabilityPercent"),
-                "top3SpeciesIds": top3,
+                "top3RawSpeciesIds": top3_raw,
                 "warnings": out.get("warnings") or [],
                 "top1_match": top1_match,
-                "top3_match": top3_match,
+                "top3_raw_match": top3_raw_match,
             }
         )
 
@@ -158,10 +161,10 @@ def run(base_url: str, email: str, password: str, use_https: bool = True) -> dic
         "base": base,
         "species_eval": {
             "total_cases": total,
-            "top1_hits": top1_hits,
-            "top1_accuracy": (top1_hits / total) if total else 0.0,
-            "top3_hits": top3_hits,
-            "top3_accuracy": (top3_hits / total) if total else 0.0,
+            "top1_final_hits": top1_hits,
+            "top1_final_accuracy": (top1_hits / total) if total else 0.0,
+            "top3_raw_hits": top3_raw_hits,
+            "top3_raw_accuracy": (top3_raw_hits / total) if total else 0.0,
             "cases": species_results,
         },
         "ai_eval": ai_summary,
