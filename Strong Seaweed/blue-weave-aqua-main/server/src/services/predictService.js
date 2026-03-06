@@ -1,9 +1,43 @@
-﻿import { config } from "../config.js";
+import { config } from "../config.js";
 
-function timeoutSignal(ms = 6000) {
+function timeoutSignal(ms = Math.max(12000, Number(config.aiTimeoutMs || 12000))) {
   const controller = new AbortController();
   const t = setTimeout(() => controller.abort(), ms);
   return { signal: controller.signal, clear: () => clearTimeout(t) };
+}
+
+function sleep(ms) {
+  return new Promise((resolve) => setTimeout(resolve, ms));
+}
+
+async function postModelJson(url, payload, attempts = 2) {
+  let lastErr = "";
+  for (let i = 0; i < attempts; i += 1) {
+    const t = timeoutSignal();
+    try {
+      const res = await fetch(url, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(payload),
+        signal: t.signal,
+      });
+      if (!res.ok) {
+        lastErr = `HTTP ${res.status}`;
+      } else {
+        const data = await res.json();
+        return { ok: true, data, error: "" };
+      }
+    } catch (err) {
+      lastErr = err instanceof Error ? err.message : String(err || "request_failed");
+    } finally {
+      t.clear();
+    }
+
+    if (i < attempts - 1) {
+      await sleep(250);
+    }
+  }
+  return { ok: false, data: null, error: lastErr || "request_failed" };
 }
 
 export async function predictSpeciesAtPoint(lat, lon, formInput = null) {
@@ -14,23 +48,11 @@ export async function predictSpeciesAtPoint(lat, lon, formInput = null) {
   let modelError = "";
   const payload = formInput ? { lat, lon, formInput } : { lat, lon };
 
-  try {
-    const t = timeoutSignal();
-    const res = await fetch(speciesUrl, {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify(payload),
-      signal: t.signal,
-    });
-    t.clear();
-
-    if (!res.ok) {
-      modelError = `Species API error: ${res.status}`;
-    } else {
-      orchestrated = await res.json();
-    }
-  } catch (err) {
-    modelError = err instanceof Error ? err.message : "Species API unreachable";
+  const orchestratedReq = await postModelJson(speciesUrl, payload, 2);
+  if (orchestratedReq.ok) {
+    orchestrated = orchestratedReq.data;
+  } else {
+    modelError = `Species API error: ${orchestratedReq.error}`;
   }
 
   if (orchestrated && Array.isArray(orchestrated.species)) {
@@ -38,23 +60,11 @@ export async function predictSpeciesAtPoint(lat, lon, formInput = null) {
   }
 
   // Fallback to legacy kappa-only API behavior.
-  try {
-    const t = timeoutSignal();
-    const res = await fetch(kappaUrl, {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify(payload),
-      signal: t.signal,
-    });
-    t.clear();
-
-    if (!res.ok) {
-      modelError = `Kappaphycus API error: ${res.status}`;
-    } else {
-      kapp = await res.json();
-    }
-  } catch (err) {
-    modelError = err instanceof Error ? err.message : "Kappaphycus API unreachable";
+  const kappaReq = await postModelJson(kappaUrl, payload, 2);
+  if (kappaReq.ok) {
+    kapp = kappaReq.data;
+  } else {
+    modelError = `Kappaphycus API error: ${kappaReq.error}`;
   }
 
   const kappScore = kapp?.kappaphycus?.probability_percent;
