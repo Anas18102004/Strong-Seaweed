@@ -21,6 +21,39 @@ function sleep(ms) {
   return new Promise((resolve) => setTimeout(resolve, ms));
 }
 
+function sanitizeContext(raw = {}) {
+  const input = raw && typeof raw === "object" ? raw : {};
+  const asNum = (v) => {
+    if (v === null || v === undefined || v === "") return null;
+    const n = Number(v);
+    return Number.isFinite(n) ? n : null;
+  };
+  const asStr = (v, max = 80) => String(v || "").trim().slice(0, max);
+  const advancedIn = input.advanced && typeof input.advanced === "object" ? input.advanced : {};
+  const overridesIn = input.overrides && typeof input.overrides === "object" ? input.overrides : {};
+  return {
+    mode: asStr(input.mode, 24),
+    locationName: asStr(input.locationName, 120),
+    speciesHint: asStr(input.speciesHint, 80),
+    season: asStr(input.season, 40),
+    lat: asNum(input.lat),
+    lon: asNum(input.lon),
+    depthM: asNum(input.depthM),
+    overrides: {
+      temperatureC: asNum(overridesIn.temperatureC),
+      salinityPpt: asNum(overridesIn.salinityPpt),
+    },
+    advanced: {
+      ph: asNum(advancedIn.ph),
+      turbidityNtu: asNum(advancedIn.turbidityNtu),
+      currentVelocityMs: asNum(advancedIn.currentVelocityMs),
+      waveHeightM: asNum(advancedIn.waveHeightM),
+      rainfallMm: asNum(advancedIn.rainfallMm),
+      tidalAmplitudeM: asNum(advancedIn.tidalAmplitudeM),
+    },
+  };
+}
+
 async function loadRecentConversation(sessionId, userId, limit = 8) {
   const rows = await ChatMessage.find({ sessionId, userId })
     .sort({ createdAt: -1 })
@@ -72,6 +105,7 @@ router.post("/chat", authRequired, async (req, res) => {
       userId: req.user.id,
       sessionId: session._id.toString(),
       conversation,
+      context: sanitizeContext(req.body?.context || {}),
     });
 
     await ChatMessage.create({
@@ -129,6 +163,7 @@ router.post("/chat/stream", authRequired, async (req, res) => {
     userId: req.user.id,
     sessionId: session._id.toString(),
     conversation,
+    context: sanitizeContext(req.body?.context || {}),
   });
 
   res.setHeader("Content-Type", "text/event-stream; charset=utf-8");
@@ -219,6 +254,7 @@ router.post("/voice/respond", authRequired, async (req, res) => {
       conversation,
       locale,
       voiceProfile,
+      context: sanitizeContext(req.body?.context || {}),
     });
 
     await ChatMessage.create({

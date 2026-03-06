@@ -32,6 +32,7 @@ export type ChatResponse = {
   routedAgent?: string;
   latencyMs?: number;
   cached?: boolean;
+  modelGrounded?: boolean;
 };
 
 export type AgentResponse = {
@@ -58,6 +59,7 @@ export type VoiceResponse = {
   routedAgent?: string;
   latencyMs?: number;
   cached?: boolean;
+  modelGrounded?: boolean;
 };
 
 export type VoiceProfile = "female" | "male" | "default";
@@ -134,6 +136,28 @@ export type PredictionSubmissionItem = {
   season: string;
   createdAt: string;
   bestSpecies: SpeciesScore | null;
+};
+
+export type AiContextInput = {
+  mode?: string;
+  locationName?: string;
+  speciesHint?: string;
+  season?: string;
+  lat?: number;
+  lon?: number;
+  depthM?: number | null;
+  overrides?: {
+    temperatureC?: number | null;
+    salinityPpt?: number | null;
+  };
+  advanced?: {
+    ph?: number | null;
+    turbidityNtu?: number | null;
+    currentVelocityMs?: number | null;
+    waveHeightM?: number | null;
+    rainfallMm?: number | null;
+    tidalAmplitudeM?: number | null;
+  };
 };
 
 export type UserPreferences = {
@@ -279,12 +303,12 @@ export const api = {
 
   me: (token: string) => request<{ user: AuthUser }>("/api/auth/me", { method: "GET" }, token),
 
-  chat: (question: string, token?: string, sessionId?: string) =>
+  chat: (question: string, token?: string, sessionId?: string, context?: AiContextInput) =>
     request<ChatResponse>(
       "/api/ai/chat",
       {
         method: "POST",
-        body: JSON.stringify({ question, sessionId }),
+        body: JSON.stringify({ question, sessionId, context }),
       },
       token,
     ),
@@ -293,6 +317,7 @@ export const api = {
     question: string,
     token?: string,
     sessionId?: string,
+    context?: AiContextInput,
     onDelta?: (tokenChunk: string) => void,
   ): Promise<ChatResponse> => {
     const headers: Record<string, string> = {
@@ -303,7 +328,7 @@ export const api = {
     const res = await fetch(buildApiUrl("/api/ai/chat/stream"), {
       method: "POST",
       headers,
-      body: JSON.stringify({ question, sessionId }),
+      body: JSON.stringify({ question, sessionId, context }),
     });
 
     if (!res.ok) {
@@ -374,12 +399,13 @@ export const api = {
     sessionId?: string,
     locale = "en-US",
     voiceProfile: VoiceProfile = "female",
+    context?: AiContextInput,
   ) =>
     request<VoiceResponse>(
       "/api/ai/voice/respond",
       {
         method: "POST",
-        body: JSON.stringify({ question, sessionId, locale, voiceProfile }),
+        body: JSON.stringify({ question, sessionId, locale, voiceProfile, context }),
       },
       token,
     ),

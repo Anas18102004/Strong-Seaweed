@@ -1,4 +1,5 @@
 import { config } from "../config.js";
+import { predictSpeciesAtPoint } from "./predictService.js";
 
 const CANNED = {
   cultivation:
@@ -37,6 +38,18 @@ const PROVIDER_URLS = {
   langchain: config.langChainApiUrl,
   langgraph: config.langGraphApiUrl,
   crewai: config.crewAiApiUrl,
+};
+
+const MODEL_LOCATION_COORDS = {
+  "gulf of mannar": { lat: 9.1, lon: 79.3 },
+  "palk bay": { lat: 9.4, lon: 79.2 },
+  lakshadweep: { lat: 10.5, lon: 72.7 },
+  "andaman islands": { lat: 11.7, lon: 92.7 },
+  "gulf of kachchh": { lat: 22.6, lon: 69.8 },
+  chilika: { lat: 19.7, lon: 85.3 },
+  ratnagiri: { lat: 16.9, lon: 73.3 },
+  karwar: { lat: 14.8, lon: 74.1 },
+  kollam: { lat: 8.9, lon: 76.6 },
 };
 
 const CACHE_TTL_MS = 60_000;
@@ -98,6 +111,173 @@ function routeQuestion(question) {
 function unavailableAnswer(agentId = "copilot") {
   const topic = String(agentId || "copilot");
   return `Live AI model is unavailable right now for ${topic}. Please check provider status/config and try again.`;
+}
+
+function toNum(v) {
+  if (v === null || v === undefined || v === "") return null;
+  const n = Number(v);
+  return Number.isFinite(n) ? n : null;
+}
+
+function extractLatLonFromQuestion(question = "") {
+  const m = String(question).match(/(-?\d+(?:\.\d+)?)\s*[, ]\s*(-?\d+(?:\.\d+)?)/);
+  if (!m) return null;
+  const lat = toNum(m[1]);
+  const lon = toNum(m[2]);
+  if (!Number.isFinite(lat) || !Number.isFinite(lon)) return null;
+  if (Math.abs(lat) > 90 || Math.abs(lon) > 180) return null;
+  return { lat, lon };
+}
+
+function shouldUseModelGrounding(question = "", ctx = {}) {
+  const q = String(question || "").toLowerCase();
+  const hasPredictIntent = [
+    "predict",
+    "suitability",
+    "which species",
+    "best species",
+    "what should i grow",
+    "what to grow",
+    "can i cultivate",
+    "is this location good",
+    "farm here",
+    "kappaphycus",
+    "gracilaria",
+    "ulva",
+    "sargassum",
+  ].some((k) => q.includes(k));
+
+  const c = ctx && typeof ctx === "object" ? ctx : {};
+  const hasCoords = Number.isFinite(toNum(c.lat)) && Number.isFinite(toNum(c.lon));
+  const hasLocation = String(c.locationName || "").trim().length > 0;
+  const hasQuestionCoords = Boolean(extractLatLonFromQuestion(question));
+  return hasPredictIntent && (hasCoords || hasLocation || hasQuestionCoords);
+}
+
+function resolveCoords(question = "", ctx = {}) {
+  const c = ctx && typeof ctx === "object" ? ctx : {};
+  const lat = toNum(c.lat);
+  const lon = toNum(c.lon);
+  if (Number.isFinite(lat) && Number.isFinite(lon)) return { lat, lon, source: "context" };
+
+  const fromText = extractLatLonFromQuestion(question);
+  if (fromText) return { ...fromText, source: "question" };
+
+  const loc = String(c.locationName || "").trim().toLowerCase();
+  if (loc && MODEL_LOCATION_COORDS[loc]) {
+    return { ...MODEL_LOCATION_COORDS[loc], source: "location_lookup" };
+  }
+
+  return null;
+}
+
+function buildModelFormInput(ctx = {}) {
+  const c = ctx && typeof ctx === "object" ? ctx : {};
+  const adv = c.advanced && typeof c.advanced === "object" ? c.advanced : {};
+  const ov = c.overrides && typeof c.overrides === "object" ? c.overrides : {};
+  return {
+    locationName: String(c.locationName || "").trim(),
+    season: String(c.season || "").trim(),
+    depthM: toNum(c.depthM),
+    overrides: {
+      temperatureC: toNum(ov.temperatureC),
+      salinityPpt: toNum(ov.salinityPpt),
+    },
+    advanced: {
+      ph: toNum(adv.ph),
+      turbidityNtu: toNum(adv.turbidityNtu),
+      currentVelocityMs: toNum(adv.currentVelocityMs),
+      waveHeightM: toNum(adv.waveHeightM),
+      rainfallMm: toNum(adv.rainfallMm),
+      tidalAmplitudeM: toNum(adv.tidalAmplitudeM),
+    },
+  };
+}
+
+function formatModelGroundedAnswer(pred, coordsMeta = null) {
+  const best = pred?.bestSpecies || null;
+  const species = Array.isArray(pred?.species) ? pred.species : [];
+  const top = [...species]
+    .filter((s) => Number.isFinite(s?.probabilityPercent))
+    .sort((a, b) => (b.probabilityPercent || 0) - (a.probabilityPercent || 0))
+    .slice(0, 3);
+  const lines = [];
+  if (best && Number.isFinite(best?.probabilityPercent)) {
+    lines.push(
+      `Model-grounded recommendation: ${best.displayName} (${best.probabilityPercent.toFixed(2)}% suitability, ${best.priority}).`,
+    );
+  } else {
+    lines.push("Model result: no species currently meets the suitability threshold for this context.");
+  }
+  if (top.length > 0) {
+    lines.push(`Top species scores: ${top.map((s) => `${s.displayName} ${Number(s.probabilityPercent).toFixed(2)}%`).join(" | ")}.`);
+  }
+  if (pred?.nearestGrid?.distance_km !== undefined && pred?.nearestGrid?.distance_km !== null) {
+    lines.push(`Nearest model grid distance: ${Number(pred.nearestGrid.distance_km).toFixed(2)} km.`);
+  }
+  if (coordsMeta?.source) {
+    lines.push(`Location source: ${coordsMeta.source}.`);
+  }
+  if (Array.isArray(pred?.warnings) && pred.warnings.length > 0) {
+    lines.push(`Warnings: ${pred.warnings.join(", ")}.`);
+  }
+  return lines.join("\n");
+}
+
+async function maybeRunModelGrounding(question, context = {}) {
+  const rawCtx = context?.context && typeof context.context === "object" ? context.context : context;
+  if (!shouldUseModelGrounding(question, rawCtx)) return null;
+  const coords = resolveCoords(question, rawCtx);
+  if (!coords) return null;
+
+  try {
+    const pred = await predictSpeciesAtPoint(coords.lat, coords.lon, buildModelFormInput(rawCtx));
+    return {
+      answer: normalizeUiAnswer(formatModelGroundedAnswer(pred, coords)),
+      model: String(pred?.modelRelease || "species-orchestrator"),
+      stack: ["Species Orchestrator", "Model Grounding"],
+      routedAgent: routeQuestion(question),
+      provider: "model-api",
+      status: "live",
+      modelGrounded: true,
+      prediction: pred,
+    };
+  } catch (err) {
+    console.error(`[aiService] model grounding failed: ${err instanceof Error ? err.message : "unknown_error"}`);
+    return null;
+  }
+}
+
+function shouldUseWebGrounding(question = "") {
+  const q = String(question || "").toLowerCase();
+  const hasSeaweedContext = ["seaweed", "kappaphycus", "gracilaria", "ulva", "sargassum", "aquaculture"].some((k) =>
+    q.includes(k),
+  );
+  const hasRecencyIntent = ["latest", "today", "current", "news", "price", "market", "policy", "regulation"].some((k) =>
+    q.includes(k),
+  );
+  return hasSeaweedContext && hasRecencyIntent;
+}
+
+async function fetchWebSnapshot(question = "") {
+  const q = encodeURIComponent(String(question || "").slice(0, 180));
+  const url = `https://api.duckduckgo.com/?q=${q}&format=json&no_redirect=1&no_html=1`;
+  try {
+    const data = await fetchJson(url, { method: "GET" }, 4500);
+    const abstract = String(data?.AbstractText || "").trim();
+    const heading = String(data?.Heading || "").trim();
+    const related = Array.isArray(data?.RelatedTopics) ? data.RelatedTopics : [];
+    const firstRelated = related
+      .map((x) => (x && typeof x === "object" ? String(x.Text || "").trim() : ""))
+      .find(Boolean);
+    const lines = [];
+    if (heading && abstract) lines.push(`${heading}: ${abstract}`);
+    else if (abstract) lines.push(abstract);
+    if (firstRelated) lines.push(`Related: ${firstRelated}`);
+    return lines.join("\n").trim();
+  } catch {
+    return "";
+  }
 }
 
 function normalizeUiAnswer(input) {
@@ -336,6 +516,12 @@ export async function runChat(question, context = {}) {
   const cached = getCached(cacheKey);
   if (cached) return cached;
 
+  const grounded = await maybeRunModelGrounding(question, context);
+  if (grounded) {
+    setCached(cacheKey, grounded);
+    return grounded;
+  }
+
   if (config.aiRouterMode === "provider-first") {
     for (const provider of ["langgraph", "langchain", "crewai"]) {
       const tried = await tryProvider(provider, "/chat", { question, context, routedAgent });
@@ -349,6 +535,10 @@ export async function runChat(question, context = {}) {
           status: tried.out?.status || "live",
           latencyMs: Number(tried.out?.latencyMs || 0) || undefined,
         };
+        if (shouldUseWebGrounding(question)) {
+          const web = await fetchWebSnapshot(question);
+          if (web) out.answer = normalizeUiAnswer(`${out.answer}\n\nLive web snapshot:\n${web}`);
+        }
         setCached(cacheKey, out);
         return out;
       }
@@ -367,6 +557,10 @@ export async function runChat(question, context = {}) {
     status: routed.status,
     latencyMs: routed.latencyMs,
   };
+  if (shouldUseWebGrounding(question)) {
+    const web = await fetchWebSnapshot(question);
+    if (web) out.answer = normalizeUiAnswer(`${out.answer}\n\nLive web snapshot:\n${web}`);
+  }
   setCached(cacheKey, out);
   return out;
 }
@@ -376,6 +570,24 @@ export async function runVoice(question, context = {}) {
   const cacheKey = `voice:${routedAgent}:${normalize(question)}:${stableStringify(context)}`;
   const cached = getCached(cacheKey);
   if (cached) return cached;
+
+  const grounded = await maybeRunModelGrounding(question, context);
+  if (grounded) {
+    const voiceOut = {
+      ...grounded,
+      ttsText: normalizeUiAnswer(grounded.answer),
+      voiceProfile: String(context?.voiceProfile || "female").toLowerCase(),
+    };
+    try {
+      await attachElevenLabsOrThrow(voiceOut, voiceOut.voiceProfile);
+    } catch (err) {
+      if (config.elevenLabsStrictVoice) throw err;
+    }
+    const cacheSafe = { ...voiceOut };
+    delete cacheSafe.audioBase64;
+    setCached(cacheKey, cacheSafe);
+    return voiceOut;
+  }
 
   const voiceProfile = String(context?.voiceProfile || "female").toLowerCase();
 

@@ -85,6 +85,18 @@ const suggestedPrompts = [
   "Which new location is worth testing next?",
 ];
 
+const locationToCoords: Record<string, { lat: number; lon: number }> = {
+  "Gulf of Mannar": { lat: 9.1, lon: 79.3 },
+  "Palk Bay": { lat: 9.4, lon: 79.2 },
+  Lakshadweep: { lat: 10.5, lon: 72.7 },
+  "Andaman Islands": { lat: 11.7, lon: 92.7 },
+  "Gulf of Kachchh": { lat: 22.6, lon: 69.8 },
+  Chilika: { lat: 19.7, lon: 85.3 },
+  Ratnagiri: { lat: 16.9, lon: 73.3 },
+  Karwar: { lat: 14.8, lon: 74.1 },
+  Kollam: { lat: 8.9, lon: 76.6 },
+};
+
 function renderInline(text: string) {
   const parts = text.split(/(\*\*[^*]+\*\*)/g);
   return parts.map((part, idx) => {
@@ -410,10 +422,18 @@ export default function Chatbot() {
     mode: "text" | "voice" = "text",
     options: { autoResumeVoice?: boolean } = {},
   ) => {
-    const base = text || input;
-    const contextLine = `Mode=${inputMode}; Location=${contextLocation}; Species=${contextSpecies}; Season=${contextSeason}`;
-    const msg = `${base}\n\n[Context] ${contextLine}`;
+    const base = String(text || input || "").trim();
+    const msg = base;
     if (!msg.trim()) return;
+    const selectedCoords = locationToCoords[contextLocation];
+    const aiContext = {
+      mode: inputMode,
+      locationName: contextLocation,
+      speciesHint: contextSpecies,
+      season: contextSeason,
+      lat: selectedCoords?.lat,
+      lon: selectedCoords?.lon,
+    };
 
     setMessages((prev) => [...prev, { role: "user", content: base }]);
     setInput("");
@@ -424,7 +444,7 @@ export default function Chatbot() {
 
     try {
       if (mode === "voice") {
-        const res = await api.voiceRespond(msg, token || undefined, sessionId, sttLocale, "female");
+        const res = await api.voiceRespond(msg, token || undefined, sessionId, sttLocale, "female", aiContext);
         if (res.sessionId) {
           setSessionId(res.sessionId);
           setIsDraftNewChat(false);
@@ -439,7 +459,7 @@ export default function Chatbot() {
       } else {
         try {
           let built = "";
-          const res = await api.chatStream(msg, token || undefined, sessionId, (chunk) => {
+          const res = await api.chatStream(msg, token || undefined, sessionId, aiContext, (chunk) => {
             built += chunk;
             setStreamingAssistant(built);
           });
@@ -460,7 +480,7 @@ export default function Chatbot() {
           setStreamingAssistant("");
         } catch {
           setStreamingAssistant("");
-          const res = await api.chat(msg, token || undefined, sessionId);
+          const res = await api.chat(msg, token || undefined, sessionId, aiContext);
           if (res.sessionId) {
             setSessionId(res.sessionId);
             setIsDraftNewChat(false);
