@@ -364,9 +364,9 @@ jobs:
             fi
             if [[ "${SERVICE}" == "blueweave-frontend" || "${SERVICE}" == "all" ]]; then
               if systemctl list-unit-files | grep -q '^nginx\.service'; then
-                # Reachability check only: do not fail deploy on non-2xx from root route.
-                curl -sSI --max-time 5 http://127.0.0.1/ | head -n 1 || {
-                  echo "nginx localhost check failed (connection issue)"
+                # Check a concrete static file path that should return 200 when frontend is deployed.
+                curl -fsSI --max-time 5 http://127.0.0.1/index.html | head -n 1 || {
+                  echo "nginx localhost check failed for /index.html"
                   exit 1
                 }
               else
