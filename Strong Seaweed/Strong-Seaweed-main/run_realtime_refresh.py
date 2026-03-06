@@ -6,9 +6,9 @@ from pathlib import Path
 from project_paths import BASE, TABULAR_DIR, OUTPUTS_DIR, ensure_dirs
 
 
-def run(cmd: list[str]) -> None:
+def run(cmd: list[str], env: dict[str, str] | None = None) -> None:
     print(">>", " ".join(cmd))
-    subprocess.run(cmd, check=True, cwd=BASE)
+    subprocess.run(cmd, check=True, cwd=BASE, env=env)
 
 
 def parse_args() -> argparse.Namespace:
@@ -74,19 +74,19 @@ def main() -> None:
     if args.download_copernicus:
         if not args.cmems_username or not args.cmems_password:
             raise ValueError("Set --cmems_username/--cmems_password or env CMEMS_USERNAME/CMEMS_PASSWORD.")
+        dl_env = os.environ.copy()
+        dl_env["CMEMS_USERNAME"] = args.cmems_username
+        dl_env["CMEMS_PASSWORD"] = args.cmems_password
         run(
             [
                 "python",
                 "download_copernicus_data.py",
-                "--username",
-                args.cmems_username,
-                "--password",
-                args.cmems_password,
                 "--start",
                 args.start,
                 "--end",
                 args.end,
-            ]
+            ],
+            env=dl_env,
         )
         run(["python", "process_copernicus_ocean_features.py"])
         run(["python", "build_feature_matrix.py"])

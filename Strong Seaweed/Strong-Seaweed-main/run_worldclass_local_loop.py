@@ -8,9 +8,9 @@ from pathlib import Path
 from project_paths import BASE, REPORTS_DIR, TABULAR_DIR, ensure_dirs
 
 
-def run(cmd: list[str], check: bool = True) -> int:
+def run(cmd: list[str], check: bool = True, env: dict[str, str] | None = None) -> int:
     print(">>", " ".join(cmd), flush=True)
-    proc = subprocess.run(cmd, check=False, cwd=BASE)
+    proc = subprocess.run(cmd, check=False, cwd=BASE, env=env)
     if check and proc.returncode != 0:
         raise subprocess.CalledProcessError(proc.returncode, cmd)
     return int(proc.returncode)
@@ -55,19 +55,19 @@ def main() -> None:
                 raise ValueError(
                     "download_copernicus requested but CMEMS credentials are missing."
                 )
+            dl_env = os.environ.copy()
+            dl_env["CMEMS_USERNAME"] = args.cmems_username
+            dl_env["CMEMS_PASSWORD"] = args.cmems_password
             run(
                 [
                     "python",
                     "download_copernicus_data.py",
-                    "--username",
-                    args.cmems_username,
-                    "--password",
-                    args.cmems_password,
                     "--start",
                     args.start,
                     "--end",
                     args.end,
-                ]
+                ],
+                env=dl_env,
             )
             summary["steps"].append("copernicus_download")
 
