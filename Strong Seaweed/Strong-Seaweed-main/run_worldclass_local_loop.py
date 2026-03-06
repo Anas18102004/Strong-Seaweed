@@ -8,9 +8,12 @@ from pathlib import Path
 from project_paths import BASE, REPORTS_DIR, TABULAR_DIR, ensure_dirs
 
 
-def run(cmd: list[str]) -> None:
+def run(cmd: list[str], check: bool = True) -> int:
     print(">>", " ".join(cmd), flush=True)
-    subprocess.run(cmd, check=True, cwd=BASE)
+    proc = subprocess.run(cmd, check=False, cwd=BASE)
+    if check and proc.returncode != 0:
+        raise subprocess.CalledProcessError(proc.returncode, cmd)
+    return int(proc.returncode)
 
 
 def parse_args() -> argparse.Namespace:
@@ -29,6 +32,7 @@ def parse_args() -> argparse.Namespace:
     p.add_argument("--kappa_bg_ratio", type=int, default=6)
     p.add_argument("--skip_kappa_refresh", action="store_true")
     p.add_argument("--skip_multispecies_refresh", action="store_true")
+    p.add_argument("--incumbent_kappa_tag", type=str, default="v1.1r_base46_cmp")
     return p.parse_args()
 
 
@@ -84,7 +88,8 @@ def main() -> None:
             )
             summary["steps"].append("kappa_refresh_retrain")
 
-            run(
+            readiness_json = REPORTS_DIR / f"real_world_readiness_check_{run_tag}.json"
+            rc = run(
                 [
                     "python",
                     "real_world_readiness_check.py",
@@ -93,12 +98,38 @@ def main() -> None:
                     "--training_csv",
                     str(TABULAR_DIR / f"training_dataset_{run_tag}.csv"),
                     "--output_json",
-                    str(REPORTS_DIR / f"real_world_readiness_check_{run_tag}.json"),
+                    str(readiness_json),
                     "--output_md",
                     str(Path("docs") / f"REAL_WORLD_READINESS_{run_tag}.md"),
                 ]
+                ,
+                check=False,
             )
+            decision = "UNKNOWN"
+            if readiness_json.exists():
+                try:
+                    decision = json.loads(readiness_json.read_text(encoding="utf-8")).get("decision", "UNKNOWN")
+                except Exception:
+                    decision = "UNKNOWN"
+            summary["kappa_readiness"] = {"decision": decision, "exit_code": rc}
             summary["steps"].append("kappa_readiness_gate")
+
+            # Promote only when candidate score improves incumbent; optional readiness guard.
+            run(
+                [
+                    "python",
+                    "promote_kappa_release.py",
+                    "--candidate_tag",
+                    run_tag,
+                    "--incumbent_tag",
+                    args.incumbent_kappa_tag,
+                    "--require_readiness",
+                    "--readiness_json",
+                    str(readiness_json),
+                ],
+                check=False,
+            )
+            summary["steps"].append("kappa_promotion_check")
 
         # 3) Multispecies weak-supervision refresh (rich Copernicus features + strict geographic gate).
         if not args.skip_multispecies_refresh:
@@ -158,4 +189,3 @@ def main() -> None:
 
 if __name__ == "__main__":
     main()
-

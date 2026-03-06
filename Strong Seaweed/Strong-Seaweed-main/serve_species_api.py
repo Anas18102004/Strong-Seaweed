@@ -15,7 +15,25 @@ from xgboost import XGBClassifier
 
 BASE = Path(__file__).resolve().parent
 
-KAPPA_RELEASE = os.getenv("KAPPA_RELEASE_TAG", "v1.1r_base46_cmp")
+ACTIVE_RELEASE_FILE = BASE / "artifacts" / "reports" / "active_kappa_release.json"
+
+
+def _resolve_kappa_release() -> str:
+    env_tag = os.getenv("KAPPA_RELEASE_TAG", "").strip()
+    if env_tag:
+        return env_tag
+    try:
+        if ACTIVE_RELEASE_FILE.exists():
+            data = json.loads(ACTIVE_RELEASE_FILE.read_text(encoding="utf-8"))
+            tag = str(data.get("release_tag", "")).strip()
+            if tag:
+                return tag
+    except Exception:
+        pass
+    return "v1.1r_base46_cmp"
+
+
+KAPPA_RELEASE = _resolve_kappa_release()
 KAPPA_RELEASE_FALLBACK = "kappa_india_gulf_v2_prod_ready_v3"
 MULTI_RELEASE = os.getenv("MULTI_RELEASE", "multi_species_cop_india_v5b_rich_relaxed_soft_hn")
 MULTI_RELEASE_FALLBACK = "multi_species_cop_india_v2_prod"

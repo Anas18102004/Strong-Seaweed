@@ -1,6 +1,7 @@
 import argparse
 import os
 import subprocess
+import shutil
 from pathlib import Path
 from project_paths import BASE, TABULAR_DIR, OUTPUTS_DIR, ensure_dirs
 
@@ -59,6 +60,12 @@ def main() -> None:
     training_csv = TABULAR_DIR / (f"training_dataset{suffix}.csv" if suffix else "training_dataset.csv")
     presence_csv = TABULAR_DIR / (f"kappaphycus_presence_snapped_clean{suffix}.csv" if suffix else "kappaphycus_presence_snapped_clean.csv")
     presence_report = TABULAR_DIR.parent / "reports" / (f"presence_ingestion_report{suffix}.json" if suffix else "presence_ingestion_report.json")
+    base_master_csv = TABULAR_DIR / "master_feature_matrix.csv"
+    base_presence_csv = TABULAR_DIR / "kappaphycus_presence_snapped_clean.csv"
+    if not master_csv.exists():
+        master_csv = base_master_csv
+    if not presence_csv.exists():
+        presence_csv = base_presence_csv
     if args.make_data_plan_template:
         run(["python", "ingest_presence_records.py", "--make_template"])
         print(f"Template created. Fill it and rerun with --data_plan_csv {TABULAR_DIR / 'v1_1_data_plan.csv'}")
@@ -133,6 +140,12 @@ def main() -> None:
                 str(args.max_snap_m),
             ]
         )
+        # Keep release-tagged naming stable for downstream steps if requested.
+        if args.release_tag.strip():
+            tagged_presence = TABULAR_DIR / f"kappaphycus_presence_snapped_clean_{args.release_tag.strip()}.csv"
+            if base_presence_csv.exists() and not tagged_presence.exists():
+                shutil.copyfile(base_presence_csv, tagged_presence)
+                presence_csv = tagged_presence
 
     run(
         [
