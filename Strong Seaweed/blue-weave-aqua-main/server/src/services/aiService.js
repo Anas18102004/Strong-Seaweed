@@ -137,7 +137,9 @@ function shouldUseModelGrounding(question = "", ctx = {}) {
     "which species",
     "best species",
     "what should i grow",
+    "what should i cultivate",
     "what to grow",
+    "cultivate",
     "can i cultivate",
     "is this location good",
     "farm here",
@@ -151,7 +153,8 @@ function shouldUseModelGrounding(question = "", ctx = {}) {
   const hasCoords = Number.isFinite(toNum(c.lat)) && Number.isFinite(toNum(c.lon));
   const hasLocation = String(c.locationName || "").trim().length > 0;
   const hasQuestionCoords = Boolean(extractLatLonFromQuestion(question));
-  return hasPredictIntent && (hasCoords || hasLocation || hasQuestionCoords);
+  const forcedPredictMode = String(c.mode || "").trim().toLowerCase() === "predict";
+  return (forcedPredictMode || hasPredictIntent) && (hasCoords || hasLocation || hasQuestionCoords);
 }
 
 function resolveCoords(question = "", ctx = {}) {
