@@ -57,11 +57,43 @@ jobs:
           tar -czf "$RUNNER_TEMP/blueweave-dist.tgz" -C . dist
 
       - name: Setup SSH key
+        env:
+          AWS_HOST: ${{ secrets.AWS_HOST }}
+          AWS_USER: ${{ secrets.AWS_USER }}
+          AWS_SSH_KEY: ${{ secrets.AWS_SSH_KEY }}
         run: |
-          mkdir -p ~/.ssh
-          echo "${{ secrets.AWS_SSH_KEY }}" > ~/.ssh/deploy_key
-          chmod 600 ~/.ssh/deploy_key
-          ssh-keyscan -H "${{ secrets.AWS_HOST }}" >> ~/.ssh/known_hosts
+          set -euo pipefail
+          if [[ -z "${AWS_HOST:-}" ]]; then
+            echo "::error::Missing GitHub secret AWS_HOST"
+            exit 1
+          fi
+          if [[ -z "${AWS_USER:-}" ]]; then
+            echo "::error::Missing GitHub secret AWS_USER"
+            exit 1
+          fi
+          if [[ -z "${AWS_SSH_KEY:-}" ]]; then
+            echo "::error::Missing GitHub secret AWS_SSH_KEY"
+            exit 1
+          fi
+
+          mkdir -p "$HOME/.ssh"
+          chmod 700 "$HOME/.ssh"
+
+          # Normalize potential CRLF line endings from copied secrets.
+          printf '%s\n' "$AWS_SSH_KEY" | tr -d '\r' > "$HOME/.ssh/deploy_key"
+          chmod 600 "$HOME/.ssh/deploy_key"
+
+          # Validate key format early so failures are explicit.
+          ssh-keygen -l -f "$HOME/.ssh/deploy_key" >/dev/null 2>&1 || {
+            echo "::error::AWS_SSH_KEY is not a valid private key"
+            exit 1
+          }
+
+          ssh-keyscan -T 15 -H "$AWS_HOST" >> "$HOME/.ssh/known_hosts" 2>/dev/null || {
+            echo "::error::Unable to reach AWS_HOST with ssh-keyscan: ${AWS_HOST}"
+            exit 1
+          }
+          chmod 644 "$HOME/.ssh/known_hosts"
 
       - name: Upload frontend artifact to server
         if: ${{ github.event_name == 'push' || github.event.inputs.service == 'blueweave-frontend' || github.event.inputs.service == 'all' }}
