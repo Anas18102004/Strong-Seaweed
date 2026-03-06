@@ -68,13 +68,13 @@ def pick_threshold(
     if len(valid) > 0:
         i = valid[np.argmax(recall[valid])]
     else:
-        bounded = np.where(thresholds <= max_threshold)[0]
+        bounded = np.where((thresholds >= min_threshold) & (thresholds <= max_threshold))[0]
         if len(bounded) > 0:
             f1_bounded = 2 * precision[bounded] * recall[bounded] / np.clip(precision[bounded] + recall[bounded], 1e-9, None)
             i = int(bounded[np.argmax(f1_bounded)])
         else:
-            f1 = 2 * precision * recall / np.clip(precision + recall, 1e-9, None)
-            i = int(np.argmax(f1))
+            # If everything falls outside the bounded window, use the most conservative threshold available.
+            i = int(np.argmax(thresholds))
     return {"threshold": float(thresholds[i]), "precision": float(precision[i]), "recall": float(recall[i])}
 
 
@@ -142,7 +142,7 @@ def train_one(df: pd.DataFrame, seed: int):
     p_oof = oof_raw[good]
     calibrator = IsotonicRegression(out_of_bounds="clip")
     calibrator.fit(p_oof, y_oof)
-    p_cal = calibrator.predict(p_oof)
+    p_cal = np.clip(calibrator.predict(p_oof), 0.0, 1.0)
     thr = pick_threshold(y_oof, p_cal, min_precision=0.75, min_threshold=0.5)
 
     pos_full = int(y.sum())
@@ -178,11 +178,11 @@ def train_one(df: pd.DataFrame, seed: int):
         "spatial_auc_std": float(np.std(aucs)),
         "spatial_ap_mean": float(np.mean(aps)),
         "spatial_brier_mean": float(np.mean(briers)),
-        "oof_auc_raw": float(roc_auc_score(y_oof, p_oof)),
+        "oof_auc_raw": float(roc_auc_score(y_oof, np.clip(p_oof, 0.0, 1.0))),
         "oof_auc_calibrated": float(roc_auc_score(y_oof, p_cal)),
-        "oof_ap_raw": float(average_precision_score(y_oof, p_oof)),
+        "oof_ap_raw": float(average_precision_score(y_oof, np.clip(p_oof, 0.0, 1.0))),
         "oof_ap_calibrated": float(average_precision_score(y_oof, p_cal)),
-        "oof_brier_raw": float(brier_score_loss(y_oof, p_oof)),
+        "oof_brier_raw": float(brier_score_loss(y_oof, np.clip(p_oof, 0.0, 1.0))),
         "oof_brier_calibrated": float(brier_score_loss(y_oof, p_cal)),
         "threshold": thr,
     }
