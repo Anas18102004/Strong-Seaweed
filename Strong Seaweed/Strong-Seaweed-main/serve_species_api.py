@@ -42,6 +42,16 @@ KAPPA_THRESHOLD_OFFSET = float(os.getenv("KAPPA_THRESHOLD_OFFSET", "0.0"))
 PROXY_THRESHOLD_OFFSET = float(os.getenv("PROXY_THRESHOLD_OFFSET", "0.0"))
 FEATURE_STALENESS_DAYS = int(os.getenv("FEATURE_STALENESS_DAYS", "540"))
 SCREENING_FALLBACK_FLOOR_PERCENT = float(os.getenv("SCREENING_FALLBACK_FLOOR_PERCENT", "10.0"))
+KAPPA_GEO_PRIOR_RADIUS_KM = float(os.getenv("KAPPA_GEO_PRIOR_RADIUS_KM", "120.0"))
+KAPPA_GEO_PRIOR_PROB_FLOOR_PERCENT = float(os.getenv("KAPPA_GEO_PRIOR_PROB_FLOOR_PERCENT", "25.0"))
+KAPPA_GEO_PRIOR_MAX_NEG_MARGIN_PERCENT = float(os.getenv("KAPPA_GEO_PRIOR_MAX_NEG_MARGIN_PERCENT", "80.0"))
+
+# High-confidence cultivation anchors used only as a conservative screening prior.
+KAPPA_CULTIVATION_ANCHORS = [
+    {"name": "Mandapam", "lat": 9.28, "lon": 79.12},
+    {"name": "Palk_Bay_Central", "lat": 9.35, "lon": 79.20},
+    {"name": "Rameswaram", "lat": 9.29, "lon": 79.31},
+]
 
 KAPPA_MASTER = BASE / "data" / "tabular" / "master_feature_matrix_kappa_india_gulf_v2_hardmerge4_augmented.csv"
 
@@ -116,6 +126,21 @@ def haversine_km(lat1: float, lon1: float, lat2: np.ndarray, lon2: np.ndarray) -
     dlon = np.radians(lon2 - lon1)
     a = np.sin(dlat / 2.0) ** 2 + np.cos(np.radians(lat1)) * np.cos(np.radians(lat2)) * np.sin(dlon / 2.0) ** 2
     return 2.0 * r * np.arcsin(np.sqrt(np.clip(a, 0.0, 1.0)))
+
+
+def _distance_km_point(lat1: float, lon1: float, lat2: float, lon2: float) -> float:
+    return float(haversine_km(lat1, lon1, np.array([lat2]), np.array([lon2]))[0])
+
+
+def _nearest_anchor(lat: float, lon: float) -> tuple[str | None, float]:
+    best_name = None
+    best_dist = 1e9
+    for a in KAPPA_CULTIVATION_ANCHORS:
+        d = _distance_km_point(lat, lon, float(a["lat"]), float(a["lon"]))
+        if d < best_dist:
+            best_dist = d
+            best_name = str(a["name"])
+    return best_name, float(best_dist)
 
 
 def _load_kappa():
@@ -585,6 +610,27 @@ def predict_species(lat: float, lon: float, form_input: dict | None = None) -> d
         else:
             warnings.append("no_species_meets_suitability_threshold")
 
+    # Conservative geo-prior rescue for known Kappaphycus belts.
+    # This avoids obvious false negatives when dedicated model probability is moderate
+    # but strict thresholding plus proxy overconfidence dominates the final pick.
+    if kappa_in_coverage and kappa_prob is not None:
+        anchor_name, anchor_distance_km = _nearest_anchor(lat, lon)
+        kappa_entry = next((sp for sp in species if sp.get("speciesId") == "kappaphycus_alvarezii"), None)
+        if kappa_entry is not None:
+            kappa_margin_pct = float(kappa_entry.get("marginToThresholdPercent") or 0.0)
+            eligible_geo_prior = (
+                anchor_distance_km <= KAPPA_GEO_PRIOR_RADIUS_KM
+                and float(kappa_prob) >= KAPPA_GEO_PRIOR_PROB_FLOOR_PERCENT
+                and kappa_margin_pct >= (-1.0 * KAPPA_GEO_PRIOR_MAX_NEG_MARGIN_PERCENT)
+            )
+            if eligible_geo_prior and (best is None or best.get("speciesId") != "kappaphycus_alvarezii"):
+                adjusted = dict(kappa_entry)
+                adjusted["reason"] = "geo_prior_kappaphycus_screening"
+                adjusted["actionability"] = "test_pilot_only"
+                best = adjusted
+                warnings.append("geo_prior_adjustment_applied")
+                warnings.append(f"geo_prior_anchor={anchor_name}")
+
     loaded_other_releases = sorted(
         {m["release"] for m in OTHER_MODELS.values() if isinstance(m, dict) and "release" in m}
     )
@@ -613,7 +659,7 @@ def predict_species(lat: float, lon: float, form_input: dict | None = None) -> d
         "input": {"lat": lat, "lon": lon},
         "inputMode": "lat_lon_plus_overrides" if provided_override_count > 0 else "lat_lon_only",
         "source": "species-orchestrator-production",
-        "decisionPolicyVersion": "v2_threshold_offsets",
+        "decisionPolicyVersion": "v3_threshold_offsets_geo_prior",
         "modelRelease": f"{KAPPA['release']}+{multi_release_name}",
         "featureTimestamp": COP.get("feature_timestamp"),
         "nearestGrid": k["nearestGrid"],
