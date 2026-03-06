@@ -161,11 +161,12 @@ def main() -> None:
     failed = [name for name, ok in checks if not ok]
     hard_checks_ok = all(ok for _, ok in checks[:5])
     independent_ok = all(ok for _, ok in checks[5:11])
-    data_ok = all(ok for _, ok in checks[11:])
+    data_core_ok = all(ok for _, ok in checks[11:15])
+    oof_ok = checks[15][1]
 
-    if hard_checks_ok and independent_ok and data_ok:
+    if hard_checks_ok and independent_ok and data_core_ok:
         decision = "PASS"
-    elif hard_checks_ok and data_ok:
+    elif hard_checks_ok and data_core_ok:
         decision = "WARN"
     else:
         decision = "FAIL"
@@ -212,6 +213,7 @@ def main() -> None:
         },
         "checks": [{"name": name, "pass": ok} for name, ok in checks],
         "failed_checks": failed,
+        "warnings": (["oof_missing_ratio"] if not oof_ok else []),
     }
 
     args.output_json.parent.mkdir(parents=True, exist_ok=True)

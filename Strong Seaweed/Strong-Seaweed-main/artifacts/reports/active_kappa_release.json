@@ -1,0 +1,22 @@
+{
+  "candidate_tag": "kappa_india_gulf_v2_prod_ready_v3",
+  "incumbent_tag": "v1.1r_base46_cmp",
+  "candidate_metrics": {
+    "spatial_auc_mean": 0.7210830529764354,
+    "oof_auc_calibrated": 0.7030044894670198,
+    "oof_ap_calibrated": 0.5123012251862742,
+    "oof_brier_calibrated": 0.2554904722541076
+  },
+  "incumbent_metrics": {
+    "spatial_auc_mean": 0.6357382882382883,
+    "oof_auc_calibrated": 0.6694427148194271,
+    "oof_ap_calibrated": 0.33164923463053225,
+    "oof_brier_calibrated": 0.1621934473514557
+  },
+  "candidate_score": 0.6146353507145433,
+  "incumbent_score": 0.5299307660312037,
+  "score_delta": 0.08470458468333963,
+  "readiness_decision": "PASS",
+  "promoted": true,
+  "release_tag": "kappa_india_gulf_v2_prod_ready_v3"
+}
