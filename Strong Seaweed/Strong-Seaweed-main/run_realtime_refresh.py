@@ -50,6 +50,13 @@ def parse_args() -> argparse.Namespace:
         help="Optional release tag (e.g., v1.1) for separate train/score artifacts.",
     )
     p.add_argument(
+        "--external_labels_mode",
+        type=str,
+        default="india_wide",
+        choices=["master_bbox", "india_wide"],
+        help="Scope for external label fetch when --fetch_external_labels is set.",
+    )
+    p.add_argument(
         "--no_production",
         action="store_true",
         help="Disable production threshold constraints (not recommended).",
@@ -151,14 +158,35 @@ def main() -> None:
         run(cmd)
 
     if args.fetch_external_labels:
-        run(["python", "fetch_external_presence_labels.py"])
+        fetch_cmd = ["python", "fetch_external_presence_labels.py"]
+        if args.external_labels_mode == "india_wide":
+            fetch_cmd.extend(
+                [
+                    "--out",
+                    str(TABULAR_DIR / "external_presence_candidates_india_wide.csv"),
+                    "--min_lon",
+                    "68",
+                    "--max_lon",
+                    "94",
+                    "--min_lat",
+                    "5",
+                    "--max_lat",
+                    "24",
+                    "--min_year",
+                    "2005",
+                ]
+            )
+            external_csv = TABULAR_DIR / "external_presence_candidates_india_wide.csv"
+        else:
+            external_csv = TABULAR_DIR / "external_presence_candidates.csv"
+        run(fetch_cmd)
         run(
             [
                 "python",
                 "ingest_presence_records.py",
                 "--inputs",
                 str(TABULAR_DIR / "kappaphycus_presence_snapped_clean.csv"),
-                str(TABULAR_DIR / "external_presence_candidates.csv"),
+                str(external_csv),
                 "--max_snap_m",
                 str(args.max_snap_m),
             ]
