@@ -13,6 +13,7 @@ SPECIES_CANDIDATES = [
     "Kappaphycus striatus",
     "Kappaphycus cottonii",
     "Eucheuma denticulatum",
+    "Eucheuma",
 ]
 
 
@@ -24,6 +25,9 @@ def parse_args() -> argparse.Namespace:
     p.add_argument("--min_lat", type=float, default=None)
     p.add_argument("--max_lat", type=float, default=None)
     p.add_argument("--timeout", type=int, default=30)
+    p.add_argument("--pad_lon_deg", type=float, default=1.5, help="Bbox padding (degrees) applied when bbox is inferred from master matrix.")
+    p.add_argument("--pad_lat_deg", type=float, default=1.0, help="Bbox padding (degrees) applied when bbox is inferred from master matrix.")
+    p.add_argument("--min_year", type=int, default=2005, help="Drop very old records to keep labels aligned with modern ocean conditions.")
     return p.parse_args()
 
 
@@ -33,7 +37,11 @@ def get_bbox(args: argparse.Namespace) -> tuple[float, float, float, float]:
     if not MASTER.exists():
         raise FileNotFoundError(f"Missing {MASTER}. Provide bbox explicitly.")
     df = pd.read_csv(MASTER, usecols=["lon", "lat"])
-    return float(df.lon.min()), float(df.lon.max()), float(df.lat.min()), float(df.lat.max())
+    min_lon = float(df.lon.min()) - float(args.pad_lon_deg)
+    max_lon = float(df.lon.max()) + float(args.pad_lon_deg)
+    min_lat = float(df.lat.min()) - float(args.pad_lat_deg)
+    max_lat = float(df.lat.max()) + float(args.pad_lat_deg)
+    return min_lon, max_lon, min_lat, max_lat
 
 
 def fetch_obis(species: str, bbox: tuple[float, float, float, float], timeout: int) -> list[dict]:
@@ -138,8 +146,17 @@ def main() -> None:
     else:
         df["lon"] = pd.to_numeric(df["lon"], errors="coerce")
         df["lat"] = pd.to_numeric(df["lat"], errors="coerce")
+        df["year"] = pd.to_numeric(df["year"], errors="coerce")
         df = df.dropna(subset=["lon", "lat"])
+        if args.min_year:
+            # Keep likely-relevant modern records; preserve rows with missing year.
+            df = df[(df["year"].isna()) | (df["year"] >= int(args.min_year))]
+        # Remove exact and near-duplicate coordinates from mixed sources.
+        df["lon_r5"] = df["lon"].round(5)
+        df["lat_r5"] = df["lat"].round(5)
         df = df.drop_duplicates(subset=["source", "record_id", "lon", "lat"])
+        df = df.drop_duplicates(subset=["species", "lon_r5", "lat_r5"])
+        df = df.drop(columns=["lon_r5", "lat_r5"], errors="ignore")
         df = df.sort_values(["source", "species", "year"], na_position="last").reset_index(drop=True)
 
     args.out.parent.mkdir(parents=True, exist_ok=True)

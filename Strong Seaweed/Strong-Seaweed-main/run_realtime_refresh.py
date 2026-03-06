@@ -49,6 +49,29 @@ def parse_args() -> argparse.Namespace:
         default="",
         help="Optional release tag (e.g., v1.1) for separate train/score artifacts.",
     )
+    p.add_argument(
+        "--no_production",
+        action="store_true",
+        help="Disable production threshold constraints (not recommended).",
+    )
+    p.add_argument(
+        "--min_precision_at_threshold",
+        type=float,
+        default=0.80,
+        help="Minimum precision target used by train_realtime_production threshold selection.",
+    )
+    p.add_argument(
+        "--min_recall_at_threshold",
+        type=float,
+        default=0.40,
+        help="Minimum recall target used by train_realtime_production threshold selection.",
+    )
+    p.add_argument(
+        "--min_threshold",
+        type=float,
+        default=0.50,
+        help="Minimum deployment threshold in production mode.",
+    )
     return p.parse_args()
 
 
@@ -200,7 +223,16 @@ def main() -> None:
         if not inference_feature_source.exists() and base_inference_feature_source.exists():
             shutil.copyfile(base_inference_feature_source, inference_feature_source)
 
-    train_cmd = ["python", "train_realtime_production.py"]
+    train_cmd = [
+        "python",
+        "train_realtime_production.py",
+        "--min_precision_at_threshold",
+        str(float(args.min_precision_at_threshold)),
+        "--min_recall_at_threshold",
+        str(float(args.min_recall_at_threshold)),
+    ]
+    if not args.no_production:
+        train_cmd.extend(["--production", "--min_threshold", str(float(args.min_threshold))])
     if args.release_tag.strip():
         train_cmd.extend(
             [
