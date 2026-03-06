@@ -1,5 +1,6 @@
 import json
 import os
+import warnings
 from http.server import BaseHTTPRequestHandler, HTTPServer
 from pathlib import Path
 from datetime import datetime, timezone
@@ -21,7 +22,8 @@ MULTI_RELEASE_FALLBACK = "multi_species_cop_india_v2_prod"
 KAPPA_MAX_DISTANCE_KM = float(os.getenv("KAPPA_MAX_DISTANCE_KM", "250"))
 KAPPA_THRESHOLD_OFFSET = float(os.getenv("KAPPA_THRESHOLD_OFFSET", "0.0"))
 PROXY_THRESHOLD_OFFSET = float(os.getenv("PROXY_THRESHOLD_OFFSET", "0.0"))
-FEATURE_STALENESS_DAYS = int(os.getenv("FEATURE_STALENESS_DAYS", "45"))
+FEATURE_STALENESS_DAYS = int(os.getenv("FEATURE_STALENESS_DAYS", "540"))
+SCREENING_FALLBACK_FLOOR_PERCENT = float(os.getenv("SCREENING_FALLBACK_FLOOR_PERCENT", "10.0"))
 
 KAPPA_MASTER = BASE / "data" / "tabular" / "master_feature_matrix_kappa_india_gulf_v2_hardmerge4_augmented.csv"
 
@@ -168,37 +170,41 @@ def _load_copernicus_grids():
     phys = xr.open_dataset(INDIA_PHYSICS_NC)
     wav = xr.open_dataset(INDIA_WAVES_NC)
     try:
-        so = phys["so"].mean(dim="depth", skipna=True) if "depth" in phys["so"].dims else phys["so"]
-        uo = phys["uo"].mean(dim="depth", skipna=True) if "depth" in phys["uo"].dims else phys["uo"]
-        vo = phys["vo"].mean(dim="depth", skipna=True) if "depth" in phys["vo"].dims else phys["vo"]
-        current = np.sqrt(uo**2 + vo**2)
-        wave = wav["VHM0"].interp(longitude=so["longitude"], latitude=so["latitude"], method="nearest")
+        # Some grid cells can be all-NaN in source files; keep logs clean and use median fallback later.
+        with warnings.catch_warnings():
+            warnings.filterwarnings("ignore", message="All-NaN slice encountered")
+            warnings.filterwarnings("ignore", message="Degrees of freedom <= 0 for slice")
+            so = phys["so"].mean(dim="depth", skipna=True) if "depth" in phys["so"].dims else phys["so"]
+            uo = phys["uo"].mean(dim="depth", skipna=True) if "depth" in phys["uo"].dims else phys["uo"]
+            vo = phys["vo"].mean(dim="depth", skipna=True) if "depth" in phys["vo"].dims else phys["vo"]
+            current = np.sqrt(uo**2 + vo**2)
+            wave = wav["VHM0"].interp(longitude=so["longitude"], latitude=so["latitude"], method="nearest")
 
-        so_mean = so.mean(dim="time", skipna=True)
-        so_std = so.std(dim="time", skipna=True)
-        so_min = so.min(dim="time", skipna=True)
-        so_max = so.max(dim="time", skipna=True)
-        so_p10 = _q(so, 0.10)
-        so_p90 = _q(so, 0.90)
-        so_range = so_max - so_min
-        so_cv = so_std / (np.abs(so_mean) + 1e-6)
+            so_mean = so.mean(dim="time", skipna=True)
+            so_std = so.std(dim="time", skipna=True)
+            so_min = so.min(dim="time", skipna=True)
+            so_max = so.max(dim="time", skipna=True)
+            so_p10 = _q(so, 0.10)
+            so_p90 = _q(so, 0.90)
+            so_range = so_max - so_min
+            so_cv = so_std / (np.abs(so_mean) + 1e-6)
 
-        uo_mean = uo.mean(dim="time", skipna=True)
-        vo_mean = vo.mean(dim="time", skipna=True)
-        current_mean = current.mean(dim="time", skipna=True)
-        current_std = current.std(dim="time", skipna=True)
-        current_max = current.max(dim="time", skipna=True)
-        current_p90 = _q(current, 0.90)
-        current_cv = current_std / (np.abs(current_mean) + 1e-6)
+            uo_mean = uo.mean(dim="time", skipna=True)
+            vo_mean = vo.mean(dim="time", skipna=True)
+            current_mean = current.mean(dim="time", skipna=True)
+            current_std = current.std(dim="time", skipna=True)
+            current_max = current.max(dim="time", skipna=True)
+            current_p90 = _q(current, 0.90)
+            current_cv = current_std / (np.abs(current_mean) + 1e-6)
 
-        wave_mean = wave.mean(dim="time", skipna=True)
-        wave_std = wave.std(dim="time", skipna=True)
-        wave_min = wave.min(dim="time", skipna=True)
-        wave_max = wave.max(dim="time", skipna=True)
-        wave_p90 = _q(wave, 0.90)
-        wave_p95 = _q(wave, 0.95)
-        wave_range = wave_max - wave_min
-        wave_cv = wave_std / (np.abs(wave_mean) + 1e-6)
+            wave_mean = wave.mean(dim="time", skipna=True)
+            wave_std = wave.std(dim="time", skipna=True)
+            wave_min = wave.min(dim="time", skipna=True)
+            wave_max = wave.max(dim="time", skipna=True)
+            wave_p90 = _q(wave, 0.90)
+            wave_p95 = _q(wave, 0.95)
+            wave_range = wave_max - wave_min
+            wave_cv = wave_std / (np.abs(wave_mean) + 1e-6)
 
         so_grad = _grad_mag_2d(so_mean)
         current_grad = _grad_mag_2d(current_mean)
@@ -542,7 +548,24 @@ def predict_species(lat: float, lon: float, form_input: dict | None = None) -> d
     ]
     best = sorted(eligible, key=lambda x: float(x["probabilityPercent"]), reverse=True)[0] if eligible else None
     if best is None:
-        warnings.append("no_species_meets_suitability_threshold")
+        # Screening fallback: if nothing crosses strict threshold, still return top candidate when probability is reasonable.
+        ready_scored = [
+            s
+            for s in species
+            if s["ready"] and s["probabilityPercent"] is not None
+        ]
+        if ready_scored:
+            top = sorted(ready_scored, key=lambda x: float(x["probabilityPercent"]), reverse=True)[0]
+            if float(top["probabilityPercent"]) >= SCREENING_FALLBACK_FLOOR_PERCENT:
+                top = dict(top)
+                top["reason"] = "screening_fallback_top_ranked"
+                top["actionability"] = "test_pilot_only"
+                best = top
+                warnings.append("no_species_meets_threshold_using_screening_fallback")
+            else:
+                warnings.append("no_species_meets_suitability_threshold")
+        else:
+            warnings.append("no_species_meets_suitability_threshold")
 
     loaded_other_releases = sorted(
         {m["release"] for m in OTHER_MODELS.values() if isinstance(m, dict) and "release" in m}
