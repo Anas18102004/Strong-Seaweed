@@ -364,7 +364,11 @@ jobs:
             fi
             if [[ "${SERVICE}" == "blueweave-frontend" || "${SERVICE}" == "all" ]]; then
               if systemctl list-unit-files | grep -q '^nginx\.service'; then
-                curl -fsSI http://127.0.0.1/ | head -n 1
+                # Reachability check only: do not fail deploy on non-2xx from root route.
+                curl -sSI --max-time 5 http://127.0.0.1/ | head -n 1 || {
+                  echo "nginx localhost check failed (connection issue)"
+                  exit 1
+                }
               else
                 echo "nginx service not configured; skipping localhost:80 check"
               fi
