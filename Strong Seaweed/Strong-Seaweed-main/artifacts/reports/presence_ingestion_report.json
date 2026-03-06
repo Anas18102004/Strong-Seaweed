@@ -1,13 +1,17 @@
 {
   "inputs": [
     {
-      "file": "v1_1_data_plan.csv",
-      "rows": 23
+      "file": "kappaphycus_presence_snapped_clean.csv",
+      "rows": 41
+    },
+    {
+      "file": "external_presence_candidates.csv",
+      "rows": 2
     }
   ],
-  "raw_rows": 23,
-  "after_quality_filters": 23,
-  "snapped_rows": 1,
+  "raw_rows": 43,
+  "after_quality_filters": 42,
+  "snapped_rows": 41,
   "max_snap_m": 1500.0,
   "min_year": 2000,
   "bounds": {
@@ -16,11 +20,18 @@
     "lat_min": 8.508679181589768,
     "lat_max": 9.766320579357098
   },
-  "median_snap_m_before_threshold": 5190.119497731049,
-  "output_csv": "C:\\Users\\Anas\\Desktop\\Strong Seaweed\\data\\tabular\\kappaphycus_presence_snapped_clean.csv",
-  "require_verified": true,
+  "median_snap_m_before_threshold": 0.0,
+  "output_csv": "C:\\Users\\Anas\\Desktop\\Strong Seaweed\\Strong Seaweed\\Strong-Seaweed-main\\data\\tabular\\kappaphycus_presence_snapped_clean.csv",
+  "master_csv": "C:\\Users\\Anas\\Desktop\\Strong Seaweed\\Strong Seaweed\\Strong-Seaweed-main\\data\\tabular\\master_feature_matrix.csv",
+  "training_csv": "C:\\Users\\Anas\\Desktop\\Strong Seaweed\\Strong Seaweed\\Strong-Seaweed-main\\data\\tabular\\training_dataset.csv",
+  "require_verified": false,
   "strict_acceptance": false,
+  "strict_min_confidence": 0.85,
+  "strict_min_verified_dates": 2,
+  "strict_depth_max_m": 8.0,
+  "strict_distance_to_shore_max_m": 2000.0,
   "sources_after_filter": {
-    "v1_1_data_plan.csv": 23
+    "kappaphycus_presence_snapped_clean.csv": 41,
+    "external_presence_candidates.csv": 1
   }
 }

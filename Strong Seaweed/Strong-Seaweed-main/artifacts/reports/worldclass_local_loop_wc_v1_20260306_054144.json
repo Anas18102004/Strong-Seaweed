@@ -1,0 +1,8 @@
+{
+  "run_tag": "wc_v1_20260306_054144",
+  "started_utc": "2026-03-06T05:41:44.110943Z",
+  "steps": [],
+  "status": "failed",
+  "error": "Command '['python', 'run_realtime_refresh.py', '--fetch_external_labels', '--max_snap_m', '1500.0', '--bg_ratio', '6', '--release_tag', 'wc_v1_20260306_054144']' returned non-zero exit status 1.",
+  "finished_utc": "2026-03-06T05:42:21.639769Z"
+}

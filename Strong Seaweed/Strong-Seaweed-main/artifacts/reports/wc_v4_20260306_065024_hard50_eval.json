@@ -1,0 +1,19 @@
+{
+  "release": "wc_v4_20260306_065024",
+  "n": 50,
+  "positives": 25,
+  "negatives": 25,
+  "threshold": 0.6296296119689941,
+  "accuracy": 0.48,
+  "precision": 0.4878048780487805,
+  "recall": 0.8,
+  "f1": 0.6060606060606061,
+  "roc_auc": 0.524,
+  "avg_precision": 0.5205876758720126,
+  "confusion_matrix": {
+    "tn": 4,
+    "fp": 21,
+    "fn": 5,
+    "tp": 20
+  }
+}

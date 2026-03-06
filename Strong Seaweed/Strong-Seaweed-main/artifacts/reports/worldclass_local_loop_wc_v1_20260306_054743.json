@@ -1,0 +1,10 @@
+{
+  "run_tag": "wc_v1_20260306_054743",
+  "started_utc": "2026-03-06T05:47:43.404150Z",
+  "steps": [
+    "kappa_refresh_retrain"
+  ],
+  "status": "failed",
+  "error": "Command '['python', 'real_world_readiness_check.py', '--report_json', 'releases\\\\wc_v1_20260306_054743\\\\reports\\\\xgboost_realtime_report_wc_v1_20260306_054743.json', '--training_csv', 'C:\\\\Users\\\\Anas\\\\Desktop\\\\Strong Seaweed\\\\Strong Seaweed\\\\Strong-Seaweed-main\\\\data\\\\tabular\\\\training_dataset_wc_v1_20260306_054743.csv', '--output_json', 'C:\\\\Users\\\\Anas\\\\Desktop\\\\Strong Seaweed\\\\Strong Seaweed\\\\Strong-Seaweed-main\\\\artifacts\\\\reports\\\\real_world_readiness_check_wc_v1_20260306_054743.json', '--output_md', 'docs\\\\REAL_WORLD_READINESS_wc_v1_20260306_054743.md']' returned non-zero exit status 2.",
+  "finished_utc": "2026-03-06T05:57:24.247355Z"
+}

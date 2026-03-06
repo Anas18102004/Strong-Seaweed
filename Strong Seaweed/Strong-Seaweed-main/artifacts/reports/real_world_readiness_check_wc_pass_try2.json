@@ -1,0 +1,125 @@
+{
+  "decision": "FAIL",
+  "model_version": "wc_pass_try2",
+  "inputs": {
+    "report_json": "releases\\wc_pass_try2\\reports\\xgboost_realtime_report_wc_pass_try2.json",
+    "training_csv": "data\\tabular\\training_dataset_kappa_india_gulf_v2_hardmerge4_augmented.csv",
+    "hard50_json": "artifacts\\reports\\wc_pass_try2_hard50_eval.json",
+    "independent_json": "artifacts\\reports\\wc_pass_try2_hard50_eval_nonoverlap.json",
+    "oof_csv": "releases\\wc_pass_try2\\reports\\xgboost_realtime_oof_predictions_wc_pass_try2.csv"
+  },
+  "thresholds": {
+    "min_train_spatial_auc": 0.7,
+    "min_train_oof_ap": 0.45,
+    "min_hard50_auc": 0.85,
+    "min_hard50_precision": 0.8,
+    "min_hard50_recall": 0.4,
+    "min_independent_n": 40,
+    "min_independent_pos": 20,
+    "min_independent_neg": 20,
+    "min_independent_auc": 0.75,
+    "min_independent_precision": 0.7,
+    "min_independent_recall": 0.6,
+    "max_label_conflict_ratio": 0.02,
+    "max_oof_missing_ratio": 0.15
+  },
+  "metrics": {
+    "train_spatial_auc": 0.8868741258741257,
+    "train_oof_ap_calibrated": 0.7549667071265,
+    "hard50_auc": 0.7888000000000001,
+    "hard50_precision": 0.8181818181818182,
+    "hard50_recall": 0.72,
+    "independent_n": 44,
+    "independent_pos": 22,
+    "independent_neg": 22,
+    "independent_auc": 0.7510330578512396,
+    "independent_precision": 0.7894736842105263,
+    "independent_recall": 0.6818181818181818,
+    "dataset": {
+      "n_rows": 449,
+      "n_pos": 123,
+      "n_neg": 326,
+      "bad_label_rows": 0,
+      "missing_cells": 0,
+      "rows_with_missing": 0,
+      "duplicate_lon_lat_label_rows": 0,
+      "conflict_lon_lat_points": 0,
+      "conflict_ratio": 0.0
+    },
+    "oof": {
+      "oof_csv_found": true,
+      "oof_rows": 449,
+      "oof_missing_rows": 0,
+      "oof_missing_ratio": 0.0
+    }
+  },
+  "checks": [
+    {
+      "name": "train_spatial_auc",
+      "pass": true
+    },
+    {
+      "name": "train_oof_ap_calibrated",
+      "pass": true
+    },
+    {
+      "name": "hard50_auc",
+      "pass": false
+    },
+    {
+      "name": "hard50_precision",
+      "pass": true
+    },
+    {
+      "name": "hard50_recall",
+      "pass": true
+    },
+    {
+      "name": "independent_n",
+      "pass": true
+    },
+    {
+      "name": "independent_pos",
+      "pass": true
+    },
+    {
+      "name": "independent_neg",
+      "pass": true
+    },
+    {
+      "name": "independent_auc",
+      "pass": true
+    },
+    {
+      "name": "independent_precision",
+      "pass": true
+    },
+    {
+      "name": "independent_recall",
+      "pass": true
+    },
+    {
+      "name": "dataset_bad_labels",
+      "pass": true
+    },
+    {
+      "name": "dataset_missing_cells",
+      "pass": true
+    },
+    {
+      "name": "dataset_no_dup_lon_lat_label",
+      "pass": true
+    },
+    {
+      "name": "dataset_conflict_ratio",
+      "pass": true
+    },
+    {
+      "name": "oof_missing_ratio",
+      "pass": true
+    }
+  ],
+  "failed_checks": [
+    "hard50_auc"
+  ]
+}

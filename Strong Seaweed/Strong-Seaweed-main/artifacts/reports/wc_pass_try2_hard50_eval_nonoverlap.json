@@ -1,0 +1,19 @@
+{
+  "release": "wc_pass_try2",
+  "n": 44,
+  "positives": 22,
+  "negatives": 22,
+  "threshold": 0.6666666865348816,
+  "accuracy": 0.75,
+  "precision": 0.7894736842105263,
+  "recall": 0.6818181818181818,
+  "f1": 0.7317073170731707,
+  "roc_auc": 0.7510330578512396,
+  "avg_precision": 0.7390208475734791,
+  "confusion_matrix": {
+    "tn": 18,
+    "fp": 4,
+    "fn": 7,
+    "tp": 15
+  }
+}

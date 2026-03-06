@@ -1,0 +1,72 @@
+{
+  "occ_csv": "C:\\Users\\Anas\\Desktop\\Strong Seaweed\\Strong Seaweed\\Strong-Seaweed-main\\data\\tabular\\multispecies_occurrences_multispecies_india_v2_prod.csv",
+  "physics_nc": "C:\\Users\\Anas\\Desktop\\Strong Seaweed\\Strong Seaweed\\Strong-Seaweed-main\\data\\netcdf\\india_physics_2025w01.nc",
+  "waves_nc": "C:\\Users\\Anas\\Desktop\\Strong Seaweed\\Strong Seaweed\\Strong-Seaweed-main\\data\\netcdf\\india_waves_2025w01.nc",
+  "grid_pool_rows": 39024,
+  "feature_names": [
+    "current_cv",
+    "current_grad",
+    "current_max",
+    "current_mean",
+    "current_p90",
+    "current_std",
+    "so_cv",
+    "so_grad",
+    "so_max",
+    "so_mean",
+    "so_min",
+    "so_p10",
+    "so_p90",
+    "so_range",
+    "so_std",
+    "uo_mean",
+    "vo_mean",
+    "wave_cv",
+    "wave_grad",
+    "wave_max",
+    "wave_mean",
+    "wave_min",
+    "wave_p90",
+    "wave_p95",
+    "wave_range",
+    "wave_std"
+  ],
+  "species_reports": [
+    {
+      "species_id": "gracilaria_spp",
+      "occ_points": 98,
+      "positive_rows": 98,
+      "negative_rows": 1200,
+      "total_rows": 1298,
+      "n_features": 28,
+      "output_csv": "C:\\Users\\Anas\\Desktop\\Strong Seaweed\\Strong Seaweed\\Strong-Seaweed-main\\data\\tabular\\training_dataset_gracilaria_spp_wc_v2_20260306_060653_cop_india_rich.csv"
+    },
+    {
+      "species_id": "kappaphycus_alvarezii",
+      "occ_points": 5,
+      "positive_rows": 5,
+      "negative_rows": 1200,
+      "total_rows": 1205,
+      "n_features": 28,
+      "output_csv": "C:\\Users\\Anas\\Desktop\\Strong Seaweed\\Strong Seaweed\\Strong-Seaweed-main\\data\\tabular\\training_dataset_kappaphycus_alvarezii_wc_v2_20260306_060653_cop_india_rich.csv"
+    },
+    {
+      "species_id": "sargassum_spp",
+      "occ_points": 107,
+      "positive_rows": 107,
+      "negative_rows": 1200,
+      "total_rows": 1307,
+      "n_features": 28,
+      "output_csv": "C:\\Users\\Anas\\Desktop\\Strong Seaweed\\Strong Seaweed\\Strong-Seaweed-main\\data\\tabular\\training_dataset_sargassum_spp_wc_v2_20260306_060653_cop_india_rich.csv"
+    },
+    {
+      "species_id": "ulva_spp",
+      "occ_points": 154,
+      "positive_rows": 154,
+      "negative_rows": 1232,
+      "total_rows": 1386,
+      "n_features": 28,
+      "output_csv": "C:\\Users\\Anas\\Desktop\\Strong Seaweed\\Strong Seaweed\\Strong-Seaweed-main\\data\\tabular\\training_dataset_ulva_spp_wc_v2_20260306_060653_cop_india_rich.csv"
+    }
+  ]
+}

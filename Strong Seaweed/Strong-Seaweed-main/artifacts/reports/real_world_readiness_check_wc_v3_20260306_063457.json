@@ -1,0 +1,131 @@
+{
+  "decision": "FAIL",
+  "model_version": "wc_v3_20260306_063457",
+  "inputs": {
+    "report_json": "releases\\wc_v3_20260306_063457\\reports\\xgboost_realtime_report_wc_v3_20260306_063457.json",
+    "training_csv": "C:\\Users\\Anas\\Desktop\\Strong Seaweed\\Strong Seaweed\\Strong-Seaweed-main\\data\\tabular\\training_dataset_wc_v3_20260306_063457.csv",
+    "hard50_json": "C:\\Users\\Anas\\Desktop\\Strong Seaweed\\Strong Seaweed\\Strong-Seaweed-main\\artifacts\\reports\\wc_v3_20260306_063457_hard50_eval.json",
+    "independent_json": "C:\\Users\\Anas\\Desktop\\Strong Seaweed\\Strong Seaweed\\Strong-Seaweed-main\\artifacts\\reports\\wc_v3_20260306_063457_hard50_eval_nonoverlap.json",
+    "oof_csv": "releases\\wc_v3_20260306_063457\\reports\\xgboost_realtime_oof_predictions_wc_v3_20260306_063457.csv"
+  },
+  "thresholds": {
+    "min_train_spatial_auc": 0.7,
+    "min_train_oof_ap": 0.45,
+    "min_hard50_auc": 0.85,
+    "min_hard50_precision": 0.8,
+    "min_hard50_recall": 0.4,
+    "min_independent_n": 40,
+    "min_independent_pos": 20,
+    "min_independent_neg": 20,
+    "min_independent_auc": 0.75,
+    "min_independent_precision": 0.7,
+    "min_independent_recall": 0.6,
+    "max_label_conflict_ratio": 0.02,
+    "max_oof_missing_ratio": 0.15
+  },
+  "metrics": {
+    "train_spatial_auc": 0.929404761904762,
+    "train_oof_ap_calibrated": 0.8010885485286604,
+    "hard50_auc": 0.524,
+    "hard50_precision": 0.6666666666666666,
+    "hard50_recall": 0.16,
+    "independent_n": 50,
+    "independent_pos": 25,
+    "independent_neg": 25,
+    "independent_auc": 0.524,
+    "independent_precision": 0.6666666666666666,
+    "independent_recall": 0.16,
+    "dataset": {
+      "n_rows": 277,
+      "n_pos": 41,
+      "n_neg": 236,
+      "bad_label_rows": 0,
+      "missing_cells": 0,
+      "rows_with_missing": 0,
+      "duplicate_lon_lat_label_rows": 0,
+      "conflict_lon_lat_points": 0,
+      "conflict_ratio": 0.0
+    },
+    "oof": {
+      "oof_csv_found": true,
+      "oof_rows": 246,
+      "oof_missing_rows": 133,
+      "oof_missing_ratio": 0.540650406504065
+    }
+  },
+  "checks": [
+    {
+      "name": "train_spatial_auc",
+      "pass": true
+    },
+    {
+      "name": "train_oof_ap_calibrated",
+      "pass": true
+    },
+    {
+      "name": "hard50_auc",
+      "pass": false
+    },
+    {
+      "name": "hard50_precision",
+      "pass": false
+    },
+    {
+      "name": "hard50_recall",
+      "pass": false
+    },
+    {
+      "name": "independent_n",
+      "pass": true
+    },
+    {
+      "name": "independent_pos",
+      "pass": true
+    },
+    {
+      "name": "independent_neg",
+      "pass": true
+    },
+    {
+      "name": "independent_auc",
+      "pass": false
+    },
+    {
+      "name": "independent_precision",
+      "pass": false
+    },
+    {
+      "name": "independent_recall",
+      "pass": false
+    },
+    {
+      "name": "dataset_bad_labels",
+      "pass": true
+    },
+    {
+      "name": "dataset_missing_cells",
+      "pass": true
+    },
+    {
+      "name": "dataset_no_dup_lon_lat_label",
+      "pass": true
+    },
+    {
+      "name": "dataset_conflict_ratio",
+      "pass": true
+    },
+    {
+      "name": "oof_missing_ratio",
+      "pass": false
+    }
+  ],
+  "failed_checks": [
+    "hard50_auc",
+    "hard50_precision",
+    "hard50_recall",
+    "independent_auc",
+    "independent_precision",
+    "independent_recall",
+    "oof_missing_ratio"
+  ]
+}

@@ -66,7 +66,7 @@
       "n_presence": 46,
       "n_background": 230,
       "n_features": 23,
-      "training_mode": "single",
+      "training_mode":"single",
       "n_ensemble_members": 1,
       "n_spatial_folds": 5,
       "best_params": {

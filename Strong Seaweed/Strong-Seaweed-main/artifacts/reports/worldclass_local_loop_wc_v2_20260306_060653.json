@@ -1,0 +1,19 @@
+{
+  "run_tag": "wc_v2_20260306_060653",
+  "started_utc": "2026-03-06T06:06:53.620227Z",
+  "steps": [
+    "copernicus_download",
+    "kappa_refresh_retrain",
+    "kappa_readiness_gate",
+    "kappa_promotion_check",
+    "multispecies_dataset_refresh",
+    "multispecies_strict_gate",
+    "multispecies_train"
+  ],
+  "kappa_readiness": {
+    "decision": "FAIL",
+    "exit_code": 2
+  },
+  "status": "ok",
+  "finished_utc": "2026-03-06T06:17:42.003480Z"
+}

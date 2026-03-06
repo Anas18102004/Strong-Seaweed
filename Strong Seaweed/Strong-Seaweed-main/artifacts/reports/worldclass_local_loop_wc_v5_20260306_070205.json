@@ -1,0 +1,16 @@
+{
+  "run_tag": "wc_v5_20260306_070205",
+  "started_utc": "2026-03-06T07:02:05.378026Z",
+  "steps": [
+    "kappa_refresh_retrain",
+    "kappa_candidate_eval",
+    "kappa_readiness_gate",
+    "kappa_promotion_check"
+  ],
+  "kappa_readiness": {
+    "decision": "FAIL",
+    "exit_code": 2
+  },
+  "status": "ok",
+  "finished_utc": "2026-03-06T07:12:11.944520Z"
+}
