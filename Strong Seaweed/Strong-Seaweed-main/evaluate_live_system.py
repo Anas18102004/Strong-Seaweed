@@ -39,17 +39,22 @@ def post_json(
         return r.status_code, r.text
 
 
-def run(base_url: str, email: str, password: str, use_https: bool = False) -> dict[str, Any]:
+def run(base_url: str, email: str, password: str, use_https: bool = True) -> dict[str, Any]:
     scheme = "https" if use_https else "http"
     base = f"{scheme}://{base_url}".rstrip("/")
     session = requests.Session()
 
-    status_code, auth_out = post_json(
-        session,
-        f"{base}/api/auth/signin",
-        {"email": email, "password": password},
-        token=None,
-    )
+    auth_payload = {"email": email, "password": password}
+    status_code, auth_out = post_json(session, f"{base}/api/auth/signin", auth_payload, token=None)
+    # Some deployments redirect http->https with 301 and can degrade POST->GET.
+    # If sign-in failed on http, retry once over https explicitly.
+    if (status_code != 200 or not isinstance(auth_out, dict) or "token" not in auth_out) and not use_https:
+        status_code, auth_out = post_json(
+            session,
+            f"https://{base_url.rstrip('/')}/api/auth/signin",
+            auth_payload,
+            token=None,
+        )
     if status_code != 200 or not isinstance(auth_out, dict) or "token" not in auth_out:
         raise RuntimeError(f"auth_failed status={status_code} response={str(auth_out)[:500]}")
     token = str(auth_out["token"])
@@ -84,7 +89,12 @@ def run(base_url: str, email: str, password: str, use_https: bool = False) -> di
 
         best = out.get("bestSpecies") or {}
         best_id = best.get("speciesId")
-        top3 = [s.get("speciesId") for s in (out.get("species") or [])[:3]]
+        ranked = sorted(
+            [s for s in (out.get("species") or []) if isinstance(s, dict)],
+            key=lambda s: float(s.get("probabilityPercent") or 0.0),
+            reverse=True,
+        )
+        top3 = [s.get("speciesId") for s in ranked[:3]]
         top1_match = best_id == case.expected_species_id
         top3_match = case.expected_species_id in top3
         top1_hits += 1 if top1_match else 0
@@ -106,7 +116,7 @@ def run(base_url: str, email: str, password: str, use_https: bool = False) -> di
         )
 
     ai_context = {
-        "mode": "ask",
+        "mode": "predict",
         "locationName": "Gulf of Mannar",
         "speciesHint": "Kappaphycus",
         "season": "Post-Monsoon",
@@ -163,11 +173,13 @@ def main() -> None:
     p.add_argument("--base_host", default="akuara.publicvm.com", help="Host without scheme")
     p.add_argument("--email", required=True)
     p.add_argument("--password", required=True)
-    p.add_argument("--https", action="store_true", help="Use https instead of http")
+    p.add_argument("--https", action="store_true", default=True, help="Use https instead of http")
+    p.add_argument("--http", action="store_true", help="Force http (not recommended behind TLS redirect)")
     p.add_argument("--out_json", default="artifacts/reports/live_system_eval.json")
     args = p.parse_args()
 
-    out = run(args.base_host, args.email, args.password, use_https=args.https)
+    use_https = not args.http
+    out = run(args.base_host, args.email, args.password, use_https=use_https)
     print(json.dumps(out, indent=2))
     with open(args.out_json, "w", encoding="utf-8") as f:
         json.dump(out, f, indent=2)
@@ -176,4 +188,3 @@ def main() -> None:
 
 if __name__ == "__main__":
     main()
-
