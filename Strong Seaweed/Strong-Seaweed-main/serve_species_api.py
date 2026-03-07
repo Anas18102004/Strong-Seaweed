@@ -494,6 +494,40 @@ def predict_other(model_bundle: dict | None, feat_vals: dict | None) -> dict:
     }
 
 
+def _copernicus_context(feat_vals: dict | None) -> dict | None:
+    if not isinstance(feat_vals, dict):
+        return None
+
+    def _num(key: str):
+        v = feat_vals.get(key)
+        try:
+            return round(float(v), 4) if v is not None else None
+        except Exception:
+            return None
+
+    return {
+        "source": "copernicus_runtime_grids",
+        "featureTimestamp": COP.get("feature_timestamp"),
+        "salinity": {
+            "mean": _num("so_mean"),
+            "std": _num("so_std"),
+            "gradient": _num("so_grad"),
+        },
+        "currents": {
+            "speedMean": _num("current_mean"),
+            "speedStd": _num("current_std"),
+            "speedP90": _num("current_p90"),
+            "gradient": _num("current_grad"),
+        },
+        "waves": {
+            "heightMean": _num("wave_mean"),
+            "heightStd": _num("wave_std"),
+            "heightP95": _num("wave_p95"),
+            "gradient": _num("wave_grad"),
+        },
+    }
+
+
 def predict_species(lat: float, lon: float, form_input: dict | None = None) -> dict:
     user_inputs = _normalize_form_input(form_input)
     warnings = []
@@ -678,6 +712,8 @@ def predict_species(lat: float, lon: float, form_input: dict | None = None) -> d
     if _feature_is_stale(COP.get("feature_timestamp"), FEATURE_STALENESS_DAYS):
         warnings.append("environmental_features_stale")
 
+    copernicus_context = _copernicus_context(feat_vals)
+
     overall_actionability = "insufficient_data"
     if best is not None:
         overall_actionability = best.get("actionability", "test_pilot_only")
@@ -692,6 +728,7 @@ def predict_species(lat: float, lon: float, form_input: dict | None = None) -> d
         "modelRelease": f"{KAPPA['release']}+{multi_release_name}",
         "featureTimestamp": COP.get("feature_timestamp"),
         "nearestGrid": k["nearestGrid"],
+        "copernicusContext": copernicus_context,
         "species": species,
         "topCandidatesByProbability": top_candidates,
         "bestSpecies": best,

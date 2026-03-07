@@ -62,18 +62,29 @@ function advisoryQuestionFromContext({ lat, lon, formInput, prediction, environm
   const salText = Number.isFinite(Number(environment?.salinityPpt)) ? `${Number(environment.salinityPpt).toFixed(1)} ppt` : "n/a";
   const speciesSummary = summarizeSpeciesForPrompt(prediction?.species || []);
   const warnings = Array.isArray(prediction?.warnings) ? prediction.warnings.join(", ") : "none";
+  const cop = prediction?.copernicusContext || null;
+  const copSummary = cop
+    ? [
+        `Copernicus salinity(mean/std/grad)=${cop?.salinity?.mean ?? "n/a"}/${cop?.salinity?.std ?? "n/a"}/${cop?.salinity?.gradient ?? "n/a"}`,
+        `currents(mean/p90/grad)=${cop?.currents?.speedMean ?? "n/a"}/${cop?.currents?.speedP90 ?? "n/a"}/${cop?.currents?.gradient ?? "n/a"}`,
+        `waves(mean/p95/grad)=${cop?.waves?.heightMean ?? "n/a"}/${cop?.waves?.heightP95 ?? "n/a"}/${cop?.waves?.gradient ?? "n/a"}`,
+        `featureTimestamp=${cop?.featureTimestamp || "n/a"}`,
+      ].join("; ")
+    : "Copernicus context unavailable";
 
   return [
     "You are an aquaculture decision-support specialist.",
-    "Use ONLY provided model/context signals. Do not claim certainty.",
+    "Use provided model/context signals as primary evidence. Do not claim certainty.",
     `Location: lat=${lat}, lon=${lon}, name=${formInput?.locationName || "unknown"}, season=${formInput?.season || "unknown"}.`,
     `Best model species: ${best?.displayName || "none"}; score=${best?.probabilityPercent ?? "n/a"}%; actionability=${best?.actionability || "unknown"}; decisionSource=${prediction?.decisionSource || "unknown"}.`,
     `Nearest model grid distance: ${nearestText} km.`,
     `Environment hints: temperature=${tempText}, salinity=${salText}, provider=${environment?.provider || "unknown"}.`,
+    `Copernicus signals: ${copSummary}.`,
     `Model warnings: ${warnings}.`,
     `Species ranking summary: ${speciesSummary}`,
     "Respond in 5 bullets: 1) recommendation level, 2) why, 3) top risks, 4) field checks before farming, 5) next 7-day action plan.",
     "If confidence is low or warnings exist, explicitly say pilot-only or not recommended.",
+    "Include latest policy/regulatory/market context only if available from live web grounding, and mark it separately as external context.",
   ].join(" ");
 }
 
