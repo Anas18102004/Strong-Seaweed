@@ -451,7 +451,9 @@ def extract_runtime_features(lat: float, lon: float, user_inputs: dict | None = 
             v = float(COP.get("_feature_medians", {}).get(k, 0.0))
         vals[k] = v
     if isinstance(user_inputs, dict):
-        diagnostics = _apply_overrides_to_vector(list(vals.keys()), user_inputs, vals, "user_override")
+        override_diag = _apply_overrides_to_vector(list(vals.keys()), user_inputs, vals, "user_override")
+        diagnostics["applied"] = override_diag.get("applied", [])
+        diagnostics["ignored"] = override_diag.get("ignored", [])
     return vals, diagnostics
 
 
