@@ -146,6 +146,11 @@ jobs:
             if [[ "${SERVICE}" == "ml-apis" || "${SERVICE}" == "all" ]]; then
               echo "Setting up ML backend Python environment..."
               cd "Strong Seaweed/Strong-Seaweed-main"
+              echo "Disk usage before ML setup:"
+              df -h || true
+              rm -rf ~/.cache/pip ~/.cache/pip-tools ~/.npm || true
+              sudo apt-get clean || true
+              sudo journalctl --vacuum-size=100M || true
               sudo apt-get update -y
               sudo apt-get install -y libgomp1
               if ! python3 -m venv .venv_model_api; then
@@ -155,8 +160,18 @@ jobs:
                 python3 -m venv .venv_model_api
               fi
               source .venv_model_api/bin/activate
-              python -m pip install --upgrade pip
-              python -m pip install -r requirements-model-api.txt
+              python -m pip install --upgrade pip --no-cache-dir
+              if ! python -m pip install --no-cache-dir -r requirements-model-api.txt; then
+                echo "Initial pip install failed, rebuilding ML venv and retrying without cache..."
+                deactivate || true
+                rm -rf .venv_model_api
+                python3 -m venv .venv_model_api
+                source .venv_model_api/bin/activate
+                python -m pip install --upgrade pip --no-cache-dir
+                python -m pip install --no-cache-dir -r requirements-model-api.txt
+              fi
+              echo "Disk usage after ML setup:"
+              df -h || true
               cd ../..
             fi
 
