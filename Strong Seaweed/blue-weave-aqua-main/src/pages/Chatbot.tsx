@@ -496,7 +496,38 @@ export default function Chatbot() {
     } catch (err) {
       const message = err instanceof Error ? err.message : "Chat request failed.";
       if (mode === "voice") {
-        setVoiceError(message);
+        try {
+          const selectedCoords = locationToCoords[contextLocation];
+          const aiContext = {
+            mode: inputMode,
+            locationName: contextLocation,
+            speciesHint: contextSpecies,
+            season: contextSeason,
+            lat: selectedCoords?.lat,
+            lon: selectedCoords?.lon,
+          };
+          const fallback = await api.chat(msg, token || undefined, sessionId, aiContext);
+          if (fallback.sessionId) {
+            setSessionId(fallback.sessionId);
+            setIsDraftNewChat(false);
+          }
+          setMessages((prev) => [
+            ...prev,
+            {
+              role: "assistant",
+              content: fallback.answer,
+              confidence: 88,
+              context: contextLocation,
+              model: "Marine Core v2",
+            },
+          ]);
+          setVoiceError("Voice pipeline unavailable. Switched to text response with browser female TTS fallback.");
+          speak(fallback.answer);
+          await loadSessions();
+          return;
+        } catch {
+          setVoiceError(message);
+        }
       }
       setMessages((prev) => [
         ...prev,

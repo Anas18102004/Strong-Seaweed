@@ -248,14 +248,36 @@ router.post("/voice/respond", authRequired, async (req, res) => {
     });
 
     const conversation = await loadRecentConversation(session._id, req.user.id);
-    const out = await runVoice(question, {
-      userId: req.user.id,
-      sessionId: session._id.toString(),
-      conversation,
-      locale,
-      voiceProfile,
-      context: sanitizeContext(req.body?.context || {}),
-    });
+    let out;
+    let voiceFallbackUsed = false;
+    try {
+      out = await runVoice(question, {
+        userId: req.user.id,
+        sessionId: session._id.toString(),
+        conversation,
+        locale,
+        voiceProfile,
+        context: sanitizeContext(req.body?.context || {}),
+      });
+    } catch (voiceErr) {
+      console.warn(
+        `[AI][VOICE_FALLBACK] user=${req.user?.id} reason=${voiceErr instanceof Error ? voiceErr.message : "voice_failed"}`,
+      );
+      const chatOut = await runChat(question, {
+        userId: req.user.id,
+        sessionId: session._id.toString(),
+        conversation,
+        context: sanitizeContext(req.body?.context || {}),
+      });
+      out = {
+        ...chatOut,
+        ttsText: String(chatOut?.answer || ""),
+        voiceProfile,
+        voiceProvider: "browser",
+        status: "voice_fallback_text_only",
+      };
+      voiceFallbackUsed = true;
+    }
 
     await ChatMessage.create({
       sessionId: session._id,
@@ -274,6 +296,7 @@ router.post("/voice/respond", authRequired, async (req, res) => {
         ttsText: out.ttsText,
         locale,
         voiceProfile,
+        voiceFallbackUsed,
       },
     });
 
@@ -286,6 +309,7 @@ router.post("/voice/respond", authRequired, async (req, res) => {
       status: out.status,
       voiceProfile,
       locale,
+      voiceFallbackUsed,
     });
     res.json({ ...out, sessionId: session._id.toString() });
   } catch (error) {
