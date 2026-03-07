@@ -113,6 +113,36 @@ export type AdvisoryFallbackDetail = {
   source?: string;
 };
 
+export type PredictionVerification = {
+  verdict: "strong" | "moderate" | "weak" | "unknown";
+  confidenceScore: number;
+  candidate?: {
+    speciesId?: string | null;
+    displayName?: string | null;
+    canonicalName?: string | null;
+    probabilityPercent?: number | null;
+    actionability?: string | null;
+  } | null;
+  evidence?: {
+    modelStrength?: string;
+    copernicusSupport?: string;
+    occurrenceSupport?: string;
+    occurrenceRecordCount?: number;
+    occurrenceNearestKm?: number | null;
+    occurrenceSpeciesMatched?: string | null;
+    occurrenceQueryName?: string | null;
+    occurrenceSampleDate?: string | null;
+  } | null;
+  notes?: string[];
+  checkedAt?: string;
+};
+
+export type PredictionVerificationSummary = {
+  verdict: string;
+  confidenceScore: number;
+  candidateDisplayName: string;
+};
+
 export type SpeciesPredictionResponse = {
   input: { lat: number; lon: number };
   source: string;
@@ -121,6 +151,7 @@ export type SpeciesPredictionResponse = {
   species: SpeciesScore[];
   bestSpecies: SpeciesScore | null;
   warnings: string[];
+  verification?: PredictionVerification | null;
   advisoryFallbackUsed?: boolean;
   fallbackAdvisory?: AdvisoryFallbackDetail | null;
 };
@@ -166,6 +197,7 @@ export type PredictionSubmissionItem = {
   createdAt: string;
   bestSpecies: SpeciesScore | null;
   topCandidate?: SpeciesScore | null;
+  verification?: PredictionVerificationSummary | null;
   advisoryFallbackUsed?: boolean;
   fallbackAdvisory?: AdvisoryFallbackSummary | null;
 };

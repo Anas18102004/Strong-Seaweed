@@ -54,7 +54,7 @@ function summarizeSpeciesForPrompt(speciesRows = []) {
     .join("; ");
 }
 
-function advisoryQuestionFromContext({ lat, lon, formInput, prediction, environment }) {
+function advisoryQuestionFromContext({ lat, lon, formInput, prediction, environment, verification = null }) {
   const best = prediction?.bestSpecies || null;
   const nearestKm = prediction?.nearestGrid?.distance_km;
   const nearestText = Number.isFinite(Number(nearestKm)) ? Number(nearestKm).toFixed(2) : "n/a";
@@ -71,6 +71,15 @@ function advisoryQuestionFromContext({ lat, lon, formInput, prediction, environm
         `featureTimestamp=${cop?.featureTimestamp || "n/a"}`,
       ].join("; ")
     : "Copernicus context unavailable";
+  const verificationSummary = verification
+    ? `Verification verdict=${verification?.verdict || "unknown"} (confidence=${verification?.confidenceScore ?? "n/a"}), candidate=${
+        verification?.candidate?.displayName || "n/a"
+      }, evidence=model:${verification?.evidence?.modelStrength || "n/a"}|copernicus:${
+        verification?.evidence?.copernicusSupport || "n/a"
+      }|web:${verification?.evidence?.occurrenceSupport || "n/a"}, nearestOccurrenceKm=${
+        verification?.evidence?.occurrenceNearestKm ?? "n/a"
+      }.`
+    : "Verification summary unavailable.";
 
   return [
     "You are a seaweed aquaculture decision-support specialist.",
@@ -80,6 +89,7 @@ function advisoryQuestionFromContext({ lat, lon, formInput, prediction, environm
     `Nearest model grid distance: ${nearestText} km.`,
     `Environment hints: temperature=${tempText}, salinity=${salText}, provider=${environment?.provider || "unknown"}.`,
     `Copernicus signals: ${copSummary}.`,
+    verificationSummary,
     `Model warnings: ${warnings}.`,
     `Species ranking summary: ${speciesSummary}`,
     "Respond in 5 bullets: 1) cultivation recommendation level, 2) why, 3) top risks, 4) field checks before farming, 5) next 7-day action plan.",
@@ -126,6 +136,222 @@ function topScoredSpecies(prediction) {
   );
 }
 
+function toRadians(x) {
+  return (Number(x) * Math.PI) / 180;
+}
+
+function haversineKm(lat1, lon1, lat2, lon2) {
+  const safe = [lat1, lon1, lat2, lon2].map((v) => Number(v));
+  if (safe.some((v) => !Number.isFinite(v))) return null;
+  const [aLat, aLon, bLat, bLon] = safe;
+  const dLat = toRadians(bLat - aLat);
+  const dLon = toRadians(bLon - aLon);
+  const h =
+    Math.sin(dLat / 2) ** 2 + Math.cos(toRadians(aLat)) * Math.cos(toRadians(bLat)) * Math.sin(dLon / 2) ** 2;
+  const c = 2 * Math.atan2(Math.sqrt(h), Math.sqrt(1 - h));
+  return 6371.0 * c;
+}
+
+function obisNameCandidates(species = null) {
+  const names = new Set();
+  const add = (v) => {
+    const s = String(v || "").trim();
+    if (s) names.add(s);
+  };
+  add(species?.canonicalName);
+  add(species?.displayName);
+  if (Array.isArray(species?.synonyms)) {
+    for (const s of species.synonyms) add(s);
+  }
+  return Array.from(names);
+}
+
+function obisGeometryBox(lat, lon, radiusDeg = 1.0) {
+  const la = Number(lat);
+  const lo = Number(lon);
+  const d = Number(radiusDeg);
+  if (![la, lo, d].every(Number.isFinite)) return null;
+  const lat1 = la - d;
+  const lat2 = la + d;
+  const lon1 = lo - d;
+  const lon2 = lo + d;
+  return `POLYGON((${lon1} ${lat1},${lon2} ${lat1},${lon2} ${lat2},${lon1} ${lat2},${lon1} ${lat1}))`;
+}
+
+async function fetchJsonWithTimeout(url, timeoutMs = 6000) {
+  const ac = new AbortController();
+  const t = setTimeout(() => ac.abort(), timeoutMs);
+  try {
+    const res = await fetch(url, { signal: ac.signal });
+    if (!res.ok) throw new Error(`http_${res.status}`);
+    return await res.json();
+  } finally {
+    clearTimeout(t);
+  }
+}
+
+async function fetchObisEvidence({ lat, lon, species }) {
+  const names = obisNameCandidates(species);
+  if (!names.length) {
+    return { support: "weak", recordCount: 0, nearestKm: null, speciesMatched: null, queryName: null, notes: ["no_species_name_for_obis"] };
+  }
+  const geometry = obisGeometryBox(lat, lon, 1.0);
+  if (!geometry) {
+    return { support: "weak", recordCount: 0, nearestKm: null, speciesMatched: null, queryName: null, notes: ["invalid_geometry"] };
+  }
+
+  let best = null;
+  for (const name of names) {
+    const url = `https://api.obis.org/v3/occurrence?scientificname=${encodeURIComponent(name)}&geometry=${encodeURIComponent(
+      geometry,
+    )}&size=80`;
+    try {
+      const data = await fetchJsonWithTimeout(url, 6000);
+      const rows = Array.isArray(data?.results) ? data.results : [];
+      let nearest = null;
+      for (const r of rows) {
+        const d = haversineKm(lat, lon, r?.decimalLatitude, r?.decimalLongitude);
+        if (!Number.isFinite(d)) continue;
+        if (nearest === null || d < nearest) nearest = d;
+      }
+      const candidate = {
+        support: "weak",
+        recordCount: Number(data?.total || rows.length || 0),
+        nearestKm: nearest === null ? null : Number(nearest.toFixed(2)),
+        speciesMatched: rows[0]?.species || null,
+        queryName: name,
+        sampleDate: rows[0]?.eventDate || null,
+        notes: [],
+      };
+      if (candidate.recordCount > 0 && candidate.nearestKm !== null && candidate.nearestKm <= 75) candidate.support = "strong";
+      else if (candidate.recordCount > 0 && candidate.nearestKm !== null && candidate.nearestKm <= 200) candidate.support = "moderate";
+      else if (candidate.recordCount > 0) candidate.support = "moderate";
+
+      if (!best) {
+        best = candidate;
+      } else if (candidate.support === "strong" && best.support !== "strong") {
+        best = candidate;
+      } else if (candidate.support === best.support && candidate.recordCount > best.recordCount) {
+        best = candidate;
+      } else if (
+        candidate.support === best.support &&
+        candidate.recordCount === best.recordCount &&
+        candidate.nearestKm !== null &&
+        (best.nearestKm === null || candidate.nearestKm < best.nearestKm)
+      ) {
+        best = candidate;
+      }
+    } catch {
+      // Keep trying other names.
+    }
+  }
+
+  return best || { support: "weak", recordCount: 0, nearestKm: null, speciesMatched: null, queryName: names[0], notes: ["obis_unavailable"] };
+}
+
+function classifyCopernicusSupport(species, cop = null) {
+  const name = String(species?.speciesId || "").toLowerCase();
+  const sal = Number(cop?.salinity?.mean);
+  const wave = Number(cop?.waves?.heightMean);
+  const cur = Number(cop?.currents?.speedMean);
+  if (![sal, wave, cur].every(Number.isFinite)) return "unknown";
+
+  const envelopes = {
+    kappaphycus_alvarezii: { sal: [28, 36], wave: [0.2, 1.3], cur: [0.05, 0.45] },
+    gracilaria_edulis: { sal: [20, 36], wave: [0.1, 1.5], cur: [0.03, 0.55] },
+    ulva_lactuca: { sal: [18, 38], wave: [0.05, 2.2], cur: [0.02, 0.9] },
+    sargassum_wightii: { sal: [24, 38], wave: [0.2, 2.0], cur: [0.05, 0.9] },
+  };
+  const env = envelopes[name];
+  if (!env) return "unknown";
+  const inRange = (v, r) => v >= r[0] && v <= r[1];
+  const passed = [inRange(sal, env.sal), inRange(wave, env.wave), inRange(cur, env.cur)].filter(Boolean).length;
+  if (passed >= 3) return "strong";
+  if (passed >= 2) return "moderate";
+  return "weak";
+}
+
+function modelStrength(prediction, candidate) {
+  const score = Number(candidate?.probabilityPercent);
+  const action = String(candidate?.actionability || "").toLowerCase();
+  const conf = String(candidate?.confidenceBand || "").toLowerCase();
+  if (action === "recommended" && Number.isFinite(score) && score >= 70) return "strong";
+  if (action === "recommended" || action === "test_pilot_only") return conf === "high" || conf === "medium" ? "moderate" : "weak";
+  if (Number.isFinite(score) && score >= 40) return "moderate";
+  if (Number.isFinite(score) && score >= 20) return "weak";
+  return "weak";
+}
+
+async function verifyPredictionEvidence({ lat, lon, prediction }) {
+  const best = prediction?.bestSpecies || null;
+  const top = topScoredSpecies(prediction);
+  const candidate = best?.speciesId === "insufficient_data" ? top : best || top;
+  if (!candidate) {
+    return {
+      verdict: "weak",
+      confidenceScore: 0,
+      candidate: null,
+      evidence: {
+        modelStrength: "weak",
+        copernicusSupport: "unknown",
+        occurrenceSupport: "weak",
+        occurrenceRecordCount: 0,
+        occurrenceNearestKm: null,
+      },
+      notes: ["no_candidate_species"],
+      checkedAt: new Date().toISOString(),
+    };
+  }
+
+  const copSupport = classifyCopernicusSupport(candidate, prediction?.copernicusContext || null);
+  const modelSupport = modelStrength(prediction, candidate);
+  const obis = await fetchObisEvidence({ lat, lon, species: candidate });
+  const occSupport = obis?.support || "weak";
+
+  const scoreMap = { weak: 0.4, moderate: 0.8, strong: 1.2, unknown: 0.5 };
+  const modelMap = { weak: 0.8, moderate: 1.3, strong: 1.8 };
+  const confidenceScore = Number(
+    (
+      (modelMap[modelSupport] || 0.8) +
+      (scoreMap[copSupport] || 0.5) +
+      (scoreMap[occSupport] || 0.4)
+    ).toFixed(2)
+  );
+  const verdict = confidenceScore >= 3.2 ? "strong" : confidenceScore >= 2.2 ? "moderate" : "weak";
+
+  const notes = [];
+  notes.push(`model=${modelSupport}`);
+  notes.push(`copernicus=${copSupport}`);
+  notes.push(`occurrence=${occSupport}`);
+  if (Number.isFinite(Number(candidate?.probabilityPercent))) notes.push(`model_score=${candidate.probabilityPercent}%`);
+  if (obis?.recordCount !== undefined) notes.push(`occurrence_records=${obis.recordCount}`);
+  if (obis?.nearestKm !== null && obis?.nearestKm !== undefined) notes.push(`occurrence_nearest_km=${obis.nearestKm}`);
+
+  return {
+    verdict,
+    confidenceScore,
+    candidate: {
+      speciesId: candidate?.speciesId || null,
+      displayName: candidate?.displayName || null,
+      canonicalName: candidate?.canonicalName || candidate?.displayName || null,
+      probabilityPercent: candidate?.probabilityPercent ?? null,
+      actionability: candidate?.actionability || null,
+    },
+    evidence: {
+      modelStrength: modelSupport,
+      copernicusSupport: copSupport,
+      occurrenceSupport: occSupport,
+      occurrenceRecordCount: obis?.recordCount ?? 0,
+      occurrenceNearestKm: obis?.nearestKm ?? null,
+      occurrenceSpeciesMatched: obis?.speciesMatched || null,
+      occurrenceQueryName: obis?.queryName || null,
+      occurrenceSampleDate: obis?.sampleDate || null,
+    },
+    notes,
+    checkedAt: new Date().toISOString(),
+  };
+}
+
 function deterministicAdvisoryText(prediction, environment) {
   const best = prediction?.bestSpecies || null;
   const top = topScoredSpecies(prediction);
@@ -144,8 +370,8 @@ function deterministicAdvisoryText(prediction, environment) {
   ].join("\n");
 }
 
-async function generateFallbackAdvisory({ userId, lat, lon, formInput, prediction, environment }) {
-  const question = advisoryQuestionFromContext({ lat, lon, formInput, prediction, environment });
+async function generateFallbackAdvisory({ userId, lat, lon, formInput, prediction, environment, verification = null }) {
+  const question = advisoryQuestionFromContext({ lat, lon, formInput, prediction, environment, verification });
   try {
     const aiOut = await runChat(question, {
       userId,
@@ -160,6 +386,7 @@ async function generateFallbackAdvisory({ userId, lat, lon, formInput, predictio
         advanced: formInput.advanced,
         prediction,
         environment,
+        verification,
       },
     });
     const answer = String(aiOut?.answer || "").trim();
@@ -277,6 +504,20 @@ router.post("/species", authRequired, async (req, res) => {
   try {
     const formInput = normalizeFormInput(req.body?.formInput);
     const prediction = await predictSpeciesAtPoint(lat, lon, formInput);
+    const verification = await verifyPredictionEvidence({ lat, lon, prediction }).catch(() => ({
+      verdict: "weak",
+      confidenceScore: 0,
+      candidate: null,
+      evidence: {
+        modelStrength: "weak",
+        copernicusSupport: "unknown",
+        occurrenceSupport: "weak",
+        occurrenceRecordCount: 0,
+        occurrenceNearestKm: null,
+      },
+      notes: ["verification_unavailable"],
+      checkedAt: new Date().toISOString(),
+    }));
     let fallbackAdvisory = null;
     let advisoryFallbackUsed = false;
 
@@ -295,12 +536,14 @@ router.post("/species", authRequired, async (req, res) => {
         formInput,
         prediction,
         environment,
+        verification,
       });
       advisoryFallbackUsed = true;
     }
 
     const out = {
       ...prediction,
+      verification,
       advisoryFallbackUsed,
       fallbackAdvisory,
     };
@@ -329,6 +572,20 @@ router.post("/species/advisory", authRequired, async (req, res) => {
   try {
     const formInput = normalizeFormInput(req.body?.formInput);
     const prediction = await predictSpeciesAtPoint(lat, lon, formInput);
+    const verification = await verifyPredictionEvidence({ lat, lon, prediction }).catch(() => ({
+      verdict: "weak",
+      confidenceScore: 0,
+      candidate: null,
+      evidence: {
+        modelStrength: "weak",
+        copernicusSupport: "unknown",
+        occurrenceSupport: "weak",
+        occurrenceRecordCount: 0,
+        occurrenceNearestKm: null,
+      },
+      notes: ["verification_unavailable"],
+      checkedAt: new Date().toISOString(),
+    }));
     const environment = await fetchEnvironment(lat, lon).catch(() => ({
       temperatureC: null,
       salinityPpt: null,
@@ -343,12 +600,14 @@ router.post("/species/advisory", authRequired, async (req, res) => {
       formInput,
       prediction,
       environment,
+      verification,
     });
 
     return res.json({
       input: { lat, lon },
       formInput,
       prediction,
+      verification,
       environment,
       advisory,
       generatedAt: new Date().toISOString(),
@@ -375,6 +634,13 @@ router.get("/submissions/me", authRequired, async (req, res) => {
       createdAt: s.createdAt,
       bestSpecies: s.prediction?.bestSpecies || null,
       topCandidate: topScoredSpecies(s.prediction || null),
+      verification: s.prediction?.verification
+        ? {
+            verdict: s.prediction.verification.verdict || "unknown",
+            confidenceScore: Number(s.prediction.verification.confidenceScore || 0),
+            candidateDisplayName: s.prediction.verification?.candidate?.displayName || "",
+          }
+        : null,
       advisoryFallbackUsed: Boolean(s.prediction?.advisoryFallbackUsed),
       fallbackAdvisory: s.prediction?.fallbackAdvisory
         ? {
