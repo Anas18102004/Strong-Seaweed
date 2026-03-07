@@ -41,8 +41,12 @@ KAPPA_MAX_DISTANCE_KM = float(os.getenv("KAPPA_MAX_DISTANCE_KM", "250"))
 KAPPA_THRESHOLD_OFFSET = float(os.getenv("KAPPA_THRESHOLD_OFFSET", "0.0"))
 PROXY_THRESHOLD_OFFSET = float(os.getenv("PROXY_THRESHOLD_OFFSET", "0.0"))
 FEATURE_STALENESS_DAYS = int(os.getenv("FEATURE_STALENESS_DAYS", "540"))
-SCREENING_FALLBACK_FLOOR_PERCENT = float(os.getenv("SCREENING_FALLBACK_FLOOR_PERCENT", "10.0"))
-RANKING_FALLBACK_FLOOR_PERCENT = float(os.getenv("RANKING_FALLBACK_FLOOR_PERCENT", "5.0"))
+SCREENING_FALLBACK_FLOOR_PERCENT = float(os.getenv("SCREENING_FALLBACK_FLOOR_PERCENT", "25.0"))
+RANKING_FALLBACK_FLOOR_PERCENT = float(os.getenv("RANKING_FALLBACK_FLOOR_PERCENT", "15.0"))
+FALLBACK_REQUIRE_POSITIVE = str(os.getenv("FALLBACK_REQUIRE_POSITIVE", "true")).strip().lower() == "true"
+UNCERTAINTY_MIN_TOP_SCORE_PERCENT = float(os.getenv("UNCERTAINTY_MIN_TOP_SCORE_PERCENT", "35.0"))
+UNCERTAINTY_MIN_MARGIN_PERCENT = float(os.getenv("UNCERTAINTY_MIN_MARGIN_PERCENT", "5.0"))
+UNCERTAINTY_MIN_GAP_PERCENT = float(os.getenv("UNCERTAINTY_MIN_GAP_PERCENT", "7.5"))
 KAPPA_GEO_PRIOR_RADIUS_KM = float(os.getenv("KAPPA_GEO_PRIOR_RADIUS_KM", "120.0"))
 KAPPA_GEO_PRIOR_PROB_FLOOR_PERCENT = float(os.getenv("KAPPA_GEO_PRIOR_PROB_FLOOR_PERCENT", "25.0"))
 KAPPA_GEO_PRIOR_MAX_NEG_MARGIN_PERCENT = float(os.getenv("KAPPA_GEO_PRIOR_MAX_NEG_MARGIN_PERCENT", "80.0"))
@@ -53,6 +57,29 @@ KAPPA_CULTIVATION_ANCHORS = [
     {"name": "Palk_Bay_Central", "lat": 9.35, "lon": 79.20},
     {"name": "Rameswaram", "lat": 9.29, "lon": 79.31},
 ]
+
+TAXON_CANONICAL = {
+    "kappaphycus_alvarezii": {
+        "canonicalName": "Kappaphycus alvarezii",
+        "synonyms": [],
+        "taxonomySource": "WoRMS",
+    },
+    "gracilaria_edulis": {
+        "canonicalName": "Hydropuntia edulis",
+        "synonyms": ["Gracilaria edulis"],
+        "taxonomySource": "WoRMS",
+    },
+    "ulva_lactuca": {
+        "canonicalName": "Ulva lactuca",
+        "synonyms": [],
+        "taxonomySource": "WoRMS",
+    },
+    "sargassum_wightii": {
+        "canonicalName": "Sargassum swartzii",
+        "synonyms": ["Sargassum wightii"],
+        "taxonomySource": "WoRMS",
+    },
+}
 
 KAPPA_MASTER = BASE / "data" / "tabular" / "master_feature_matrix_kappa_india_gulf_v2_hardmerge4_augmented.csv"
 
@@ -372,6 +399,84 @@ def _species_actionability(ready: bool, reason: str, confidence_band: str) -> st
     return "not_recommended"
 
 
+def _taxonomy_meta(species_id: str, display_name: str) -> dict:
+    tax = TAXON_CANONICAL.get(species_id, {})
+    canonical_name = str(tax.get("canonicalName") or display_name)
+    synonyms = tax.get("synonyms")
+    if not isinstance(synonyms, list):
+        synonyms = []
+    return {
+        "scientificName": display_name,
+        "canonicalName": canonical_name,
+        "synonyms": [str(s) for s in synonyms if str(s).strip()],
+        "taxonomySource": str(tax.get("taxonomySource") or "local"),
+    }
+
+
+def _decorate_species_taxonomy(species_rows: list[dict]) -> list[dict]:
+    out = []
+    for row in species_rows:
+        sp = dict(row)
+        sp.update(_taxonomy_meta(str(sp.get("speciesId") or ""), str(sp.get("displayName") or "")))
+        out.append(sp)
+    return out
+
+
+def _insufficient_data_best(reason: str = "insufficient_data_no_model_coverage") -> dict:
+    return {
+        "speciesId": "insufficient_data",
+        "displayName": "Insufficient data for species recommendation",
+        "ready": False,
+        "probabilityPercent": None,
+        "priority": "unknown",
+        "reason": reason,
+        "baseThresholdPercent": None,
+        "thresholdPercent": None,
+        "marginToThresholdPercent": None,
+        "confidenceBand": "unknown",
+        "actionability": "insufficient_data",
+        "scientificName": "Insufficient data for species recommendation",
+        "canonicalName": "Insufficient data for species recommendation",
+        "synonyms": [],
+        "taxonomySource": "system",
+    }
+
+
+def _uncertainty_details(best: dict | None, top_candidates: list[dict]) -> dict:
+    if best is None:
+        return {"isUncertain": True, "reason": "no_best_candidate", "gapPercent": None}
+
+    score = best.get("probabilityPercent")
+    margin = best.get("marginToThresholdPercent")
+    confidence_band = str(best.get("confidenceBand") or "unknown")
+    actionability = str(best.get("actionability") or "insufficient_data")
+
+    score_val = float(score) if score is not None else None
+    margin_val = float(margin) if margin is not None else None
+
+    second_score = None
+    if len(top_candidates) > 1:
+        second = top_candidates[1]
+        if second.get("probabilityPercent") is not None:
+            second_score = float(second.get("probabilityPercent"))
+    gap_val = (score_val - second_score) if score_val is not None and second_score is not None else None
+
+    if actionability in ("insufficient_data", "not_recommended"):
+        return {"isUncertain": True, "reason": f"actionability_{actionability}", "gapPercent": gap_val}
+    if score_val is None:
+        return {"isUncertain": True, "reason": "missing_probability", "gapPercent": gap_val}
+    if score_val < UNCERTAINTY_MIN_TOP_SCORE_PERCENT:
+        return {"isUncertain": True, "reason": "top_score_below_floor", "gapPercent": gap_val}
+    if margin_val is not None and margin_val < UNCERTAINTY_MIN_MARGIN_PERCENT:
+        return {"isUncertain": True, "reason": "margin_below_floor", "gapPercent": gap_val}
+    if gap_val is not None and gap_val < UNCERTAINTY_MIN_GAP_PERCENT:
+        return {"isUncertain": True, "reason": "top_gap_below_floor", "gapPercent": gap_val}
+    if confidence_band == "low" and score_val < max(50.0, UNCERTAINTY_MIN_TOP_SCORE_PERCENT):
+        return {"isUncertain": True, "reason": "low_confidence_band", "gapPercent": gap_val}
+
+    return {"isUncertain": False, "reason": "passed", "gapPercent": gap_val}
+
+
 def _clamp01(v: float) -> float:
     return max(0.0, min(1.0, float(v)))
 
@@ -643,6 +748,8 @@ def predict_species(lat: float, lon: float, form_input: dict | None = None) -> d
                 sp["reason"] = "genus_proxy_boundary_clamped"
                 sp["actionability"] = "not_recommended"
 
+    species = _decorate_species_taxonomy(species)
+
     ready_scored = [
         s
         for s in species
@@ -663,14 +770,17 @@ def predict_species(lat: float, lon: float, form_input: dict | None = None) -> d
         # Screening fallback: if nothing crosses strict threshold, still return top candidate when probability is reasonable.
         if ready_scored:
             top = sorted(ready_scored, key=lambda x: float(x["probabilityPercent"]), reverse=True)[0]
-            if float(top["probabilityPercent"]) >= SCREENING_FALLBACK_FLOOR_PERCENT:
+            top_prob = float(top["probabilityPercent"])
+            top_reason_positive = str(top.get("reason", "")).endswith("_positive")
+            fallback_allowed = top_reason_positive or not FALLBACK_REQUIRE_POSITIVE
+            if top_prob >= SCREENING_FALLBACK_FLOOR_PERCENT and fallback_allowed:
                 top = dict(top)
                 top["reason"] = "screening_fallback_top_ranked"
                 top["actionability"] = "test_pilot_only"
                 best = top
                 decision_source = "screening_fallback"
                 warnings.append("no_species_meets_threshold_using_screening_fallback")
-            elif float(top["probabilityPercent"]) >= RANKING_FALLBACK_FLOOR_PERCENT:
+            elif top_prob >= RANKING_FALLBACK_FLOOR_PERCENT and fallback_allowed:
                 top = dict(top)
                 top["reason"] = "ranking_fallback_low_confidence"
                 top["actionability"] = "not_recommended"
@@ -679,31 +789,18 @@ def predict_species(lat: float, lon: float, form_input: dict | None = None) -> d
                 warnings.append("no_species_meets_threshold_using_ranking_fallback")
                 warnings.append("best_species_low_confidence")
             else:
-                top = dict(top)
-                top["reason"] = "ranking_fallback_ultra_low_confidence"
-                top["actionability"] = "not_recommended"
-                best = top
-                decision_source = "ranking_fallback"
+                best = _insufficient_data_best("insufficient_data_uncertain_fallback")
+                decision_source = "insufficient_data_fallback"
                 warnings.append("no_species_meets_suitability_threshold")
-                warnings.append("best_species_ultra_low_confidence")
+                if not fallback_allowed:
+                    warnings.append("fallback_blocked_no_positive_species")
+                elif top_prob < RANKING_FALLBACK_FLOOR_PERCENT:
+                    warnings.append("best_species_ultra_low_confidence")
+                else:
+                    warnings.append("best_species_low_confidence")
         else:
             if species:
-                fallback = {
-                    "speciesId": "insufficient_data",
-                    "displayName": "Insufficient data for species recommendation",
-                    "ready": False,
-                    "probabilityPercent": None,
-                    "priority": "unknown",
-                    "reason": "insufficient_data_no_model_coverage",
-                    "baseThresholdPercent": None,
-                    "thresholdPercent": None,
-                    "marginToThresholdPercent": None,
-                    "confidenceBand": "unknown",
-                    "actionability": "insufficient_data",
-                }
-                fallback["reason"] = "insufficient_data_no_model_coverage"
-                fallback["actionability"] = "insufficient_data"
-                best = fallback
+                best = _insufficient_data_best("insufficient_data_no_model_coverage")
                 decision_source = "insufficient_data_fallback"
                 warnings.append("no_species_meets_suitability_threshold")
                 warnings.append("no_species_with_ready_scores")
@@ -732,6 +829,14 @@ def predict_species(lat: float, lon: float, form_input: dict | None = None) -> d
                 warnings.append("geo_prior_adjustment_applied")
                 warnings.append(f"geo_prior_anchor={anchor_name}")
 
+    uncertainty = _uncertainty_details(best, top_candidates)
+    if best is not None and uncertainty.get("isUncertain") and str(best.get("actionability")) != "recommended":
+        if str(best.get("speciesId")) != "insufficient_data":
+            warnings.append("prediction_uncertainty_gate_triggered")
+            warnings.append(f"prediction_uncertainty_reason={uncertainty.get('reason')}")
+        best = _insufficient_data_best("insufficient_data_uncertainty_gate")
+        decision_source = "uncertainty_gate"
+
     loaded_other_releases = sorted(
         {m["release"] for m in OTHER_MODELS.values() if isinstance(m, dict) and "release" in m}
     )
@@ -755,14 +860,14 @@ def predict_species(lat: float, lon: float, form_input: dict | None = None) -> d
     overall_actionability = "insufficient_data"
     if best is not None:
         overall_actionability = best.get("actionability", "test_pilot_only")
-        if float(best.get("marginToThresholdPercent", 0.0) or 0.0) < 5.0:
+        if str(best.get("speciesId")) != "insufficient_data" and float(best.get("marginToThresholdPercent", 0.0) or 0.0) < 5.0:
             warnings.append("best_species_near_decision_boundary")
 
     return {
         "input": {"lat": lat, "lon": lon},
         "inputMode": "lat_lon_plus_overrides" if provided_override_count > 0 else "lat_lon_only",
         "source": "species-orchestrator-production",
-        "decisionPolicyVersion": "v3_threshold_offsets_geo_prior",
+        "decisionPolicyVersion": "v4_uncertainty_gate_taxonomy",
         "modelRelease": f"{KAPPA['release']}+{multi_release_name}",
         "featureTimestamp": COP.get("feature_timestamp"),
         "nearestGrid": k["nearestGrid"],
@@ -779,6 +884,9 @@ def predict_species(lat: float, lon: float, form_input: dict | None = None) -> d
             "kappaphycusCoverage": bool(kappa_in_coverage),
             "proxyCoverage": bool(feat_vals is not None),
             "proxyCoverageMode": proxy_override_diag.get("coverageMode", "unknown"),
+            "uncertaintyGateTriggered": decision_source == "uncertainty_gate",
+            "uncertaintyReason": uncertainty.get("reason"),
+            "taxonomyCanonicalized": True,
         },
         "appliedOverrides": {
             "kappaphycus": k.get("overrideDiagnostics", {}),
