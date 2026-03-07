@@ -41,12 +41,13 @@ KAPPA_MAX_DISTANCE_KM = float(os.getenv("KAPPA_MAX_DISTANCE_KM", "250"))
 KAPPA_THRESHOLD_OFFSET = float(os.getenv("KAPPA_THRESHOLD_OFFSET", "0.0"))
 PROXY_THRESHOLD_OFFSET = float(os.getenv("PROXY_THRESHOLD_OFFSET", "0.0"))
 FEATURE_STALENESS_DAYS = int(os.getenv("FEATURE_STALENESS_DAYS", "540"))
-SCREENING_FALLBACK_FLOOR_PERCENT = float(os.getenv("SCREENING_FALLBACK_FLOOR_PERCENT", "25.0"))
-RANKING_FALLBACK_FLOOR_PERCENT = float(os.getenv("RANKING_FALLBACK_FLOOR_PERCENT", "15.0"))
-FALLBACK_REQUIRE_POSITIVE = str(os.getenv("FALLBACK_REQUIRE_POSITIVE", "true")).strip().lower() == "true"
+SCREENING_FALLBACK_FLOOR_PERCENT = float(os.getenv("SCREENING_FALLBACK_FLOOR_PERCENT", "10.0"))
+RANKING_FALLBACK_FLOOR_PERCENT = float(os.getenv("RANKING_FALLBACK_FLOOR_PERCENT", "5.0"))
+FALLBACK_REQUIRE_POSITIVE = str(os.getenv("FALLBACK_REQUIRE_POSITIVE", "false")).strip().lower() == "true"
 UNCERTAINTY_MIN_TOP_SCORE_PERCENT = float(os.getenv("UNCERTAINTY_MIN_TOP_SCORE_PERCENT", "35.0"))
 UNCERTAINTY_MIN_MARGIN_PERCENT = float(os.getenv("UNCERTAINTY_MIN_MARGIN_PERCENT", "5.0"))
 UNCERTAINTY_MIN_GAP_PERCENT = float(os.getenv("UNCERTAINTY_MIN_GAP_PERCENT", "7.5"))
+UNCERTAINTY_BLOCK_RESULT = str(os.getenv("UNCERTAINTY_BLOCK_RESULT", "false")).strip().lower() == "true"
 KAPPA_GEO_PRIOR_RADIUS_KM = float(os.getenv("KAPPA_GEO_PRIOR_RADIUS_KM", "120.0"))
 KAPPA_GEO_PRIOR_PROB_FLOOR_PERCENT = float(os.getenv("KAPPA_GEO_PRIOR_PROB_FLOOR_PERCENT", "25.0"))
 KAPPA_GEO_PRIOR_MAX_NEG_MARGIN_PERCENT = float(os.getenv("KAPPA_GEO_PRIOR_MAX_NEG_MARGIN_PERCENT", "80.0"))
@@ -834,8 +835,16 @@ def predict_species(lat: float, lon: float, form_input: dict | None = None) -> d
         if str(best.get("speciesId")) != "insufficient_data":
             warnings.append("prediction_uncertainty_gate_triggered")
             warnings.append(f"prediction_uncertainty_reason={uncertainty.get('reason')}")
-        best = _insufficient_data_best("insufficient_data_uncertainty_gate")
-        decision_source = "uncertainty_gate"
+        if UNCERTAINTY_BLOCK_RESULT:
+            best = _insufficient_data_best("insufficient_data_uncertainty_gate")
+            decision_source = "uncertainty_gate"
+        else:
+            if str(best.get("speciesId")) != "insufficient_data":
+                adjusted = dict(best)
+                adjusted["actionability"] = "test_pilot_only"
+                adjusted["reason"] = "uncertainty_gate_advisory"
+                best = adjusted
+            decision_source = "uncertainty_gate_advisory"
 
     loaded_other_releases = sorted(
         {m["release"] for m in OTHER_MODELS.values() if isinstance(m, dict) and "release" in m}
@@ -867,7 +876,7 @@ def predict_species(lat: float, lon: float, form_input: dict | None = None) -> d
         "input": {"lat": lat, "lon": lon},
         "inputMode": "lat_lon_plus_overrides" if provided_override_count > 0 else "lat_lon_only",
         "source": "species-orchestrator-production",
-        "decisionPolicyVersion": "v4_uncertainty_gate_taxonomy",
+        "decisionPolicyVersion": "v5_always_answer_advisory",
         "modelRelease": f"{KAPPA['release']}+{multi_release_name}",
         "featureTimestamp": COP.get("feature_timestamp"),
         "nearestGrid": k["nearestGrid"],
@@ -884,8 +893,9 @@ def predict_species(lat: float, lon: float, form_input: dict | None = None) -> d
             "kappaphycusCoverage": bool(kappa_in_coverage),
             "proxyCoverage": bool(feat_vals is not None),
             "proxyCoverageMode": proxy_override_diag.get("coverageMode", "unknown"),
-            "uncertaintyGateTriggered": decision_source == "uncertainty_gate",
+            "uncertaintyGateTriggered": decision_source in ("uncertainty_gate", "uncertainty_gate_advisory"),
             "uncertaintyReason": uncertainty.get("reason"),
+            "uncertaintyBlocking": UNCERTAINTY_BLOCK_RESULT,
             "taxonomyCanonicalized": True,
         },
         "appliedOverrides": {
