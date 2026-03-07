@@ -655,6 +655,7 @@ class AgentOrchestrator:
     def run(self, mode: str, question: str, routed_agent: Optional[str], context: Optional[Dict[str, Any]]) -> Dict[str, Any]:
         start = time.perf_counter()
         question = (question or "").strip()
+        is_voice = mode == "voice"
         agent = (routed_agent or "").strip().lower() or self.route_question(question)
         if agent not in AGENT_SYSTEM:
             agent = "copilot"
@@ -674,27 +675,28 @@ class AgentOrchestrator:
                 "Do not use numbered headings/sections.\n"
                 "Invite the user to ask a specific seaweed farming question."
             )
-        groq_answer, groq_err = self._groq_answer(system, question, context, is_voice=(mode == "voice"))
+        groq_answer, groq_err = self._groq_answer(system, question, context, is_voice=is_voice)
         answer = groq_answer
         llm_provider = "groq" if answer else "none"
         failure_reason = groq_err
 
         if not answer:
-            openrouter_answer, openrouter_err = self._openrouter_answer(system, question, context, is_voice=(mode == "voice"))
+            openrouter_answer, openrouter_err = self._openrouter_answer(system, question, context, is_voice=is_voice)
             answer = openrouter_answer
             failure_reason = openrouter_err if openrouter_err else failure_reason
             if answer:
                 llm_provider = "openrouter"
 
-        if not answer:
-            openai_answer, openai_err = self._llm_answer(system, question, context, is_voice=(mode == "voice"))
+        # Voice pipeline stays strict: Groq -> OpenRouter only.
+        if not answer and not is_voice:
+            openai_answer, openai_err = self._llm_answer(system, question, context, is_voice=is_voice)
             answer = openai_answer
             failure_reason = openai_err if openai_err else failure_reason
             if answer:
                 llm_provider = "openai"
 
-        if not answer:
-            gemini_answer, gemini_err = self._gemini_answer(system, question, context, is_voice=(mode == "voice"))
+        if not answer and not is_voice:
+            gemini_answer, gemini_err = self._gemini_answer(system, question, context, is_voice=is_voice)
             answer = gemini_answer
             failure_reason = gemini_err if gemini_err else failure_reason
             if answer:
