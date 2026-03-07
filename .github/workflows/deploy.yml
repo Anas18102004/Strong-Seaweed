@@ -193,30 +193,67 @@ jobs:
             if [[ "${SERVICE}" == "blueweave-backend" || "${SERVICE}" == "all" ]]; then
               echo "Setting up Node.js backend..."
               cd "Strong Seaweed/blue-weave-aqua-main/server"
-              if [[ -z "${MONGODB_URI:-}" ]]; then
-                echo "Missing MONGODB_URI secret. Set repository secret MONGODB_URI and re-run deploy."
+              ENV_FILE=".env"
+              if [[ ! -f "${ENV_FILE}" ]]; then
+                echo "No ${ENV_FILE} found; creating from .env.example"
+                if [[ -f ".env.example" ]]; then
+                  cp ".env.example" "${ENV_FILE}"
+                else
+                  touch "${ENV_FILE}"
+                fi
+              fi
+
+              upsert_env() {
+                local key="$1"
+                local value="$2"
+                local file="$3"
+                local tmp_file
+                tmp_file="$(mktemp)"
+                awk -v key="$key" -v value="$value" '
+                  BEGIN { updated = 0 }
+                  $0 ~ ("^" key "=") { print key "=" value; updated = 1; next }
+                  { print }
+                  END { if (!updated) print key "=" value }
+                ' "$file" > "$tmp_file"
+                mv "$tmp_file" "$file"
+              }
+
+              ensure_env_default() {
+                local key="$1"
+                local value="$2"
+                local file="$3"
+                if ! grep -q "^${key}=" "$file"; then
+                  echo "${key}=${value}" >> "$file"
+                fi
+              }
+
+              if [[ -n "${MONGODB_URI:-}" ]]; then
+                upsert_env "MONGODB_URI" "${MONGODB_URI}" "${ENV_FILE}"
+              elif ! grep -q "^MONGODB_URI=" "${ENV_FILE}"; then
+                echo "Missing MONGODB_URI in both GitHub secret and ${ENV_FILE}."
                 exit 1
               fi
+
               EFFECTIVE_CORS_ORIGINS="${CORS_ORIGINS:-https://akuara.publicvm.com,http://akuara.publicvm.com,http://127.0.0.1:8080,http://localhost:8080}"
-              {
-                echo "PORT=4000"
-                echo "MONGODB_URI=${MONGODB_URI}"
-                echo "JWT_SECRET=${JWT_SECRET:-change-me}"
-                echo "CORS_ORIGINS=${EFFECTIVE_CORS_ORIGINS}"
-                echo "MODEL_API_URL=http://127.0.0.1:8000"
-                echo "AI_TIMEOUT_MS=12000"
-                echo "AI_ROUTER_MODE=hybrid"
-                echo "VOICE_TTS_PROVIDER=browser"
-                echo "LANGCHAIN_API_URL=http://127.0.0.1:8101"
-                echo "LANGGRAPH_API_URL=http://127.0.0.1:8101"
-                echo "CREWAI_API_URL=http://127.0.0.1:8101"
-                echo "ELEVENLABS_MODEL_ID=eleven_multilingual_v2"
-                echo "ELEVENLABS_OUTPUT_FORMAT=mp3_44100_128"
-                echo "ELEVENLABS_STRICT_VOICE=false"
-                echo "ELEVENLABS_API_KEY="
-                echo "ELEVENLABS_VOICE_ID_FEMALE="
-                echo "ELEVENLABS_VOICE_ID="
-              } > .env
+              upsert_env "PORT" "4000" "${ENV_FILE}"
+              upsert_env "CORS_ORIGINS" "${EFFECTIVE_CORS_ORIGINS}" "${ENV_FILE}"
+              if [[ -n "${JWT_SECRET:-}" ]]; then
+                upsert_env "JWT_SECRET" "${JWT_SECRET}" "${ENV_FILE}"
+              fi
+              ensure_env_default "MODEL_API_URL" "http://127.0.0.1:8000" "${ENV_FILE}"
+              ensure_env_default "AI_TIMEOUT_MS" "12000" "${ENV_FILE}"
+              ensure_env_default "AI_ROUTER_MODE" "hybrid" "${ENV_FILE}"
+              ensure_env_default "VOICE_TTS_PROVIDER" "browser" "${ENV_FILE}"
+              ensure_env_default "LANGCHAIN_API_URL" "http://127.0.0.1:8101" "${ENV_FILE}"
+              ensure_env_default "LANGGRAPH_API_URL" "http://127.0.0.1:8101" "${ENV_FILE}"
+              ensure_env_default "CREWAI_API_URL" "http://127.0.0.1:8101" "${ENV_FILE}"
+              ensure_env_default "ELEVENLABS_MODEL_ID" "eleven_multilingual_v2" "${ENV_FILE}"
+              ensure_env_default "ELEVENLABS_OUTPUT_FORMAT" "mp3_44100_128" "${ENV_FILE}"
+              ensure_env_default "ELEVENLABS_STRICT_VOICE" "false" "${ENV_FILE}"
+              ensure_env_default "ELEVENLABS_API_KEY" "" "${ENV_FILE}"
+              ensure_env_default "ELEVENLABS_VOICE_ID_FEMALE" "" "${ENV_FILE}"
+              ensure_env_default "ELEVENLABS_VOICE_ID" "" "${ENV_FILE}"
+              echo "Preserved server-managed ${ENV_FILE}; provider keys are not overwritten by deploy."
               if ! command -v npm >/dev/null 2>&1; then
                 echo "npm not found; installing Node.js 20..."
                 sudo apt-get update -y
