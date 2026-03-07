@@ -619,9 +619,24 @@ def predict_species(lat: float, lon: float, form_input: dict | None = None) -> d
                 warnings.append("no_species_meets_threshold_using_ranking_fallback")
                 warnings.append("best_species_low_confidence")
             else:
+                top = dict(top)
+                top["reason"] = "ranking_fallback_ultra_low_confidence"
+                top["actionability"] = "not_recommended"
+                best = top
+                decision_source = "ranking_fallback"
                 warnings.append("no_species_meets_suitability_threshold")
+                warnings.append("best_species_ultra_low_confidence")
         else:
-            warnings.append("no_species_meets_suitability_threshold")
+            if species:
+                fallback = dict(species[0])
+                fallback["reason"] = "insufficient_data_no_model_coverage"
+                fallback["actionability"] = "insufficient_data"
+                best = fallback
+                decision_source = "insufficient_data_fallback"
+                warnings.append("no_species_meets_suitability_threshold")
+                warnings.append("no_species_with_ready_scores")
+            else:
+                warnings.append("no_species_meets_suitability_threshold")
 
     # Conservative geo-prior rescue for known Kappaphycus belts.
     # This avoids obvious false negatives when dedicated model probability is moderate

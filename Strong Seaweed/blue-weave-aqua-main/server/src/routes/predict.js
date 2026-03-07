@@ -1,6 +1,7 @@
 import express from "express";
 import { authRequired } from "../middleware/auth.js";
 import { predictSpeciesAtPoint } from "../services/predictService.js";
+import { runChat } from "../services/aiService.js";
 import { PredictionSubmission } from "../models/PredictionSubmission.js";
 
 const router = express.Router();
@@ -39,6 +40,41 @@ function detectSeason(now = new Date()) {
   if (month >= 6 && month <= 9) return "Monsoon";
   if (month >= 10 && month <= 11) return "Post-Monsoon";
   return "Winter";
+}
+
+function summarizeSpeciesForPrompt(speciesRows = []) {
+  if (!Array.isArray(speciesRows) || speciesRows.length === 0) return "No species scores available.";
+  return speciesRows
+    .slice()
+    .sort((a, b) => Number(b?.probabilityPercent || 0) - Number(a?.probabilityPercent || 0))
+    .map((s) => {
+      const pct = Number.isFinite(Number(s?.probabilityPercent)) ? `${Number(s.probabilityPercent).toFixed(2)}%` : "n/a";
+      return `${s?.displayName || s?.speciesId || "unknown"}: score=${pct}, actionability=${s?.actionability || "unknown"}, reason=${s?.reason || "unknown"}`;
+    })
+    .join("; ");
+}
+
+function advisoryQuestionFromContext({ lat, lon, formInput, prediction, environment }) {
+  const best = prediction?.bestSpecies || null;
+  const nearestKm = prediction?.nearestGrid?.distance_km;
+  const nearestText = Number.isFinite(Number(nearestKm)) ? Number(nearestKm).toFixed(2) : "n/a";
+  const tempText = Number.isFinite(Number(environment?.temperatureC)) ? `${Number(environment.temperatureC).toFixed(1)} C` : "n/a";
+  const salText = Number.isFinite(Number(environment?.salinityPpt)) ? `${Number(environment.salinityPpt).toFixed(1)} ppt` : "n/a";
+  const speciesSummary = summarizeSpeciesForPrompt(prediction?.species || []);
+  const warnings = Array.isArray(prediction?.warnings) ? prediction.warnings.join(", ") : "none";
+
+  return [
+    "You are an aquaculture decision-support specialist.",
+    "Use ONLY provided model/context signals. Do not claim certainty.",
+    `Location: lat=${lat}, lon=${lon}, name=${formInput?.locationName || "unknown"}, season=${formInput?.season || "unknown"}.`,
+    `Best model species: ${best?.displayName || "none"}; score=${best?.probabilityPercent ?? "n/a"}%; actionability=${best?.actionability || "unknown"}; decisionSource=${prediction?.decisionSource || "unknown"}.`,
+    `Nearest model grid distance: ${nearestText} km.`,
+    `Environment hints: temperature=${tempText}, salinity=${salText}, provider=${environment?.provider || "unknown"}.`,
+    `Model warnings: ${warnings}.`,
+    `Species ranking summary: ${speciesSummary}`,
+    "Respond in 5 bullets: 1) recommendation level, 2) why, 3) top risks, 4) field checks before farming, 5) next 7-day action plan.",
+    "If confidence is low or warnings exist, explicitly say pilot-only or not recommended.",
+  ].join(" ");
 }
 
 async function fetchEnvironment(lat, lon) {
@@ -145,6 +181,60 @@ router.post("/species", authRequired, async (req, res) => {
     return res.json(out);
   } catch (err) {
     return res.status(500).json({ error: err instanceof Error ? err.message : "prediction failed" });
+  }
+});
+
+router.post("/species/advisory", authRequired, async (req, res) => {
+  const lat = Number(req.body?.lat);
+  const lon = Number(req.body?.lon);
+  if (!Number.isFinite(lat) || !Number.isFinite(lon)) {
+    return res.status(400).json({ error: "numeric lat and lon are required" });
+  }
+
+  try {
+    const formInput = normalizeFormInput(req.body?.formInput);
+    const prediction = await predictSpeciesAtPoint(lat, lon, formInput);
+    const environment = await fetchEnvironment(lat, lon).catch(() => ({
+      temperatureC: null,
+      salinityPpt: null,
+      provider: "unavailable",
+      fetchedAt: new Date().toISOString(),
+      notes: ["Live environment data unavailable during advisory generation."],
+    }));
+
+    const question = advisoryQuestionFromContext({ lat, lon, formInput, prediction, environment });
+    const aiOut = await runChat(question, {
+      userId: req.user?.id,
+      context: {
+        mode: "predict_advisory",
+        locationName: formInput.locationName,
+        season: formInput.season,
+        lat,
+        lon,
+        depthM: formInput.depthM,
+        overrides: formInput.overrides,
+        advanced: formInput.advanced,
+        prediction,
+        environment,
+      },
+    });
+
+    return res.json({
+      input: { lat, lon },
+      formInput,
+      prediction,
+      environment,
+      advisory: {
+        answer: aiOut?.answer || "No advisory generated.",
+        model: aiOut?.model || "unknown",
+        provider: aiOut?.provider || "unknown",
+        status: aiOut?.status || "unknown",
+        routedAgent: aiOut?.routedAgent || "copilot",
+      },
+      generatedAt: new Date().toISOString(),
+    });
+  } catch (err) {
+    return res.status(502).json({ error: err instanceof Error ? err.message : "advisory_generation_failed" });
   }
 });
 
