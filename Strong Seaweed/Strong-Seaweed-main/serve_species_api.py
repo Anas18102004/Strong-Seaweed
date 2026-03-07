@@ -427,9 +427,18 @@ def predict_kappa(lat: float, lon: float, user_inputs: dict | None = None) -> di
 
 def extract_runtime_features(lat: float, lon: float, user_inputs: dict | None = None) -> tuple[dict | None, dict]:
     diagnostics = {"applied": [], "ignored": []}
-    if not (COP["lat_min"] <= lat <= COP["lat_max"] and COP["lon_min"] <= lon <= COP["lon_max"]):
-        return None, diagnostics
-    vals = {"lon": float(lon), "lat": float(lat)}
+    in_coverage = COP["lat_min"] <= lat <= COP["lat_max"] and COP["lon_min"] <= lon <= COP["lon_max"]
+    sample_lat = float(lat)
+    sample_lon = float(lon)
+    if in_coverage:
+        diagnostics["coverageMode"] = "direct"
+    else:
+        sample_lat = float(np.clip(lat, COP["lat_min"], COP["lat_max"]))
+        sample_lon = float(np.clip(lon, COP["lon_min"], COP["lon_max"]))
+        diagnostics["coverageMode"] = "clamped_to_grid_boundary"
+        diagnostics["sampleLat"] = sample_lat
+        diagnostics["sampleLon"] = sample_lon
+    vals = {"lon": sample_lon, "lat": sample_lat}
     feature_keys = [
         "so_mean", "so_std", "so_min", "so_max", "so_p10", "so_p90", "so_range", "so_cv",
         "uo_mean", "vo_mean", "current_mean", "current_std", "current_max", "current_p90", "current_cv",
@@ -437,7 +446,7 @@ def extract_runtime_features(lat: float, lon: float, user_inputs: dict | None = 
         "so_grad", "current_grad", "wave_grad",
     ]
     for k in feature_keys:
-        v = float(COP[k].sel(latitude=lat, longitude=lon, method="nearest").values)
+        v = float(COP[k].sel(latitude=sample_lat, longitude=sample_lon, method="nearest").values)
         if not np.isfinite(v):
             v = float(COP.get("_feature_medians", {}).get(k, 0.0))
         vals[k] = v
@@ -494,7 +503,7 @@ def predict_other(model_bundle: dict | None, feat_vals: dict | None) -> dict:
     }
 
 
-def _copernicus_context(feat_vals: dict | None) -> dict | None:
+def _copernicus_context(feat_vals: dict | None, diagnostics: dict | None = None) -> dict | None:
     if not isinstance(feat_vals, dict):
         return None
 
@@ -507,7 +516,12 @@ def _copernicus_context(feat_vals: dict | None) -> dict | None:
 
     return {
         "source": "copernicus_runtime_grids",
+        "coverageMode": (diagnostics or {}).get("coverageMode", "unknown"),
         "featureTimestamp": COP.get("feature_timestamp"),
+        "sampleLocation": {
+            "lat": (diagnostics or {}).get("sampleLat"),
+            "lon": (diagnostics or {}).get("sampleLon"),
+        },
         "salinity": {
             "mean": _num("so_mean"),
             "std": _num("so_std"),
@@ -538,6 +552,8 @@ def predict_species(lat: float, lon: float, form_input: dict | None = None) -> d
     feat_vals, proxy_override_diag = extract_runtime_features(lat, lon, user_inputs)
     if feat_vals is None:
         warnings.append("india_wide_proxy_models_out_of_coverage")
+    elif proxy_override_diag.get("coverageMode") == "clamped_to_grid_boundary":
+        warnings.append("proxy_features_clamped_to_copernicus_boundary")
 
     g = predict_other(OTHER_MODELS["gracilaria_spp"], feat_vals)
     u = predict_other(OTHER_MODELS["ulva_spp"], feat_vals)
@@ -616,6 +632,14 @@ def predict_species(lat: float, lon: float, form_input: dict | None = None) -> d
             ),
         },
     ]
+
+    if proxy_override_diag.get("coverageMode") == "clamped_to_grid_boundary":
+        for sp in species:
+            if sp.get("speciesId") == "kappaphycus_alvarezii":
+                continue
+            if sp.get("ready") and sp.get("probabilityPercent") is not None:
+                sp["reason"] = "genus_proxy_boundary_clamped"
+                sp["actionability"] = "not_recommended"
 
     ready_scored = [
         s
@@ -724,7 +748,7 @@ def predict_species(lat: float, lon: float, form_input: dict | None = None) -> d
     if _feature_is_stale(COP.get("feature_timestamp"), FEATURE_STALENESS_DAYS):
         warnings.append("environmental_features_stale")
 
-    copernicus_context = _copernicus_context(feat_vals)
+    copernicus_context = _copernicus_context(feat_vals, proxy_override_diag)
 
     overall_actionability = "insufficient_data"
     if best is not None:
@@ -752,6 +776,7 @@ def predict_species(lat: float, lon: float, form_input: dict | None = None) -> d
             "overrideCoverageScore": round(float(override_coverage), 3),
             "kappaphycusCoverage": bool(kappa_in_coverage),
             "proxyCoverage": bool(feat_vals is not None),
+            "proxyCoverageMode": proxy_override_diag.get("coverageMode", "unknown"),
         },
         "appliedOverrides": {
             "kappaphycus": k.get("overrideDiagnostics", {}),
