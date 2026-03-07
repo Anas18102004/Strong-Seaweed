@@ -217,6 +217,7 @@ export default function Chatbot() {
   const [orbOffset, setOrbOffset] = useState({ x: 0, y: 0 });
 
   const recognitionRef = useRef<BrowserSpeechRecognition | null>(null);
+  const lastRecognitionErrorRef = useRef("");
   const activeAudioRef = useRef<HTMLAudioElement | null>(null);
   const bottomRef = useRef<HTMLDivElement>(null);
   const { token } = useAuth();
@@ -550,7 +551,7 @@ export default function Chatbot() {
     setVoiceSupported(true);
     const recognition = new SR();
     recognition.lang = sttLocale;
-    recognition.interimResults = false;
+    recognition.interimResults = true;
     recognition.continuous = false;
     try {
       (recognition as BrowserSpeechRecognition & { maxAlternatives?: number }).maxAlternatives = 3;
@@ -558,9 +559,19 @@ export default function Chatbot() {
       // no-op for browsers that don't support this flag
     }
 
-    recognition.onstart = () => setListening(true);
+    recognition.onstart = () => {
+      setListening(true);
+      lastRecognitionErrorRef.current = "";
+    };
     recognition.onend = () => {
       setListening(false);
+      const lastErr = lastRecognitionErrorRef.current;
+      const blockAutoResume =
+        lastErr === "network" || lastErr === "not-allowed" || lastErr === "service-not-allowed";
+      if (blockAutoResume) {
+        setVoiceSessionActive(false);
+        return;
+      }
       if (voiceMode && voiceSessionActive && voiceSupported && !isTyping) {
         setTimeout(() => {
           void startListening();
@@ -570,6 +581,7 @@ export default function Chatbot() {
     recognition.onerror = (event: SpeechRecognitionErrorEventLite) => {
       setListening(false);
       const code = String(event?.error || "").toLowerCase();
+      lastRecognitionErrorRef.current = code;
       if (code === "not-allowed" || code === "service-not-allowed") {
         setVoiceError("Microphone permission denied. Please allow mic access in browser settings.");
         return;
@@ -581,10 +593,10 @@ export default function Chatbot() {
       if (code === "network") {
         if (sttLocale !== "en-US") {
           setSttLocale("en-US");
-          setVoiceError("Speech recognition network error. Switched speech locale to en-US. Try again.");
+          setVoiceError("Speech recognition network error. Switched speech locale to en-US. Press Start Voice again.");
           return;
         }
-        setVoiceError("Speech recognition network error. Use Chrome/Edge over HTTPS and retry.");
+        setVoiceError("Speech recognition network error. Voice session paused. Use Chrome/Edge over HTTPS and press Start Voice.");
         return;
       }
       setVoiceError(event?.message || "Voice input failed. Try again.");
