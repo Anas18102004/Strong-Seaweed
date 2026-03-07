@@ -21,7 +21,6 @@ import {
   BrainCircuit,
   ShieldCheck,
   Database,
-  ChevronDown,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { api } from "@/lib/api";
@@ -181,6 +180,8 @@ function getExecutionSteps() {
   return ["Analyzing marine context", "Validating constraints", "Running suitability heuristics"];
 }
 
+const DEEPGRAM_CLIP_MS = 4200;
+
 export default function Chatbot() {
   const welcomeMessage: Message = {
     role: "assistant",
@@ -218,6 +219,16 @@ export default function Chatbot() {
 
   const recognitionRef = useRef<BrowserSpeechRecognition | null>(null);
   const lastRecognitionErrorRef = useRef("");
+  const mediaRecorderRef = useRef<MediaRecorder | null>(null);
+  const mediaStreamRef = useRef<MediaStream | null>(null);
+  const mediaChunksRef = useRef<BlobPart[]>([]);
+  const deepgramStopTimerRef = useRef<number | null>(null);
+  const voiceResumeTimerRef = useRef<number | null>(null);
+  const deepgramEnabledRef = useRef(true);
+  const voiceSessionActiveRef = useRef(false);
+  const voiceModeRef = useRef(false);
+  const isTypingRef = useRef(false);
+  const listeningRef = useRef(false);
   const activeAudioRef = useRef<HTMLAudioElement | null>(null);
   const bottomRef = useRef<HTMLDivElement>(null);
   const { token } = useAuth();
@@ -250,6 +261,22 @@ export default function Chatbot() {
     if (voiceMode) return;
     bottomRef.current?.scrollIntoView({ behavior: "smooth" });
   }, [messages, isTyping, voiceMode]);
+
+  useEffect(() => {
+    voiceSessionActiveRef.current = voiceSessionActive;
+  }, [voiceSessionActive]);
+
+  useEffect(() => {
+    voiceModeRef.current = voiceMode;
+  }, [voiceMode, voiceSupported]);
+
+  useEffect(() => {
+    isTypingRef.current = isTyping;
+  }, [isTyping]);
+
+  useEffect(() => {
+    listeningRef.current = listening;
+  }, [listening]);
 
   const pickFemaleVoice = () => {
     if (!("speechSynthesis" in window)) return null;
@@ -316,7 +343,174 @@ export default function Chatbot() {
     }
   };
 
+  const clearDeepgramTimer = () => {
+    if (deepgramStopTimerRef.current !== null) {
+      window.clearTimeout(deepgramStopTimerRef.current);
+      deepgramStopTimerRef.current = null;
+    }
+  };
+
+  const clearVoiceResumeTimer = () => {
+    if (voiceResumeTimerRef.current !== null) {
+      window.clearTimeout(voiceResumeTimerRef.current);
+      voiceResumeTimerRef.current = null;
+    }
+  };
+
+  const scheduleVoiceResume = (delayMs = 260, retries = 8) => {
+    clearVoiceResumeTimer();
+    const attempt = (remaining: number) => {
+      if (!voiceModeRef.current || !voiceSessionActiveRef.current) return;
+      if (listeningRef.current) return;
+      if (isTypingRef.current) {
+        if (remaining <= 0) return;
+        voiceResumeTimerRef.current = window.setTimeout(() => attempt(remaining - 1), 320);
+        return;
+      }
+      void startListening();
+      if (remaining <= 0) return;
+      voiceResumeTimerRef.current = window.setTimeout(() => {
+        if (!listeningRef.current && voiceModeRef.current && voiceSessionActiveRef.current) {
+          attempt(remaining - 1);
+        }
+      }, 480);
+    };
+    voiceResumeTimerRef.current = window.setTimeout(() => attempt(retries), delayMs);
+  };
+
+  const stopDeepgramRecorder = () => {
+    clearDeepgramTimer();
+    const recorder = mediaRecorderRef.current;
+    if (recorder && recorder.state !== "inactive") {
+      try {
+        recorder.stop();
+      } catch {
+        // no-op
+      }
+    }
+    const stream = mediaStreamRef.current;
+    if (stream) {
+      stream.getTracks().forEach((t) => t.stop());
+      mediaStreamRef.current = null;
+    }
+  };
+
+  const blobToBase64 = async (blob: Blob) =>
+    new Promise<string>((resolve, reject) => {
+      const reader = new FileReader();
+      reader.onloadend = () => {
+        const raw = String(reader.result || "");
+        const base64 = raw.includes(",") ? raw.split(",")[1] : "";
+        if (!base64) {
+          reject(new Error("audio_encode_failed"));
+          return;
+        }
+        resolve(base64);
+      };
+      reader.onerror = () => reject(new Error("audio_encode_failed"));
+      reader.readAsDataURL(blob);
+    });
+
+  const pickRecorderMimeType = () => {
+    if (typeof MediaRecorder === "undefined") return "";
+    const candidates = ["audio/webm;codecs=opus", "audio/webm", "audio/ogg;codecs=opus", "audio/mp4"];
+    return candidates.find((x) => MediaRecorder.isTypeSupported(x)) || "";
+  };
+
+  const startDeepgramCapture = async () => {
+    if (!token) throw new Error("Authentication required for Deepgram voice transcription.");
+    if (!navigator.mediaDevices?.getUserMedia || typeof MediaRecorder === "undefined") {
+      throw new Error("Media recorder is not supported in this browser.");
+    }
+    if (isTypingRef.current || listeningRef.current) return;
+
+    const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
+    mediaStreamRef.current = stream;
+    const mimeType = pickRecorderMimeType();
+    const recorder = mimeType ? new MediaRecorder(stream, { mimeType }) : new MediaRecorder(stream);
+    mediaRecorderRef.current = recorder;
+    mediaChunksRef.current = [];
+
+    recorder.onstart = () => {
+      setListening(true);
+      setVoiceError("");
+      setLiveTranscript("Listening...");
+    };
+    recorder.ondataavailable = (event) => {
+      if (event.data && event.data.size > 0) {
+        mediaChunksRef.current.push(event.data);
+      }
+    };
+    recorder.onerror = () => {
+      setListening(false);
+      setVoiceError("Audio capture failed. Please retry.");
+      stopDeepgramRecorder();
+    };
+    recorder.onstop = async () => {
+      clearDeepgramTimer();
+      setListening(false);
+
+      const streamRef = mediaStreamRef.current;
+      if (streamRef) {
+        streamRef.getTracks().forEach((t) => t.stop());
+        mediaStreamRef.current = null;
+      }
+
+      const chunks = [...mediaChunksRef.current];
+      mediaChunksRef.current = [];
+      mediaRecorderRef.current = null;
+
+      // User explicitly stopped voice mode.
+      if (!voiceSessionActiveRef.current || !voiceModeRef.current) return;
+      if (!chunks.length) {
+        setVoiceError("No audio captured. Please try again.");
+        scheduleVoiceResume(260);
+        return;
+      }
+
+      const blob = new Blob(chunks, { type: recorder.mimeType || mimeType || "audio/webm" });
+      try {
+        const audioBase64 = await blobToBase64(blob);
+        const stt = await api.voiceTranscribe(audioBase64, blob.type || "audio/webm", sttLocale, token || undefined);
+        const transcript = String(stt?.transcript || "").trim();
+        if (!transcript) {
+          setVoiceError("No speech detected. Please speak clearly and try again.");
+          scheduleVoiceResume(260);
+          return;
+        }
+
+        setLiveTranscript(transcript);
+        await sendMessage(transcript, "voice", { autoResumeVoice: true });
+      } catch (error) {
+        const message = error instanceof Error ? error.message : "Deepgram transcription failed.";
+        if (message.includes("deepgram_not_configured") || message.includes("401")) {
+          deepgramEnabledRef.current = false;
+          setVoiceError("Deepgram STT is not configured on server. Falling back to browser STT.");
+          return;
+        }
+        setVoiceError(`Deepgram STT failed. ${message}`);
+      } finally {
+        scheduleVoiceResume(260);
+      }
+    };
+
+    recorder.start();
+    deepgramStopTimerRef.current = window.setTimeout(() => {
+      const activeRecorder = mediaRecorderRef.current;
+      if (activeRecorder && activeRecorder.state === "recording") {
+        try {
+          activeRecorder.stop();
+        } catch {
+          // no-op
+        }
+      }
+    }, DEEPGRAM_CLIP_MS);
+  };
+
   const stopListening = () => {
+    clearVoiceResumeTimer();
+    stopDeepgramRecorder();
+    setListening(false);
     const recognition = recognitionRef.current;
     if (!recognition) return;
     try {
@@ -327,8 +521,24 @@ export default function Chatbot() {
   };
 
   const startListening = async () => {
+    if (!voiceModeRef.current || !voiceSessionActiveRef.current) return;
+    if (isTypingRef.current || listeningRef.current) return;
+
+    // Prefer Deepgram STT to avoid browser SpeechRecognition network instability.
+    if (deepgramEnabledRef.current && token && navigator.mediaDevices?.getUserMedia && typeof MediaRecorder !== "undefined") {
+      try {
+        await startDeepgramCapture();
+        return;
+      } catch (error) {
+        setVoiceError(error instanceof Error ? error.message : "Could not start Deepgram STT.");
+      }
+    }
+
     const recognition = recognitionRef.current;
-    if (!recognition || isTyping || listening) return;
+    if (!recognition) {
+      setVoiceError("Voice input is not supported in this browser.");
+      return;
+    }
     try {
       // Prefer explicit permission prompt when supported.
       if (navigator.mediaDevices?.getUserMedia) {
@@ -536,19 +746,22 @@ export default function Chatbot() {
       ]);
     } finally {
       setIsTyping(false);
-      if (options.autoResumeVoice && voiceMode && voiceSupported && voiceSessionActive) {
-        setTimeout(() => startListening(), 250);
+      if (options.autoResumeVoice && voiceModeRef.current && voiceSupported && voiceSessionActiveRef.current) {
+        scheduleVoiceResume(260);
       }
     }
   };
 
   useEffect(() => {
     const SR = window.SpeechRecognition || window.webkitSpeechRecognition;
+    const hasDeepgramCapture = Boolean(navigator.mediaDevices?.getUserMedia && typeof MediaRecorder !== "undefined");
+    const hasBrowserStt = Boolean(SR);
+    setVoiceSupported(hasDeepgramCapture || hasBrowserStt);
+
     if (!SR) {
-      setVoiceSupported(false);
+      recognitionRef.current = null;
       return;
     }
-    setVoiceSupported(true);
     const recognition = new SR();
     recognition.lang = sttLocale;
     recognition.interimResults = true;
@@ -569,13 +782,12 @@ export default function Chatbot() {
       const blockAutoResume =
         lastErr === "network" || lastErr === "not-allowed" || lastErr === "service-not-allowed";
       if (blockAutoResume) {
+        voiceSessionActiveRef.current = false;
         setVoiceSessionActive(false);
         return;
       }
-      if (voiceMode && voiceSessionActive && voiceSupported && !isTyping) {
-        setTimeout(() => {
-          void startListening();
-        }, 220);
+      if (voiceModeRef.current && voiceSessionActiveRef.current && voiceSupported) {
+        scheduleVoiceResume(220);
       }
     };
     recognition.onerror = (event: SpeechRecognitionErrorEventLite) => {
@@ -636,6 +848,7 @@ export default function Chatbot() {
 
   useEffect(() => {
     if (!voiceMode) {
+      voiceSessionActiveRef.current = false;
       setVoiceSessionActive(false);
       stopListening();
       stopVoiceOutput();
@@ -643,14 +856,31 @@ export default function Chatbot() {
       setVoiceError("");
       return;
     }
-    // Keep explicit user control: start recognition only on Start Voice click.
-  }, [voiceMode]);
+    if (!voiceSupported) {
+      setVoiceError("Voice input is not supported in this browser.");
+      return;
+    }
+    voiceSessionActiveRef.current = true;
+    setVoiceSessionActive(true);
+    setVoiceError("");
+    setLiveTranscript("Starting voice channel...");
+    scheduleVoiceResume(180, 10);
+  }, [voiceMode, voiceSupported]);
 
   useEffect(() => {
     if (!voiceEnabled) {
       stopVoiceOutput();
     }
   }, [voiceEnabled]);
+
+  useEffect(
+    () => () => {
+      stopListening();
+      stopVoiceOutput();
+    },
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+    [],
+  );
 
   const filteredSessions = sessions.filter((s) => s.title.toLowerCase().includes(sessionSearch.toLowerCase()));
   const groupedSessions = filteredSessions.reduce<Record<string, { id: string; title: string; lastMessageAt?: string }[]>>((acc, s) => {
@@ -714,6 +944,7 @@ export default function Chatbot() {
                   setVoiceMode((v) => {
                     const next = !v;
                     if (!next) {
+                      voiceSessionActiveRef.current = false;
                       setVoiceSessionActive(false);
                       stopListening();
                       stopVoiceOutput();
@@ -807,7 +1038,7 @@ export default function Chatbot() {
                         : voiceSessionActive
                           ? "Voice standby. Listening will auto-resume."
                           : voiceSupported
-                            ? "Tap Start Voice to begin."
+                            ? "Voice channel ready."
                             : "Voice input is not supported in this browser."}
                   </p>
                   {isTyping && (
@@ -831,11 +1062,13 @@ export default function Chatbot() {
                     className="voice-mic-btn min-h-12 min-w-44 rounded-full"
                     onClick={() => {
                       if (voiceSessionActive || listening) {
+                        voiceSessionActiveRef.current = false;
                         setVoiceSessionActive(false);
                         stopListening();
                       } else {
+                        voiceSessionActiveRef.current = true;
                         setVoiceSessionActive(true);
-                        void startListening();
+                        scheduleVoiceResume(120, 10);
                       }
                     }}
                     disabled={!voiceSupported || isTyping}
@@ -846,6 +1079,7 @@ export default function Chatbot() {
                     type="button"
                     className="min-h-12 min-w-44 rounded-full border border-white/20 bg-white/10 text-cyan-100 hover:bg-white/15"
                     onClick={() => {
+                      voiceSessionActiveRef.current = false;
                       setVoiceSessionActive(false);
                       stopListening();
                       stopVoiceOutput();
@@ -972,17 +1206,6 @@ export default function Chatbot() {
                         <p className="mb-2 text-[11px] uppercase tracking-[0.12em] text-slate-500">Answer</p>
                         <div className="text-sm text-slate-800">{renderAssistantText(m.content)}</div>
                       </div>
-                      <details className="mt-3 rounded-lg border border-[#d5e4ee] bg-[#f7fbff] p-2.5">
-                        <summary className="cursor-pointer list-none text-xs font-semibold text-cyan-800 flex items-center gap-1.5">
-                          <ChevronDown className="h-3.5 w-3.5" />
-                          Reasoning and analysis trace
-                        </summary>
-                        <div className="mt-2 space-y-1.5 text-xs text-slate-600">
-                          <p>- Environmental constraints were prioritized by current context values.</p>
-                          <p>- Species and risk weighting were balanced against operational objective.</p>
-                          <p>- Recommendations were tuned for execution feasibility.</p>
-                        </div>
-                      </details>
                     </div>
                   )}
                 </motion.div>

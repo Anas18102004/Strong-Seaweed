@@ -7,7 +7,19 @@ import { useAuth } from "@/context/AuthContext";
 import { useEffect, useMemo, useState } from "react";
 
 function toCsv(rows: PredictionSubmissionItem[]) {
-  const headers = ["createdAt", "locationName", "lat", "lon", "bestSpecies", "probabilityPercent", "priority"];
+  const headers = [
+    "createdAt",
+    "locationName",
+    "lat",
+    "lon",
+    "bestSpecies",
+    "probabilityPercent",
+    "priority",
+    "topCandidate",
+    "topCandidatePercent",
+    "advisoryFallbackUsed",
+    "advisorySummary",
+  ];
   const lines = rows.map((r) => [
     r.createdAt,
     r.locationName || "",
@@ -16,8 +28,19 @@ function toCsv(rows: PredictionSubmissionItem[]) {
     r.bestSpecies?.displayName || "",
     String(r.bestSpecies?.probabilityPercent ?? ""),
     r.bestSpecies?.priority || "",
+    r.topCandidate?.displayName || "",
+    String(r.topCandidate?.probabilityPercent ?? ""),
+    String(Boolean(r.advisoryFallbackUsed)),
+    r.fallbackAdvisory?.summary || "",
   ]);
   return [headers.join(","), ...lines.map((x) => x.map((v) => `"${String(v).replace(/"/g, '""')}"`).join(","))].join("\n");
+}
+
+function effectiveSpecies(row: PredictionSubmissionItem) {
+  if (row.bestSpecies?.actionability === "insufficient_data" && row.topCandidate) {
+    return row.topCandidate;
+  }
+  return row.bestSpecies;
 }
 
 export default function Reports() {
@@ -47,7 +70,7 @@ export default function Reports() {
   }, [token]);
 
   const avgProb = useMemo(() => {
-    const vals = submissions.map((s) => s.bestSpecies?.probabilityPercent).filter((v): v is number => typeof v === "number");
+    const vals = submissions.map((s) => effectiveSpecies(s)?.probabilityPercent).filter((v): v is number => typeof v === "number");
     if (!vals.length) return null;
     return vals.reduce((a, b) => a + b, 0) / vals.length;
   }, [submissions]);
@@ -55,9 +78,10 @@ export default function Reports() {
   const topSpecies = useMemo(() => {
     const counts = new Map<string, number>();
     for (const s of submissions) {
-      const actionable = s.bestSpecies?.actionability;
+      const item = effectiveSpecies(s);
+      const actionable = item?.actionability;
       if (actionable && actionable !== "recommended") continue;
-      const name = s.bestSpecies?.displayName?.trim();
+      const name = item?.displayName?.trim();
       if (!name) continue;
       counts.set(name, (counts.get(name) || 0) + 1);
     }
@@ -154,7 +178,20 @@ export default function Reports() {
           </h2>
 
           <div className="grid gap-2.5">
-            {submissions.slice(0, 12).map((s) => (
+            {submissions.slice(0, 12).map((s) => {
+              const species = effectiveSpecies(s);
+              const statusText =
+                s.bestSpecies?.actionability === "recommended"
+                  ? "Recommended species"
+                  : s.bestSpecies?.actionability === "test_pilot_only"
+                  ? "Pilot-only candidate"
+                  : s.bestSpecies?.actionability === "insufficient_data" && s.fallbackAdvisory
+                  ? "AI fallback advisory available"
+                  : s.bestSpecies?.actionability === "insufficient_data"
+                  ? "Insufficient data"
+                  : "No cultivation recommendation";
+
+              return (
               <div
                 key={s.id}
                 className="grid gap-2.5 rounded-2xl border border-[#c9deec] bg-[linear-gradient(180deg,rgba(248,252,255,0.98)_0%,rgba(240,248,253,0.94)_100%)] px-4 py-3 sm:grid-cols-[minmax(0,1fr)_auto_auto] sm:items-center"
@@ -174,21 +211,16 @@ export default function Reports() {
                   </div>
                 </div>
                 <div className="sm:text-right">
-                  <p className="text-sm font-semibold text-[#0f2e47]">{s.bestSpecies?.displayName || "-"}</p>
-                  <p className="text-[11px] text-slate-500">
-                    {s.bestSpecies?.actionability === "recommended"
-                      ? "Recommended species"
-                      : s.bestSpecies?.actionability === "test_pilot_only"
-                      ? "Pilot-only candidate"
-                      : s.bestSpecies?.actionability === "insufficient_data"
-                      ? "Insufficient data"
-                      : "No cultivation recommendation"}
-                  </p>
+                  <p className="text-sm font-semibold text-[#0f2e47]">{species?.displayName || "-"}</p>
+                  <p className="text-[11px] text-slate-500">{statusText}</p>
+                  {s.fallbackAdvisory?.summary ? (
+                    <p className="mt-1 max-w-[280px] text-[11px] text-slate-500 sm:ml-auto">{s.fallbackAdvisory.summary}</p>
+                  ) : null}
                 </div>
-                {typeof s.bestSpecies?.probabilityPercent === "number" ? (
+                {typeof species?.probabilityPercent === "number" ? (
                   <div className="inline-flex items-center gap-1 rounded-full border border-cyan-200 bg-cyan-50 px-2.5 py-1 text-xs font-semibold text-cyan-800 sm:justify-self-end">
                     <TrendingUp className="h-3.5 w-3.5" />
-                    {s.bestSpecies.probabilityPercent}%
+                    {species.probabilityPercent}%
                   </div>
                 ) : (
                   <div className="inline-flex items-center rounded-full border border-slate-200 bg-slate-50 px-2.5 py-1 text-xs font-semibold text-slate-600 sm:justify-self-end">
@@ -196,7 +228,8 @@ export default function Reports() {
                   </div>
                 )}
               </div>
-            ))}
+              );
+            })}
             {!loading && submissions.length === 0 && (
               <div className="rounded-2xl border border-dashed border-cyan-200/80 bg-cyan-50/40 px-4 py-8 text-center">
                 <Waves className="mx-auto mb-2 h-5 w-5 text-cyan-700" />

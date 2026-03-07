@@ -64,6 +64,14 @@ export type VoiceResponse = {
 
 export type VoiceProfile = "female" | "male" | "default";
 
+export type VoiceTranscribeResponse = {
+  transcript: string;
+  confidence?: number | null;
+  provider: string;
+  model?: string;
+  locale?: string;
+};
+
 export type AiProviderStatus = {
   provider: string;
   configured: boolean;
@@ -90,6 +98,21 @@ export type SpeciesScore = {
   marginToThresholdPercent?: number | null;
 };
 
+export type AdvisoryFallbackSummary = {
+  summary: string;
+  provider: string;
+  status: string;
+};
+
+export type AdvisoryFallbackDetail = {
+  answer: string;
+  model: string;
+  provider: string;
+  status: string;
+  routedAgent?: string;
+  source?: string;
+};
+
 export type SpeciesPredictionResponse = {
   input: { lat: number; lon: number };
   source: string;
@@ -98,6 +121,8 @@ export type SpeciesPredictionResponse = {
   species: SpeciesScore[];
   bestSpecies: SpeciesScore | null;
   warnings: string[];
+  advisoryFallbackUsed?: boolean;
+  fallbackAdvisory?: AdvisoryFallbackDetail | null;
 };
 
 export type PredictionFormInput = {
@@ -140,6 +165,9 @@ export type PredictionSubmissionItem = {
   season: string;
   createdAt: string;
   bestSpecies: SpeciesScore | null;
+  topCandidate?: SpeciesScore | null;
+  advisoryFallbackUsed?: boolean;
+  fallbackAdvisory?: AdvisoryFallbackSummary | null;
 };
 
 export type AiContextInput = {
@@ -410,6 +438,21 @@ export const api = {
       {
         method: "POST",
         body: JSON.stringify({ question, sessionId, locale, voiceProfile, context }),
+      },
+      token,
+    ),
+
+  voiceTranscribe: (
+    audioBase64: string,
+    mimeType = "audio/webm",
+    locale = "en-US",
+    token?: string,
+  ) =>
+    request<VoiceTranscribeResponse>(
+      "/api/ai/voice/transcribe",
+      {
+        method: "POST",
+        body: JSON.stringify({ audioBase64, mimeType, locale }),
       },
       token,
     ),

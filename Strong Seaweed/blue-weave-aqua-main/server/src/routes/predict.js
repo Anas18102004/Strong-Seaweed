@@ -73,7 +73,7 @@ function advisoryQuestionFromContext({ lat, lon, formInput, prediction, environm
     : "Copernicus context unavailable";
 
   return [
-    "You are an aquaculture decision-support specialist.",
+    "You are a seaweed aquaculture decision-support specialist.",
     "Use provided model/context signals as primary evidence. Do not claim certainty.",
     `Location: lat=${lat}, lon=${lon}, name=${formInput?.locationName || "unknown"}, season=${formInput?.season || "unknown"}.`,
     `Best model species: ${best?.displayName || "none"}; score=${best?.probabilityPercent ?? "n/a"}%; actionability=${best?.actionability || "unknown"}; decisionSource=${prediction?.decisionSource || "unknown"}.`,
@@ -82,10 +82,107 @@ function advisoryQuestionFromContext({ lat, lon, formInput, prediction, environm
     `Copernicus signals: ${copSummary}.`,
     `Model warnings: ${warnings}.`,
     `Species ranking summary: ${speciesSummary}`,
-    "Respond in 5 bullets: 1) recommendation level, 2) why, 3) top risks, 4) field checks before farming, 5) next 7-day action plan.",
+    "Respond in 5 bullets: 1) cultivation recommendation level, 2) why, 3) top risks, 4) field checks before farming, 5) next 7-day action plan.",
     "If confidence is low or warnings exist, explicitly say pilot-only or not recommended.",
-    "Include latest policy/regulatory/market context only if available from live web grounding, and mark it separately as external context.",
+    "Also include latest current seaweed policy/regulatory/market context from web grounding when available, and label it as external context.",
   ].join(" ");
+}
+
+function shouldGenerateFallbackAdvisory(prediction) {
+  const best = prediction?.bestSpecies || null;
+  const actionability = String(best?.actionability || prediction?.actionability || "insufficient_data").toLowerCase();
+  const score = Number(best?.probabilityPercent);
+  const warnings = Array.isArray(prediction?.warnings) ? prediction.warnings.map((w) => String(w).toLowerCase()) : [];
+
+  if (["insufficient_data", "not_recommended", "test_pilot_only"].includes(actionability)) return true;
+  if (!Number.isFinite(score)) return true;
+  if (score < 45) return true;
+  if (
+    warnings.some((w) =>
+      [
+        "no_species_meets_suitability_threshold",
+        "no_species_with_ready_scores",
+        "no_species_meets_threshold_using_screening_fallback",
+        "no_species_meets_threshold_using_ranking_fallback",
+        "best_species_low_confidence",
+        "best_species_ultra_low_confidence",
+        "environmental_features_stale",
+        "low_override_mapping_coverage",
+      ].includes(w),
+    )
+  ) {
+    return true;
+  }
+
+  return false;
+}
+
+function topScoredSpecies(prediction) {
+  const list = Array.isArray(prediction?.species) ? prediction.species : [];
+  return (
+    list
+      .filter((s) => Number.isFinite(Number(s?.probabilityPercent)))
+      .sort((a, b) => Number(b?.probabilityPercent || 0) - Number(a?.probabilityPercent || 0))[0] || null
+  );
+}
+
+function deterministicAdvisoryText(prediction, environment) {
+  const best = prediction?.bestSpecies || null;
+  const top = topScoredSpecies(prediction);
+  const chosen = best?.speciesId === "insufficient_data" ? top : best || top;
+  const speciesName = chosen?.displayName || "No strong species candidate";
+  const scoreText = Number.isFinite(Number(chosen?.probabilityPercent)) ? `${Number(chosen.probabilityPercent).toFixed(2)}%` : "n/a";
+  const tempText = Number.isFinite(Number(environment?.temperatureC)) ? `${Number(environment.temperatureC).toFixed(1)} C` : "n/a";
+  const salText = Number.isFinite(Number(environment?.salinityPpt)) ? `${Number(environment.salinityPpt).toFixed(1)} ppt` : "n/a";
+  const warnings = Array.isArray(prediction?.warnings) && prediction.warnings.length > 0 ? prediction.warnings.join(", ") : "none";
+  return [
+    `Recommendation level: pilot-only for ${speciesName} (score ${scoreText}).`,
+    `Why: model confidence is limited; decision source=${prediction?.decisionSource || "unknown"}, warnings=${warnings}.`,
+    `Top risks: uncertain local coverage and possible environmental mismatch.`,
+    `Field checks before farming: validate salinity/temperature/depth locally (temp ${tempText}, salinity ${salText}).`,
+    "Next 7 days: run a small pilot line, monitor growth/fouling daily, then rerun prediction with updated observations.",
+  ].join("\n");
+}
+
+async function generateFallbackAdvisory({ userId, lat, lon, formInput, prediction, environment }) {
+  const question = advisoryQuestionFromContext({ lat, lon, formInput, prediction, environment });
+  try {
+    const aiOut = await runChat(question, {
+      userId,
+      context: {
+        mode: "predict_advisory",
+        locationName: formInput.locationName,
+        season: formInput.season,
+        lat,
+        lon,
+        depthM: formInput.depthM,
+        overrides: formInput.overrides,
+        advanced: formInput.advanced,
+        prediction,
+        environment,
+      },
+    });
+    const answer = String(aiOut?.answer || "").trim();
+    const unusable = !answer || /live ai model is unavailable/i.test(answer);
+    if (unusable) throw new Error("ai_advisory_unavailable");
+    return {
+      answer,
+      model: aiOut?.model || "unknown",
+      provider: aiOut?.provider || "unknown",
+      status: aiOut?.status || "live",
+      routedAgent: aiOut?.routedAgent || "copilot",
+      source: "llm_plus_context",
+    };
+  } catch {
+    return {
+      answer: deterministicAdvisoryText(prediction, environment),
+      model: "deterministic-fallback",
+      provider: "rule-fallback",
+      status: "fallback",
+      routedAgent: "copilot",
+      source: "rule_fallback",
+    };
+  }
 }
 
 async function fetchEnvironment(lat, lon) {
@@ -179,7 +276,34 @@ router.post("/species", authRequired, async (req, res) => {
 
   try {
     const formInput = normalizeFormInput(req.body?.formInput);
-    const out = await predictSpeciesAtPoint(lat, lon, formInput);
+    const prediction = await predictSpeciesAtPoint(lat, lon, formInput);
+    let fallbackAdvisory = null;
+    let advisoryFallbackUsed = false;
+
+    if (shouldGenerateFallbackAdvisory(prediction)) {
+      const environment = await fetchEnvironment(lat, lon).catch(() => ({
+        temperatureC: null,
+        salinityPpt: null,
+        provider: "unavailable",
+        fetchedAt: new Date().toISOString(),
+        notes: ["Live environment data unavailable during fallback advisory generation."],
+      }));
+      fallbackAdvisory = await generateFallbackAdvisory({
+        userId: req.user.id,
+        lat,
+        lon,
+        formInput,
+        prediction,
+        environment,
+      });
+      advisoryFallbackUsed = true;
+    }
+
+    const out = {
+      ...prediction,
+      advisoryFallbackUsed,
+      fallbackAdvisory,
+    };
 
     await PredictionSubmission.create({
       userId: req.user.id,
@@ -212,22 +336,13 @@ router.post("/species/advisory", authRequired, async (req, res) => {
       fetchedAt: new Date().toISOString(),
       notes: ["Live environment data unavailable during advisory generation."],
     }));
-
-    const question = advisoryQuestionFromContext({ lat, lon, formInput, prediction, environment });
-    const aiOut = await runChat(question, {
+    const advisory = await generateFallbackAdvisory({
       userId: req.user?.id,
-      context: {
-        mode: "predict_advisory",
-        locationName: formInput.locationName,
-        season: formInput.season,
-        lat,
-        lon,
-        depthM: formInput.depthM,
-        overrides: formInput.overrides,
-        advanced: formInput.advanced,
-        prediction,
-        environment,
-      },
+      lat,
+      lon,
+      formInput,
+      prediction,
+      environment,
     });
 
     return res.json({
@@ -235,13 +350,7 @@ router.post("/species/advisory", authRequired, async (req, res) => {
       formInput,
       prediction,
       environment,
-      advisory: {
-        answer: aiOut?.answer || "No advisory generated.",
-        model: aiOut?.model || "unknown",
-        provider: aiOut?.provider || "unknown",
-        status: aiOut?.status || "unknown",
-        routedAgent: aiOut?.routedAgent || "copilot",
-      },
+      advisory,
       generatedAt: new Date().toISOString(),
     });
   } catch (err) {
@@ -265,6 +374,15 @@ router.get("/submissions/me", authRequired, async (req, res) => {
       season: s.season || "",
       createdAt: s.createdAt,
       bestSpecies: s.prediction?.bestSpecies || null,
+      topCandidate: topScoredSpecies(s.prediction || null),
+      advisoryFallbackUsed: Boolean(s.prediction?.advisoryFallbackUsed),
+      fallbackAdvisory: s.prediction?.fallbackAdvisory
+        ? {
+            summary: String(s.prediction.fallbackAdvisory.answer || "").replace(/\s+/g, " ").trim().slice(0, 220),
+            provider: s.prediction.fallbackAdvisory.provider || "unknown",
+            status: s.prediction.fallbackAdvisory.status || "unknown",
+          }
+        : null,
     })),
   });
 });

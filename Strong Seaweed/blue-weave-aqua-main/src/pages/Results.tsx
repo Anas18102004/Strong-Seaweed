@@ -104,9 +104,15 @@ export default function ResultsPage() {
     actionability: species.actionability || "insufficient_data",
   }));
 
-  const best = speciesResults.find((item) => item.best) ?? speciesResults[0];
-  const bestIsRecommended = best?.actionability === "recommended";
-  const bestIsPilot = best?.actionability === "test_pilot_only";
+  const scoredByRank = speciesResults
+    .filter((item): item is (typeof speciesResults)[number] & { score: number } => typeof item.score === "number")
+    .sort((a, b) => b.score - a.score);
+  const modelBest = speciesResults.find((item) => item.best) ?? scoredByRank[0] ?? speciesResults[0];
+  const hasInsufficientData = prediction.bestSpecies?.actionability === "insufficient_data";
+  const best = hasInsufficientData ? scoredByRank[0] ?? modelBest : modelBest;
+  const bestIsRecommended = best?.actionability === "recommended" && !hasInsufficientData;
+  const bestIsPilot = best?.actionability === "test_pilot_only" || hasInsufficientData;
+  const bestHasScore = typeof best?.score === "number";
 
   return (
     <DashboardLayout>
@@ -174,19 +180,27 @@ export default function ResultsPage() {
                 {bestIsRecommended
                   ? <>Recommended for cultivation: <span className="gradient-text">{best.name}</span></>
                   : bestIsPilot
-                  ? <>Pilot-only candidate: <span className="gradient-text">{best.name}</span></>
+                  ? <>Pilot-only candidate: <span className="gradient-text">{best?.name || "No clear candidate"}</span></>
                   : <>No cultivation recommendation at this location</>}
               </h3>
               <p className="text-sm text-muted-foreground leading-relaxed mb-3">
                 {bestIsRecommended
                   ? <>Best species score at this site is <strong className="text-foreground">{best.score ?? 0}%</strong>.</>
-                  : <>Top ranked model score is <strong className="text-foreground">{best.score ?? 0}%</strong>, below strict cultivation threshold.</>}
+                  : bestIsPilot && bestHasScore
+                  ? <>Top available species score is <strong className="text-foreground">{best.score}%</strong>. Confidence is limited, so start with a small pilot and verify in field conditions.</>
+                  : <>Top ranked model score is <strong className="text-foreground">{best?.score ?? 0}%</strong>, below strict cultivation threshold.</>}
                 {prediction.nearestGrid && (
                   <>
                     {" "}Nearest model grid is <strong className="text-foreground">{prediction.nearestGrid.distance_km.toFixed(2)} km</strong> away.
                   </>
                 )}
               </p>
+              {prediction.fallbackAdvisory?.answer && (
+                <div className="mb-3 rounded-xl border border-cyan-400/25 bg-cyan-500/5 p-3">
+                  <p className="text-xs font-semibold uppercase tracking-wide text-cyan-200">Fallback Advisory</p>
+                  <p className="mt-1 whitespace-pre-line text-sm text-cyan-100">{prediction.fallbackAdvisory.answer}</p>
+                </div>
+              )}
               <button
                 onClick={() => setShowWhy(!showWhy)}
                 className="flex items-center gap-1 text-sm font-medium text-primary hover:text-primary/80 transition-colors"

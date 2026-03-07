@@ -1,6 +1,7 @@
 import express from "express";
 import { authRequired } from "../middleware/auth.js";
 import { getAiStatus, runAgent, runChat, runVoice } from "../services/aiService.js";
+import { config } from "../config.js";
 import { ChatSession } from "../models/ChatSession.js";
 import { ChatMessage } from "../models/ChatMessage.js";
 
@@ -51,6 +52,66 @@ function sanitizeContext(raw = {}) {
       rainfallMm: asNum(advancedIn.rainfallMm),
       tidalAmplitudeM: asNum(advancedIn.tidalAmplitudeM),
     },
+  };
+}
+
+function deepgramLanguageForLocale(locale = "en-US") {
+  const value = String(locale || "").toLowerCase();
+  if (value.startsWith("en")) return "en";
+  if (value.startsWith("hi")) return "hi";
+  return "en";
+}
+
+async function transcribeWithDeepgram({ audioBase64, mimeType, locale }) {
+  if (!config.deepgramApiKey) {
+    throw new Error("deepgram_not_configured");
+  }
+
+  const base64 = String(audioBase64 || "").trim();
+  if (!base64) {
+    throw new Error("audio_missing");
+  }
+
+  const audio = Buffer.from(base64, "base64");
+  if (!audio.length) {
+    throw new Error("audio_empty");
+  }
+
+  const model = encodeURIComponent(String(config.deepgramSttModel || "flux-general-en"));
+  const language = encodeURIComponent(deepgramLanguageForLocale(locale));
+  const url = `${String(config.deepgramSttApiUrl || "https://api.deepgram.com/v1/listen")}?model=${model}&language=${language}&smart_format=true&punctuate=true`;
+  const contentType = String(mimeType || "audio/webm");
+
+  const response = await fetch(url, {
+    method: "POST",
+    headers: {
+      Authorization: `Token ${config.deepgramApiKey}`,
+      "Content-Type": contentType,
+    },
+    body: audio,
+  });
+
+  const raw = await response.text();
+  if (!response.ok) {
+    throw new Error(`deepgram_http_${response.status}: ${raw.slice(0, 260)}`);
+  }
+
+  let parsed;
+  try {
+    parsed = JSON.parse(raw);
+  } catch {
+    throw new Error("deepgram_parse_error");
+  }
+
+  const alt = parsed?.results?.channels?.[0]?.alternatives?.[0] || {};
+  const transcript = String(alt?.transcript || "").trim();
+  const confidence = Number(alt?.confidence);
+  return {
+    transcript,
+    confidence: Number.isFinite(confidence) ? confidence : null,
+    provider: "deepgram",
+    model: String(config.deepgramSttModel || "flux-general-en"),
+    locale: deepgramLanguageForLocale(locale),
   };
 }
 
@@ -224,6 +285,39 @@ router.post("/chat/stream", authRequired, async (req, res) => {
     disconnected,
   });
   res.end();
+});
+
+router.post("/voice/transcribe", authRequired, async (req, res) => {
+  const start = logAiStart("/api/ai/voice/transcribe", req.user?.id);
+  const audioBase64 = String(req.body?.audioBase64 || "").trim();
+  const mimeType = String(req.body?.mimeType || "audio/webm").trim() || "audio/webm";
+  const locale = String(req.body?.locale || "en-US").trim() || "en-US";
+
+  if (!audioBase64) {
+    logAiEnd("/api/ai/voice/transcribe", req.user?.id, start, false, { error: "audio_missing" });
+    return res.status(400).json({ error: "audioBase64 is required" });
+  }
+
+  // Guard against oversized uploads.
+  if (audioBase64.length > 12_000_000) {
+    logAiEnd("/api/ai/voice/transcribe", req.user?.id, start, false, { error: "audio_too_large" });
+    return res.status(413).json({ error: "audio payload too large" });
+  }
+
+  try {
+    const out = await transcribeWithDeepgram({ audioBase64, mimeType, locale });
+    logAiEnd("/api/ai/voice/transcribe", req.user?.id, start, true, {
+      provider: out.provider,
+      model: out.model,
+      transcriptChars: out.transcript.length,
+      locale: out.locale,
+    });
+    return res.json(out);
+  } catch (error) {
+    const detail = error instanceof Error ? error.message : "transcribe_failed";
+    logAiEnd("/api/ai/voice/transcribe", req.user?.id, start, false, { error: detail });
+    return res.status(502).json({ error: detail });
+  }
 });
 
 router.post("/voice/respond", authRequired, async (req, res) => {

@@ -1,6 +1,7 @@
 import json
 import logging
 import os
+import re
 import threading
 import time
 import urllib.error
@@ -328,6 +329,24 @@ class AgentOrchestrator:
         return False
 
     @staticmethod
+    def _sanitize_answer(text: Optional[str]) -> Optional[str]:
+        if not text:
+            return None
+        out = str(text).replace("\r\n", "\n").strip()
+        if not out:
+            return None
+        # Strip any explicit reasoning trace sections if a model leaks them.
+        out = re.sub(
+            r"(?is)\n{0,2}(reasoning and analysis trace|internal reasoning|chain of thought|reasoning trace)\b.*$",
+            "",
+            out,
+        )
+        # Keep responses business-like for this UI.
+        out = re.sub(r"[\U0001F300-\U0001FAFF]+", "", out)
+        out = re.sub(r"\n{3,}", "\n\n", out).strip()
+        return out or None
+
+    @staticmethod
     def _cache_key(mode: str, agent: str, question: str, context: Optional[Dict[str, Any]]) -> str:
         payload = {
             "mode": mode,
@@ -394,7 +413,9 @@ class AgentOrchestrator:
                 "Respond concise and practical. Keep default replies short (2-4 lines). "
                 "Use medium length only for complex questions. "
                 "Avoid long lists; if needed, max 3 bullets. "
-                "Do not add assumptions unless essential."
+                "Do not add assumptions unless essential. "
+                "Do not use emojis. "
+                "Return only final user-facing answer, never internal reasoning trace."
             )
         )
 
@@ -417,6 +438,7 @@ class AgentOrchestrator:
             text = (getattr(rsp, "output_text", None) or "").strip()
             if not text:
                 text = str(rsp).strip()
+            text = AgentOrchestrator._sanitize_answer(text)
             return (text if text else None), (None if text else "groq_empty_text")
 
         try:
@@ -467,7 +489,9 @@ class AgentOrchestrator:
                 "Respond concise and practical. Keep default replies short (2-4 lines). "
                 "Use medium length only for complex questions. "
                 "Avoid long lists; if needed, max 3 bullets. "
-                "Do not add assumptions unless essential."
+                "Do not add assumptions unless essential. "
+                "Do not use emojis. "
+                "Return only final user-facing answer, never internal reasoning trace."
             )
         )
 
@@ -512,6 +536,7 @@ class AgentOrchestrator:
                 text = "\n".join(str(x.get("text", "")).strip() for x in content if isinstance(x, dict) and x.get("text"))
             else:
                 text = str(content or "").strip()
+            text = AgentOrchestrator._sanitize_answer(text)
             return (text if text else None), (None if text else "openrouter_empty_text")
         except urllib.error.HTTPError as exc:
             try:
@@ -551,7 +576,9 @@ class AgentOrchestrator:
                 "Respond concise and practical. Keep default replies short (2-4 lines). "
                 "Use medium length only for complex questions. "
                 "Avoid long lists; if needed, max 3 bullets. "
-                "Do not add assumptions unless essential."
+                "Do not add assumptions unless essential. "
+                "Do not use emojis. "
+                "Return only final user-facing answer, never internal reasoning trace."
             )
         )
 
@@ -571,7 +598,7 @@ class AgentOrchestrator:
             chain = prompt | llm
             msg = chain.invoke({"question": question, "context_json": AgentOrchestrator._context_block(context)})
             out = getattr(msg, "content", None) or str(msg)
-            out = out.strip()
+            out = AgentOrchestrator._sanitize_answer(out)
             return (out if out else None), (None if out else "openai_empty_response")
         except Exception as exc:
             logger.exception("OpenAI call failed")
@@ -598,7 +625,9 @@ class AgentOrchestrator:
                 "Respond concise and practical. Keep default replies short (2-4 lines). "
                 "Use medium length only for complex questions. "
                 "Avoid long lists; if needed, max 3 bullets. "
-                "Do not add assumptions unless essential."
+                "Do not add assumptions unless essential. "
+                "Do not use emojis. "
+                "Return only final user-facing answer, never internal reasoning trace."
             )
         )
 
@@ -633,7 +662,7 @@ class AgentOrchestrator:
             content = candidates[0].get("content") or {}
             parts = content.get("parts") or []
             text = "\n".join(str(p.get("text", "")).strip() for p in parts if p.get("text"))
-            text = text.strip()
+            text = AgentOrchestrator._sanitize_answer(text)
             return (text if text else None), (None if text else "gemini_empty_text")
         except urllib.error.HTTPError as exc:
             try:

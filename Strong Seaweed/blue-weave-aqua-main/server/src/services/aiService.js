@@ -206,29 +206,32 @@ function formatModelGroundedAnswer(pred, coordsMeta = null) {
     .slice(0, 3);
   const lines = [];
   if (best && Number.isFinite(best?.probabilityPercent)) {
-    lines.push(
-      `Model-grounded recommendation: ${best.displayName} (${best.probabilityPercent.toFixed(2)}% suitability, ${best.priority}).`,
-    );
+    const suitability = Number(best.probabilityPercent).toFixed(2);
+    lines.push(`Recommended species for this site: ${best.displayName} (${suitability}% suitability, ${best.priority} confidence).`);
   } else {
-    lines.push("Model result: no species currently meets the suitability threshold for this context.");
+    lines.push("No species is strongly suitable at this location right now based on current model inputs.");
   }
   if (top.length > 0) {
-    lines.push(`Top species scores: ${top.map((s) => `${s.displayName} ${Number(s.probabilityPercent).toFixed(2)}%`).join(" | ")}.`);
+    lines.push(`Top options now: ${top.map((s) => `${s.displayName} ${Number(s.probabilityPercent).toFixed(2)}%`).join(", ")}.`);
   }
   if (pred?.nearestGrid?.distance_km !== undefined && pred?.nearestGrid?.distance_km !== null) {
-    lines.push(`Nearest model grid distance: ${Number(pred.nearestGrid.distance_km).toFixed(2)} km.`);
-  }
-  if (coordsMeta?.source) {
-    lines.push(`Location source: ${coordsMeta.source}.`);
+    lines.push(`Nearest validated grid is ${Number(pred.nearestGrid.distance_km).toFixed(2)} km away.`);
   }
   if (Array.isArray(pred?.warnings) && pred.warnings.length > 0) {
-    lines.push(`Warnings: ${pred.warnings.join(", ")}.`);
+    if (pred.warnings.includes("no_species_meets_threshold_using_screening_fallback")) {
+      lines.push("Caution: this looks borderline. Start with a small pilot plot before full-scale deployment.");
+    } else {
+      lines.push("Caution: environmental signals are mixed. Recheck local water conditions before scaling.");
+    }
   }
+  lines.push("Next step: confirm salinity and temperature on-site for 7-10 days, then retest.");
   return lines.join("\n");
 }
 
 async function maybeRunModelGrounding(question, context = {}) {
   const rawCtx = context?.context && typeof context.context === "object" ? context.context : context;
+  const mode = String(rawCtx?.mode || "").trim().toLowerCase();
+  if (mode === "predict_advisory" || mode === "advisory") return null;
   if (!shouldUseModelGrounding(question, rawCtx)) return null;
   const coords = resolveCoords(question, rawCtx);
   if (!coords) return null;
@@ -309,6 +312,12 @@ function normalizeUiAnswer(input) {
 
   // Collapse excess blank lines/spaces.
   text = text.replace(/[ \t]+\n/g, "\n").replace(/\n{3,}/g, "\n\n").trim();
+
+  // Remove leaked chain-of-thought/trace headers if any provider returns them.
+  text = text.replace(/\n{0,2}(Reasoning and analysis trace|Internal reasoning|Chain of thought|Reasoning trace)\b[\s\S]*$/i, "").trim();
+
+  // Keep UI tone professional.
+  text = text.replace(/[\u{1F300}-\u{1FAFF}]/gu, "");
 
   // Keep responses medium by default.
   if (text.length > MAX_UI_ANSWER_CHARS) {
@@ -685,6 +694,9 @@ export async function getAiStatus() {
     providers,
     voice: {
       ttsProvider: activeTtsProvider(),
+      sttProvider: config.deepgramApiKey ? "deepgram" : "browser",
+      deepgramConfigured: Boolean(config.deepgramApiKey),
+      deepgramModel: config.deepgramSttModel,
       elevenLabsConfigured: Boolean(config.elevenLabsApiKey && resolveVoiceId("female")),
       elevenLabsFemaleConfigured: Boolean(config.elevenLabsApiKey && resolveVoiceId("female")),
       elevenLabsMaleConfigured: Boolean(config.elevenLabsApiKey && resolveVoiceId("male")),
