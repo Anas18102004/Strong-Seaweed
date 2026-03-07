@@ -662,7 +662,19 @@ def predict_species(lat: float, lon: float, form_input: dict | None = None) -> d
                 warnings.append("best_species_ultra_low_confidence")
         else:
             if species:
-                fallback = dict(species[0])
+                fallback = {
+                    "speciesId": "insufficient_data",
+                    "displayName": "Insufficient data for species recommendation",
+                    "ready": False,
+                    "probabilityPercent": None,
+                    "priority": "unknown",
+                    "reason": "insufficient_data_no_model_coverage",
+                    "baseThresholdPercent": None,
+                    "thresholdPercent": None,
+                    "marginToThresholdPercent": None,
+                    "confidenceBand": "unknown",
+                    "actionability": "insufficient_data",
+                }
                 fallback["reason"] = "insufficient_data_no_model_coverage"
                 fallback["actionability"] = "insufficient_data"
                 best = fallback
