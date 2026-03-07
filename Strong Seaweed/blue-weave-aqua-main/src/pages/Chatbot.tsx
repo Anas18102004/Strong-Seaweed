@@ -579,7 +579,12 @@ export default function Chatbot() {
         return;
       }
       if (code === "network") {
-        setVoiceError("Speech recognition network error. Check internet and retry.");
+        if (sttLocale !== "en-US") {
+          setSttLocale("en-US");
+          setVoiceError("Speech recognition network error. Switched speech locale to en-US. Try again.");
+          return;
+        }
+        setVoiceError("Speech recognition network error. Use Chrome/Edge over HTTPS and retry.");
         return;
       }
       setVoiceError(event?.message || "Voice input failed. Try again.");

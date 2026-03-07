@@ -5,11 +5,39 @@ import threading
 import time
 import urllib.error
 import urllib.request
+from pathlib import Path
 from dataclasses import dataclass
 from typing import Any, Dict, List, Optional, Tuple
 
 from fastapi import FastAPI
 from pydantic import BaseModel
+
+
+def _bootstrap_env() -> None:
+    # Mirror Node backend behavior by loading server/.env for this Python process.
+    env_candidates = [
+        Path(__file__).resolve().parents[1] / ".env",  # server/.env
+        Path.cwd() / ".env",  # fallback when launched from server dir
+    ]
+    for env_path in env_candidates:
+        if not env_path.exists():
+            continue
+        try:
+            for raw in env_path.read_text(encoding="utf-8").splitlines():
+                line = raw.strip()
+                if not line or line.startswith("#") or "=" not in line:
+                    continue
+                key, value = line.split("=", 1)
+                key = key.strip()
+                if not key or key in os.environ:
+                    continue
+                os.environ[key] = value.strip().strip('"').strip("'")
+            return
+        except Exception:
+            continue
+
+
+_bootstrap_env()
 
 logging.basicConfig(level=logging.INFO, format="[agent-gateway] %(levelname)s %(message)s")
 logger = logging.getLogger("agent_gateway")
@@ -658,8 +686,19 @@ class AgentOrchestrator:
             if answer:
                 llm_provider = "openrouter"
 
-        # Requested priority chain is strictly Groq -> OpenRouter.
-        # Keep OpenAI/Gemini helpers available for future use, but do not call them here.
+        if not answer:
+            openai_answer, openai_err = self._llm_answer(system, question, context, is_voice=(mode == "voice"))
+            answer = openai_answer
+            failure_reason = openai_err if openai_err else failure_reason
+            if answer:
+                llm_provider = "openai"
+
+        if not answer:
+            gemini_answer, gemini_err = self._gemini_answer(system, question, context, is_voice=(mode == "voice"))
+            answer = gemini_answer
+            failure_reason = gemini_err if gemini_err else failure_reason
+            if answer:
+                llm_provider = "gemini"
 
         used_llm = bool(answer)
         if not answer:
@@ -677,6 +716,10 @@ class AgentOrchestrator:
             if llm_provider == "groq"
             else _env("OPENROUTER_MODEL", "meta-llama/llama-3.1-8b-instruct:free")
             if llm_provider == "openrouter"
+            else _env("OPENAI_MODEL", "gpt-4o-mini")
+            if llm_provider == "openai"
+            else _env("GEMINI_MODEL", "gemini-1.5-flash")
+            if llm_provider == "gemini"
             else "gateway-fallback"
         )
 
