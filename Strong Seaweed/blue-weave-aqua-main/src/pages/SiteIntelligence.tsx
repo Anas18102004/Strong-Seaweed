@@ -61,18 +61,25 @@ export default function SiteIntelligence() {
   }, [token]);
 
   const regions = useMemo(() => {
-    const by: Record<string, { scores: number[]; species: Record<string, number> }> = {};
+    const by: Record<string, { scores: number[]; species: Record<string, number>; recommendedCount: number }> = {};
     for (const r of rows) {
       const key = regionName(r);
-      by[key] = by[key] || { scores: [], species: {} };
+      by[key] = by[key] || { scores: [], species: {}, recommendedCount: 0 };
       const p = r.bestSpecies?.probabilityPercent;
-      if (typeof p === "number") by[key].scores.push(p);
-      const sp = r.bestSpecies?.displayName || "Unknown";
-      by[key].species[sp] = (by[key].species[sp] || 0) + 1;
+      const actionability = r.bestSpecies?.actionability || "insufficient_data";
+      const isCultivationReady = actionability === "recommended";
+      if (isCultivationReady && typeof p === "number") by[key].scores.push(p);
+      if (isCultivationReady) {
+        by[key].recommendedCount += 1;
+        const sp = r.bestSpecies?.displayName || "Unknown";
+        by[key].species[sp] = (by[key].species[sp] || 0) + 1;
+      }
     }
     const out: RegionItem[] = Object.entries(by).map(([name, info]) => {
       const avg = info.scores.length ? info.scores.reduce((a, b) => a + b, 0) / info.scores.length : 0;
-      const species = Object.entries(info.species).sort((a, b) => b[1] - a[1])[0]?.[0] || "Unknown";
+      const species = info.recommendedCount > 0
+        ? (Object.entries(info.species).sort((a, b) => b[1] - a[1])[0]?.[0] || "Unknown")
+        : "No recommended species";
       const level = avg >= 80 ? "high" : avg >= 60 ? "moderate" : "low";
       return {
         name,
@@ -81,7 +88,13 @@ export default function SiteIntelligence() {
         species,
         temp: "Live from model",
         salinity: "Live from model",
-        advisory: avg >= 80 ? "Strong candidate. Prioritize field verification." : avg >= 60 ? "Promising area. Run additional checks." : "Low suitability currently.",
+        advisory: info.recommendedCount === 0
+          ? "No cultivation-ready recommendation in recent runs. Treat as screening only."
+          : avg >= 80
+          ? "Strong candidate. Prioritize field verification."
+          : avg >= 60
+          ? "Promising area. Run additional checks."
+          : "Low suitability currently.",
       };
     });
     return out.sort((a, b) => b.score - a.score);

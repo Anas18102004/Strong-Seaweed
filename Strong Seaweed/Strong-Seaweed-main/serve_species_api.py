@@ -42,6 +42,7 @@ KAPPA_THRESHOLD_OFFSET = float(os.getenv("KAPPA_THRESHOLD_OFFSET", "0.0"))
 PROXY_THRESHOLD_OFFSET = float(os.getenv("PROXY_THRESHOLD_OFFSET", "0.0"))
 FEATURE_STALENESS_DAYS = int(os.getenv("FEATURE_STALENESS_DAYS", "540"))
 SCREENING_FALLBACK_FLOOR_PERCENT = float(os.getenv("SCREENING_FALLBACK_FLOOR_PERCENT", "10.0"))
+RANKING_FALLBACK_FLOOR_PERCENT = float(os.getenv("RANKING_FALLBACK_FLOOR_PERCENT", "5.0"))
 KAPPA_GEO_PRIOR_RADIUS_KM = float(os.getenv("KAPPA_GEO_PRIOR_RADIUS_KM", "120.0"))
 KAPPA_GEO_PRIOR_PROB_FLOOR_PERCENT = float(os.getenv("KAPPA_GEO_PRIOR_PROB_FLOOR_PERCENT", "25.0"))
 KAPPA_GEO_PRIOR_MAX_NEG_MARGIN_PERCENT = float(os.getenv("KAPPA_GEO_PRIOR_MAX_NEG_MARGIN_PERCENT", "80.0"))
@@ -609,6 +610,14 @@ def predict_species(lat: float, lon: float, form_input: dict | None = None) -> d
                 best = top
                 decision_source = "screening_fallback"
                 warnings.append("no_species_meets_threshold_using_screening_fallback")
+            elif float(top["probabilityPercent"]) >= RANKING_FALLBACK_FLOOR_PERCENT:
+                top = dict(top)
+                top["reason"] = "ranking_fallback_low_confidence"
+                top["actionability"] = "not_recommended"
+                best = top
+                decision_source = "ranking_fallback"
+                warnings.append("no_species_meets_threshold_using_ranking_fallback")
+                warnings.append("best_species_low_confidence")
             else:
                 warnings.append("no_species_meets_suitability_threshold")
         else:

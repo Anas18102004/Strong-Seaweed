@@ -84,6 +84,10 @@ export type SpeciesScore = {
   probabilityPercent: number | null;
   priority: string;
   reason: string;
+  actionability?: "recommended" | "test_pilot_only" | "not_recommended" | "insufficient_data";
+  confidenceBand?: "high" | "medium" | "low" | "unknown";
+  thresholdPercent?: number | null;
+  marginToThresholdPercent?: number | null;
 };
 
 export type SpeciesPredictionResponse = {

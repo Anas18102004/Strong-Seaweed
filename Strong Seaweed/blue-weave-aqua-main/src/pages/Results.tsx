@@ -101,9 +101,12 @@ export default function ResultsPage() {
     pending: !species.ready || species.probabilityPercent == null,
     reason: species.reason,
     badge: modelBadgeFromReason(species.reason, !species.ready || species.probabilityPercent == null),
+    actionability: species.actionability || "insufficient_data",
   }));
 
   const best = speciesResults.find((item) => item.best) ?? speciesResults[0];
+  const bestIsRecommended = best?.actionability === "recommended";
+  const bestIsPilot = best?.actionability === "test_pilot_only";
 
   return (
     <DashboardLayout>
@@ -168,10 +171,16 @@ export default function ResultsPage() {
             <div className="flex-1">
               <p className="text-xs font-semibold text-muted-foreground uppercase tracking-wider mb-1">AI Recommendation</p>
               <h3 className="text-xl font-bold text-foreground mb-2">
-                Best Choice: <span className="gradient-text">{best.name}</span>
+                {bestIsRecommended
+                  ? <>Recommended for cultivation: <span className="gradient-text">{best.name}</span></>
+                  : bestIsPilot
+                  ? <>Pilot-only candidate: <span className="gradient-text">{best.name}</span></>
+                  : <>No cultivation recommendation at this location</>}
               </h3>
               <p className="text-sm text-muted-foreground leading-relaxed mb-3">
-                Best species score at this site is <strong className="text-foreground">{best.score ?? 0}%</strong>.
+                {bestIsRecommended
+                  ? <>Best species score at this site is <strong className="text-foreground">{best.score ?? 0}%</strong>.</>
+                  : <>Top ranked model score is <strong className="text-foreground">{best.score ?? 0}%</strong>, below strict cultivation threshold.</>}
                 {prediction.nearestGrid && (
                   <>
                     {" "}Nearest model grid is <strong className="text-foreground">{prediction.nearestGrid.distance_km.toFixed(2)} km</strong> away.

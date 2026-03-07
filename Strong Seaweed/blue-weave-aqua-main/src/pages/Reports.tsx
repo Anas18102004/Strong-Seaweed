@@ -55,6 +55,8 @@ export default function Reports() {
   const topSpecies = useMemo(() => {
     const counts = new Map<string, number>();
     for (const s of submissions) {
+      const actionable = s.bestSpecies?.actionability;
+      if (actionable && actionable !== "recommended") continue;
       const name = s.bestSpecies?.displayName?.trim();
       if (!name) continue;
       counts.set(name, (counts.get(name) || 0) + 1);
@@ -173,7 +175,13 @@ export default function Reports() {
                 </div>
                 <div className="sm:text-right">
                   <p className="text-sm font-semibold text-[#0f2e47]">{s.bestSpecies?.displayName || "-"}</p>
-                  <p className="text-[11px] text-slate-500">Recommended species</p>
+                  <p className="text-[11px] text-slate-500">
+                    {s.bestSpecies?.actionability === "recommended"
+                      ? "Recommended species"
+                      : s.bestSpecies?.actionability === "test_pilot_only"
+                      ? "Pilot-only candidate"
+                      : "No cultivation recommendation"}
+                  </p>
                 </div>
                 <div className="inline-flex items-center gap-1 rounded-full border border-cyan-200 bg-cyan-50 px-2.5 py-1 text-xs font-semibold text-cyan-800 sm:justify-self-end">
                   <TrendingUp className="h-3.5 w-3.5" />
