@@ -180,13 +180,21 @@ export default function Reports() {
                       ? "Recommended species"
                       : s.bestSpecies?.actionability === "test_pilot_only"
                       ? "Pilot-only candidate"
+                      : s.bestSpecies?.actionability === "insufficient_data"
+                      ? "Insufficient data"
                       : "No cultivation recommendation"}
                   </p>
                 </div>
-                <div className="inline-flex items-center gap-1 rounded-full border border-cyan-200 bg-cyan-50 px-2.5 py-1 text-xs font-semibold text-cyan-800 sm:justify-self-end">
-                  <TrendingUp className="h-3.5 w-3.5" />
-                  {s.bestSpecies?.probabilityPercent ?? "-"}%
-                </div>
+                {typeof s.bestSpecies?.probabilityPercent === "number" ? (
+                  <div className="inline-flex items-center gap-1 rounded-full border border-cyan-200 bg-cyan-50 px-2.5 py-1 text-xs font-semibold text-cyan-800 sm:justify-self-end">
+                    <TrendingUp className="h-3.5 w-3.5" />
+                    {s.bestSpecies.probabilityPercent}%
+                  </div>
+                ) : (
+                  <div className="inline-flex items-center rounded-full border border-slate-200 bg-slate-50 px-2.5 py-1 text-xs font-semibold text-slate-600 sm:justify-self-end">
+                    N/A
+                  </div>
+                )}
               </div>
             ))}
             {!loading && submissions.length === 0 && (
