@@ -33,6 +33,17 @@ function regionName(s: PredictionSubmissionItem) {
   return `${s.lat.toFixed(2)}, ${s.lon.toFixed(2)}`;
 }
 
+function effectiveSubmissionSpecies(s: PredictionSubmissionItem) {
+  const final = s.finalRecommendation;
+  if (final && final.speciesId && final.speciesId !== "insufficient_data") {
+    return final;
+  }
+  if (s.bestSpecies?.actionability === "insufficient_data" && s.topCandidate) {
+    return s.topCandidate;
+  }
+  return s.bestSpecies || s.topCandidate || null;
+}
+
 export default function SiteIntelligence() {
   const { token } = useAuth();
   const navigate = useNavigate();
@@ -65,13 +76,14 @@ export default function SiteIntelligence() {
     for (const r of rows) {
       const key = regionName(r);
       by[key] = by[key] || { scores: [], species: {}, recommendedCount: 0 };
-      const p = r.bestSpecies?.probabilityPercent;
-      const actionability = r.bestSpecies?.actionability || "insufficient_data";
+      const chosen = effectiveSubmissionSpecies(r);
+      const p = chosen?.probabilityPercent;
+      const actionability = chosen?.actionability || "insufficient_data";
       const isCultivationReady = actionability === "recommended";
       if (isCultivationReady && typeof p === "number") by[key].scores.push(p);
       if (isCultivationReady) {
         by[key].recommendedCount += 1;
-        const sp = r.bestSpecies?.displayName || "Unknown";
+        const sp = chosen?.displayName || "Unknown";
         by[key].species[sp] = (by[key].species[sp] || 0) + 1;
       }
     }

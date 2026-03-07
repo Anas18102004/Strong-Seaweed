@@ -6,41 +6,50 @@ import { api, PredictionSubmissionItem } from "@/lib/api";
 import { useAuth } from "@/context/AuthContext";
 import { useEffect, useMemo, useState } from "react";
 
+function effectiveSpecies(row: PredictionSubmissionItem) {
+  const final = row.finalRecommendation;
+  if (final && final.speciesId && final.speciesId !== "insufficient_data") {
+    return final;
+  }
+  if (row.bestSpecies?.actionability === "insufficient_data" && row.topCandidate) {
+    return row.topCandidate;
+  }
+  return row.bestSpecies || row.topCandidate || null;
+}
+
 function toCsv(rows: PredictionSubmissionItem[]) {
   const headers = [
     "createdAt",
     "locationName",
     "lat",
     "lon",
-    "bestSpecies",
-    "probabilityPercent",
-    "priority",
+    "finalSpecies",
+    "finalProbabilityPercent",
+    "finalActionability",
+    "decisionSource",
     "topCandidate",
     "topCandidatePercent",
     "advisoryFallbackUsed",
     "advisorySummary",
   ];
-  const lines = rows.map((r) => [
-    r.createdAt,
-    r.locationName || "",
-    String(r.lat),
-    String(r.lon),
-    r.bestSpecies?.displayName || "",
-    String(r.bestSpecies?.probabilityPercent ?? ""),
-    r.bestSpecies?.priority || "",
-    r.topCandidate?.displayName || "",
-    String(r.topCandidate?.probabilityPercent ?? ""),
-    String(Boolean(r.advisoryFallbackUsed)),
-    r.fallbackAdvisory?.summary || "",
-  ]);
+  const lines = rows.map((r) => {
+    const chosen = effectiveSpecies(r);
+    return [
+      r.createdAt,
+      r.locationName || "",
+      String(r.lat),
+      String(r.lon),
+      chosen?.displayName || "",
+      String(chosen?.probabilityPercent ?? ""),
+      String(chosen?.actionability || ""),
+      String(r.finalRecommendation?.source || ""),
+      r.topCandidate?.displayName || "",
+      String(r.topCandidate?.probabilityPercent ?? ""),
+      String(Boolean(r.advisoryFallbackUsed)),
+      r.fallbackAdvisory?.summary || "",
+    ];
+  });
   return [headers.join(","), ...lines.map((x) => x.map((v) => `"${String(v).replace(/"/g, '""')}"`).join(","))].join("\n");
-}
-
-function effectiveSpecies(row: PredictionSubmissionItem) {
-  if (row.bestSpecies?.actionability === "insufficient_data" && row.topCandidate) {
-    return row.topCandidate;
-  }
-  return row.bestSpecies;
 }
 
 export default function Reports() {
@@ -180,14 +189,15 @@ export default function Reports() {
           <div className="grid gap-2.5">
             {submissions.slice(0, 12).map((s) => {
               const species = effectiveSpecies(s);
+              const actionability = species?.actionability || "insufficient_data";
               const statusText =
-                s.bestSpecies?.actionability === "recommended"
+                actionability === "recommended"
                   ? "Recommended species"
-                  : s.bestSpecies?.actionability === "test_pilot_only"
+                  : actionability === "test_pilot_only"
                   ? "Pilot-only candidate"
-                  : s.bestSpecies?.actionability === "insufficient_data" && s.fallbackAdvisory
+                  : actionability === "insufficient_data" && s.fallbackAdvisory
                   ? "AI fallback advisory available"
-                  : s.bestSpecies?.actionability === "insufficient_data"
+                  : actionability === "insufficient_data"
                   ? "Insufficient data"
                   : "No cultivation recommendation";
 

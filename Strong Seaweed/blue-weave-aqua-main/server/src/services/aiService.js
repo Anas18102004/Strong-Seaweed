@@ -197,8 +197,27 @@ function buildModelFormInput(ctx = {}) {
   };
 }
 
-function formatModelGroundedAnswer(pred, coordsMeta = null) {
+function topScoredSpecies(pred = null) {
+  const species = Array.isArray(pred?.species) ? pred.species : [];
+  return (
+    species
+      .filter((s) => Number.isFinite(Number(s?.probabilityPercent)))
+      .sort((a, b) => Number(b?.probabilityPercent || 0) - Number(a?.probabilityPercent || 0))[0] || null
+  );
+}
+
+function effectiveRecommendation(pred = null) {
+  const final = pred?.finalRecommendation || null;
+  if (final && String(final?.speciesId || "").toLowerCase() !== "insufficient_data") {
+    return final;
+  }
   const best = pred?.bestSpecies || null;
+  const top = topScoredSpecies(pred);
+  return best?.speciesId === "insufficient_data" ? top || best : best || top;
+}
+
+function formatModelGroundedAnswer(pred, coordsMeta = null) {
+  const best = effectiveRecommendation(pred);
   const species = Array.isArray(pred?.species) ? pred.species : [];
   const top = [...species]
     .filter((s) => Number.isFinite(s?.probabilityPercent))
@@ -207,7 +226,14 @@ function formatModelGroundedAnswer(pred, coordsMeta = null) {
   const lines = [];
   if (best && Number.isFinite(best?.probabilityPercent)) {
     const suitability = Number(best.probabilityPercent).toFixed(2);
-    lines.push(`Recommended species for this site: ${best.displayName} (${suitability}% suitability, ${best.priority} confidence).`);
+    const actionability = String(best?.actionability || "").toLowerCase();
+    if (actionability === "recommended") {
+      lines.push(`Recommended species for this site: ${best.displayName} (${suitability}% suitability).`);
+    } else if (actionability === "test_pilot_only") {
+      lines.push(`Pilot-only candidate for this site: ${best.displayName} (${suitability}% suitability).`);
+    } else {
+      lines.push(`Top model candidate for this site: ${best.displayName} (${suitability}% suitability).`);
+    }
   } else {
     lines.push("No species is strongly suitable at this location right now based on current model inputs.");
   }

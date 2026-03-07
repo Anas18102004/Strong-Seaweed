@@ -143,6 +143,46 @@ export type PredictionVerificationSummary = {
   candidateDisplayName: string;
 };
 
+export type FinalRecommendation = {
+  speciesId: string;
+  displayName: string;
+  canonicalName: string;
+  probabilityPercent: number | null;
+  actionability: "recommended" | "test_pilot_only" | "not_recommended" | "insufficient_data";
+  source: string;
+  disagreementWithAgent: boolean;
+  verificationVerdict: string;
+  verificationConfidenceScore: number;
+  mlCandidate?: {
+    speciesId?: string | null;
+    displayName?: string | null;
+    canonicalName?: string | null;
+    probabilityPercent?: number | null;
+    actionability?: string | null;
+    verificationVerdict?: string | null;
+  } | null;
+  agentSuggestion?: {
+    speciesId?: string | null;
+    displayName?: string | null;
+    canonicalName?: string | null;
+    probabilityPercent?: number | null;
+    verificationVerdict?: string | null;
+  } | null;
+  notes?: string[];
+  decidedAt?: string;
+};
+
+export type FinalRecommendationSummary = {
+  speciesId: string | null;
+  displayName: string;
+  canonicalName: string;
+  probabilityPercent: number | null;
+  actionability: "recommended" | "test_pilot_only" | "not_recommended" | "insufficient_data";
+  source: string;
+  disagreementWithAgent: boolean;
+  verificationVerdict: string;
+};
+
 export type SpeciesPredictionResponse = {
   input: { lat: number; lon: number };
   source: string;
@@ -152,6 +192,7 @@ export type SpeciesPredictionResponse = {
   bestSpecies: SpeciesScore | null;
   warnings: string[];
   verification?: PredictionVerification | null;
+  finalRecommendation?: FinalRecommendation | null;
   advisoryFallbackUsed?: boolean;
   fallbackAdvisory?: AdvisoryFallbackDetail | null;
 };
@@ -197,6 +238,7 @@ export type PredictionSubmissionItem = {
   createdAt: string;
   bestSpecies: SpeciesScore | null;
   topCandidate?: SpeciesScore | null;
+  finalRecommendation?: FinalRecommendationSummary | null;
   verification?: PredictionVerificationSummary | null;
   advisoryFallbackUsed?: boolean;
   fallbackAdvisory?: AdvisoryFallbackSummary | null;

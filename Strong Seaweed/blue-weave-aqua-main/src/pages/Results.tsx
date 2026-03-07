@@ -93,11 +93,16 @@ export default function ResultsPage() {
   }
 
   const colorByIndex = ["#0077FF", "#00A8E8", "#00C6FF", "#7DD6FF"];
+  const finalRecommendation = prediction.finalRecommendation || null;
+  const preferredSpeciesId =
+    finalRecommendation && finalRecommendation.speciesId !== "insufficient_data"
+      ? finalRecommendation.speciesId
+      : prediction.bestSpecies?.speciesId;
   const speciesResults = prediction.species.map((species, idx) => ({
     name: species.displayName,
     score: species.probabilityPercent == null ? null : Math.round(species.probabilityPercent),
     color: colorByIndex[idx % colorByIndex.length],
-    best: prediction.bestSpecies?.speciesId === species.speciesId,
+    best: preferredSpeciesId === species.speciesId,
     pending: !species.ready || species.probabilityPercent == null,
     reason: species.reason,
     badge: modelBadgeFromReason(species.reason, !species.ready || species.probabilityPercent == null),
@@ -108,11 +113,20 @@ export default function ResultsPage() {
     .filter((item): item is (typeof speciesResults)[number] & { score: number } => typeof item.score === "number")
     .sort((a, b) => b.score - a.score);
   const modelBest = speciesResults.find((item) => item.best) ?? scoredByRank[0] ?? speciesResults[0];
-  const hasInsufficientData = prediction.bestSpecies?.actionability === "insufficient_data";
+  const hasInsufficientData =
+    (finalRecommendation?.actionability || prediction.bestSpecies?.actionability || "insufficient_data") ===
+    "insufficient_data";
   const best = hasInsufficientData ? scoredByRank[0] ?? modelBest : modelBest;
-  const bestIsRecommended = best?.actionability === "recommended" && !hasInsufficientData;
-  const bestIsPilot = best?.actionability === "test_pilot_only" || hasInsufficientData;
+  const bestActionability = best?.actionability || finalRecommendation?.actionability || "insufficient_data";
+  const bestIsRecommended = bestActionability === "recommended" && !hasInsufficientData;
+  const bestIsPilot = bestActionability === "test_pilot_only" || hasInsufficientData;
   const bestHasScore = typeof best?.score === "number";
+  const bestScoreText =
+    typeof best?.score === "number"
+      ? best.score
+      : Number.isFinite(Number(finalRecommendation?.probabilityPercent))
+      ? Math.round(Number(finalRecommendation?.probabilityPercent))
+      : 0;
 
   return (
     <DashboardLayout>
@@ -185,16 +199,22 @@ export default function ResultsPage() {
               </h3>
               <p className="text-sm text-muted-foreground leading-relaxed mb-3">
                 {bestIsRecommended
-                  ? <>Best species score at this site is <strong className="text-foreground">{best.score ?? 0}%</strong>.</>
+                  ? <>Best species score at this site is <strong className="text-foreground">{bestScoreText}%</strong>.</>
                   : bestIsPilot && bestHasScore
                   ? <>Top available species score is <strong className="text-foreground">{best.score}%</strong>. Confidence is limited, so start with a small pilot and verify in field conditions.</>
-                  : <>Top ranked model score is <strong className="text-foreground">{best?.score ?? 0}%</strong>, below strict cultivation threshold.</>}
+                  : <>Top ranked model score is <strong className="text-foreground">{bestScoreText}%</strong>, below strict cultivation threshold.</>}
                 {prediction.nearestGrid && (
                   <>
                     {" "}Nearest model grid is <strong className="text-foreground">{prediction.nearestGrid.distance_km.toFixed(2)} km</strong> away.
                   </>
                 )}
               </p>
+              {finalRecommendation && (
+                <p className="mb-3 text-xs text-muted-foreground">
+                  Decision source: {finalRecommendation.source.replace(/_/g, " ")}
+                  {finalRecommendation.disagreementWithAgent ? " | model and advisory conflict auto-resolved by verification" : ""}.
+                </p>
+              )}
               {prediction.fallbackAdvisory?.answer && (
                 <div className="mb-3 rounded-xl border border-cyan-400/25 bg-cyan-500/5 p-3">
                   <p className="text-xs font-semibold uppercase tracking-wide text-cyan-200">Fallback Advisory</p>

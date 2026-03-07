@@ -25,6 +25,25 @@ async function probeJson(url) {
   }
 }
 
+function topScoredSpecies(prediction = null) {
+  const species = Array.isArray(prediction?.species) ? prediction.species : [];
+  return (
+    species
+      .filter((s) => Number.isFinite(Number(s?.probabilityPercent)))
+      .sort((a, b) => Number(b?.probabilityPercent || 0) - Number(a?.probabilityPercent || 0))[0] || null
+  );
+}
+
+function effectiveRecommendation(prediction = null) {
+  const final = prediction?.finalRecommendation || null;
+  if (final && String(final?.speciesId || "").toLowerCase() !== "insufficient_data") {
+    return final;
+  }
+  const best = prediction?.bestSpecies || null;
+  const top = topScoredSpecies(prediction);
+  return best?.actionability === "insufficient_data" ? top || best : best || top;
+}
+
 router.get("/summary", authRequired, async (req, res) => {
   const userId = req.user.id;
   const [submissions, sessionsCount] = await Promise.all([
@@ -33,7 +52,7 @@ router.get("/summary", authRequired, async (req, res) => {
   ]);
 
   const avgValues = submissions
-    .map((s) => s.prediction?.bestSpecies?.probabilityPercent)
+    .map((s) => effectiveRecommendation(s.prediction)?.probabilityPercent)
     .filter((v) => typeof v === "number");
   const avgConfidence = avgValues.length
     ? avgValues.reduce((a, b) => a + b, 0) / avgValues.length
@@ -41,7 +60,7 @@ router.get("/summary", authRequired, async (req, res) => {
 
   const speciesCounts = {};
   for (const s of submissions) {
-    const name = s.prediction?.bestSpecies?.displayName || "Unknown";
+    const name = effectiveRecommendation(s.prediction)?.displayName || "Unknown";
     speciesCounts[name] = (speciesCounts[name] || 0) + 1;
   }
   const topSpecies = Object.entries(speciesCounts).sort((a, b) => b[1] - a[1])[0]?.[0] || "-";
@@ -68,14 +87,15 @@ router.get("/activity", authRequired, async (req, res) => {
   const submissions = await PredictionSubmission.find({ userId }).sort({ createdAt: -1 }).limit(20).lean();
 
   const predictions = submissions.map((s) => {
-    const prob = Number(s.prediction?.bestSpecies?.probabilityPercent || 0);
+    const chosen = effectiveRecommendation(s.prediction);
+    const prob = Number(chosen?.probabilityPercent || 0);
     const score = Math.max(0, Math.min(100, Math.round(prob)));
     const status = score >= 80 ? "Optimal" : score >= 65 ? "Good" : score >= 50 ? "Moderate" : "Fair";
     return {
       id: s._id.toString(),
       createdAt: s.createdAt,
       location: s.locationName || `${Number(s.lat).toFixed(3)}, ${Number(s.lon).toFixed(3)}`,
-      species: s.prediction?.bestSpecies?.displayName || "Unknown",
+      species: chosen?.displayName || "Unknown",
       score,
       status,
     };

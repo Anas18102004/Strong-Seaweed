@@ -23,6 +23,17 @@ function quarterLabel(month: number) {
   return "Q4";
 }
 
+function effectiveSubmissionSpecies(row: PredictionSubmissionItem) {
+  const final = row.finalRecommendation;
+  if (final && final.speciesId && final.speciesId !== "insufficient_data") {
+    return final;
+  }
+  if (row.bestSpecies?.actionability === "insufficient_data" && row.topCandidate) {
+    return row.topCandidate;
+  }
+  return row.bestSpecies || row.topCandidate || null;
+}
+
 export default function SeasonalForecast() {
   const { token } = useAuth();
   const [rows, setRows] = useState<PredictionSubmissionItem[]>([]);
@@ -53,7 +64,7 @@ export default function SeasonalForecast() {
     for (const r of rows) {
       const d = new Date(r.createdAt);
       const q = quarterLabel(d.getMonth() + 1);
-      const p = r.bestSpecies?.probabilityPercent;
+      const p = effectiveSubmissionSpecies(r)?.probabilityPercent;
       if (typeof p === "number") map[q].push(p);
     }
 

@@ -55,7 +55,7 @@ function summarizeSpeciesForPrompt(speciesRows = []) {
 }
 
 function advisoryQuestionFromContext({ lat, lon, formInput, prediction, environment, verification = null }) {
-  const best = prediction?.bestSpecies || null;
+  const best = primaryModelCandidate(prediction);
   const nearestKm = prediction?.nearestGrid?.distance_km;
   const nearestText = Number.isFinite(Number(nearestKm)) ? Number(nearestKm).toFixed(2) : "n/a";
   const tempText = Number.isFinite(Number(environment?.temperatureC)) ? `${Number(environment.temperatureC).toFixed(1)} C` : "n/a";
@@ -134,6 +134,12 @@ function topScoredSpecies(prediction) {
       .filter((s) => Number.isFinite(Number(s?.probabilityPercent)))
       .sort((a, b) => Number(b?.probabilityPercent || 0) - Number(a?.probabilityPercent || 0))[0] || null
   );
+}
+
+function primaryModelCandidate(prediction) {
+  const best = prediction?.bestSpecies || null;
+  const top = topScoredSpecies(prediction);
+  return best?.speciesId === "insufficient_data" ? top : best || top;
 }
 
 function toRadians(x) {
@@ -283,9 +289,11 @@ function modelStrength(prediction, candidate) {
 }
 
 async function verifyPredictionEvidence({ lat, lon, prediction }) {
-  const best = prediction?.bestSpecies || null;
-  const top = topScoredSpecies(prediction);
-  const candidate = best?.speciesId === "insufficient_data" ? top : best || top;
+  const candidate = primaryModelCandidate(prediction);
+  return verifyCandidateEvidence({ lat, lon, prediction, candidate });
+}
+
+async function verifyCandidateEvidence({ lat, lon, prediction, candidate }) {
   if (!candidate) {
     return {
       verdict: "weak",
@@ -352,10 +360,196 @@ async function verifyPredictionEvidence({ lat, lon, prediction }) {
   };
 }
 
+function candidateBySpeciesId(prediction, speciesId) {
+  const rows = Array.isArray(prediction?.species) ? prediction.species : [];
+  const id = String(speciesId || "").trim().toLowerCase();
+  if (!id) return null;
+  return rows.find((s) => String(s?.speciesId || "").trim().toLowerCase() === id) || null;
+}
+
+function speciesNameTokens(species = null) {
+  const out = new Set();
+  const add = (v) => {
+    const s = String(v || "").trim().toLowerCase();
+    if (s) out.add(s);
+  };
+  add(species?.displayName);
+  add(species?.canonicalName);
+  if (Array.isArray(species?.synonyms)) {
+    for (const syn of species.synonyms) add(syn);
+  }
+  add(String(species?.speciesId || "").replace(/_/g, " "));
+  return Array.from(out);
+}
+
+function speciesMentionIndex(text, species = null) {
+  const body = String(text || "").toLowerCase();
+  if (!body.trim()) return -1;
+  const hits = speciesNameTokens(species)
+    .map((token) => body.indexOf(token))
+    .filter((idx) => idx >= 0)
+    .sort((a, b) => a - b);
+  return hits[0] ?? -1;
+}
+
+function extractAgentSuggestedSpeciesId(answerText = "", prediction = null) {
+  const text = String(answerText || "").toLowerCase();
+  if (!text.trim()) return null;
+  const rows = Array.isArray(prediction?.species) ? prediction.species : [];
+  if (!rows.length) return null;
+
+  const recommendationFragments = [
+    /recommended species[^:\n]*:\s*([^\n.]+)/i,
+    /model-grounded recommendation[^:\n]*:\s*([^\n.]+)/i,
+    /pilot-only candidate[^:\n]*:\s*([^\n.]+)/i,
+    /recommendation level[^:\n]*:\s*([^\n.]+)/i,
+  ];
+
+  for (const pattern of recommendationFragments) {
+    const m = String(answerText || "").match(pattern);
+    if (!m?.[1]) continue;
+    const frag = m[1].toLowerCase();
+    const hit = rows.find((sp) => speciesNameTokens(sp).some((t) => t && frag.includes(t)));
+    if (hit?.speciesId) return hit.speciesId;
+  }
+
+  const mentions = rows
+    .map((sp) => ({ sp, idx: speciesMentionIndex(text, sp) }))
+    .filter((x) => x.idx >= 0)
+    .sort((a, b) => a.idx - b.idx);
+  return mentions[0]?.sp?.speciesId || null;
+}
+
+function supportScore(label = "unknown") {
+  const key = String(label || "unknown").toLowerCase();
+  if (key === "strong") return 1.2;
+  if (key === "moderate") return 0.8;
+  if (key === "weak") return 0.35;
+  return 0.5;
+}
+
+function recommendationScore(candidate = null, verification = null) {
+  const p = Number(candidate?.probabilityPercent);
+  const pTerm = Number.isFinite(p) ? p / 100 : 0;
+  const action = String(candidate?.actionability || "insufficient_data").toLowerCase();
+  const actionBonus =
+    action === "recommended"
+      ? 0.35
+      : action === "test_pilot_only"
+      ? 0.15
+      : action === "not_recommended"
+      ? -0.05
+      : -0.25;
+  const verdict = String(verification?.verdict || "weak").toLowerCase();
+  const verdictBonus = verdict === "strong" ? 0.45 : verdict === "moderate" ? 0.25 : 0.05;
+  const occ = supportScore(verification?.evidence?.occurrenceSupport);
+  const cop = supportScore(verification?.evidence?.copernicusSupport);
+  return Number((pTerm * 1.6 + actionBonus + verdictBonus + occ * 0.25 + cop * 0.2).toFixed(3));
+}
+
+async function arbitrateFinalRecommendation({ lat, lon, prediction, verification, fallbackAdvisory = null }) {
+  const modelCandidate = primaryModelCandidate(prediction);
+  if (!modelCandidate) {
+    return {
+      speciesId: "insufficient_data",
+      displayName: "Insufficient data for species recommendation",
+      canonicalName: "Insufficient data for species recommendation",
+      probabilityPercent: null,
+      actionability: "insufficient_data",
+      source: "no_candidate",
+      disagreementWithAgent: false,
+      verificationVerdict: "weak",
+      verificationConfidenceScore: 0,
+      mlCandidate: null,
+      agentSuggestion: null,
+      notes: ["no_candidate_available"],
+      decidedAt: new Date().toISOString(),
+    };
+  }
+
+  const modelVerification =
+    verification && String(verification?.candidate?.speciesId || "") === String(modelCandidate?.speciesId || "")
+      ? verification
+      : await verifyCandidateEvidence({ lat, lon, prediction, candidate: modelCandidate }).catch(() => null);
+  let chosen = modelCandidate;
+  let chosenVerification = modelVerification;
+  let source = "model_verification";
+  let disagreementWithAgent = false;
+  let agentSuggestion = null;
+  const notes = [];
+
+  const agentSpeciesId = extractAgentSuggestedSpeciesId(fallbackAdvisory?.answer || "", prediction);
+  if (agentSpeciesId && agentSpeciesId !== modelCandidate?.speciesId) {
+    disagreementWithAgent = true;
+    const agentCandidate = candidateBySpeciesId(prediction, agentSpeciesId);
+    if (agentCandidate) {
+      const agentVerification = await verifyCandidateEvidence({ lat, lon, prediction, candidate: agentCandidate }).catch(() => null);
+      const modelScore = recommendationScore(modelCandidate, modelVerification);
+      const agentScore = recommendationScore(agentCandidate, agentVerification);
+      notes.push(`model_score=${modelScore}`);
+      notes.push(`agent_score=${agentScore}`);
+      agentSuggestion = {
+        speciesId: agentCandidate?.speciesId || null,
+        displayName: agentCandidate?.displayName || null,
+        canonicalName: agentCandidate?.canonicalName || agentCandidate?.displayName || null,
+        probabilityPercent: Number.isFinite(Number(agentCandidate?.probabilityPercent))
+          ? Number(agentCandidate.probabilityPercent)
+          : null,
+        verificationVerdict: agentVerification?.verdict || "weak",
+      };
+
+      const modelProb = Number(modelCandidate?.probabilityPercent);
+      const agentProb = Number(agentCandidate?.probabilityPercent);
+      const overrideAllowed =
+        String(agentVerification?.verdict || "weak") === "strong" ||
+        (agentScore >= modelScore + 0.35 &&
+          (String(agentVerification?.verdict || "weak") === "moderate" ||
+            (Number.isFinite(agentProb) && Number.isFinite(modelProb) && agentProb >= modelProb + 8)));
+
+      if (overrideAllowed) {
+        chosen = agentCandidate;
+        chosenVerification = agentVerification;
+        source = "agent_verified_override";
+        notes.push("override=agent");
+      } else {
+        source = "model_retained_agent_conflict";
+        notes.push("override=model");
+      }
+    }
+  }
+
+  let actionability = String(chosen?.actionability || "insufficient_data");
+  if (source === "agent_verified_override" && actionability === "not_recommended") actionability = "test_pilot_only";
+  if (String(chosenVerification?.verdict || "weak") === "weak" && actionability === "recommended") actionability = "test_pilot_only";
+
+  return {
+    speciesId: chosen?.speciesId || "insufficient_data",
+    displayName: chosen?.displayName || "Insufficient data for species recommendation",
+    canonicalName: chosen?.canonicalName || chosen?.displayName || "Insufficient data for species recommendation",
+    probabilityPercent: Number.isFinite(Number(chosen?.probabilityPercent)) ? Number(chosen.probabilityPercent) : null,
+    actionability,
+    source,
+    disagreementWithAgent,
+    verificationVerdict: chosenVerification?.verdict || "weak",
+    verificationConfidenceScore: Number(chosenVerification?.confidenceScore || 0),
+    mlCandidate: {
+      speciesId: modelCandidate?.speciesId || null,
+      displayName: modelCandidate?.displayName || null,
+      canonicalName: modelCandidate?.canonicalName || modelCandidate?.displayName || null,
+      probabilityPercent: Number.isFinite(Number(modelCandidate?.probabilityPercent))
+        ? Number(modelCandidate.probabilityPercent)
+        : null,
+      actionability: modelCandidate?.actionability || null,
+      verificationVerdict: modelVerification?.verdict || "weak",
+    },
+    agentSuggestion,
+    notes,
+    decidedAt: new Date().toISOString(),
+  };
+}
+
 function deterministicAdvisoryText(prediction, environment) {
-  const best = prediction?.bestSpecies || null;
-  const top = topScoredSpecies(prediction);
-  const chosen = best?.speciesId === "insufficient_data" ? top : best || top;
+  const chosen = primaryModelCandidate(prediction);
   const speciesName = chosen?.displayName || "No strong species candidate";
   const scoreText = Number.isFinite(Number(chosen?.probabilityPercent)) ? `${Number(chosen.probabilityPercent).toFixed(2)}%` : "n/a";
   const tempText = Number.isFinite(Number(environment?.temperatureC)) ? `${Number(environment.temperatureC).toFixed(1)} C` : "n/a";
@@ -368,6 +562,25 @@ function deterministicAdvisoryText(prediction, environment) {
     `Field checks before farming: validate salinity/temperature/depth locally (temp ${tempText}, salinity ${salText}).`,
     "Next 7 days: run a small pilot line, monitor growth/fouling daily, then rerun prediction with updated observations.",
   ].join("\n");
+}
+
+function fallbackFinalRecommendation(prediction, verification) {
+  const candidate = primaryModelCandidate(prediction);
+  return {
+    speciesId: candidate?.speciesId || "insufficient_data",
+    displayName: candidate?.displayName || "Insufficient data for species recommendation",
+    canonicalName: candidate?.canonicalName || candidate?.displayName || "Insufficient data for species recommendation",
+    probabilityPercent: Number.isFinite(Number(candidate?.probabilityPercent)) ? Number(candidate.probabilityPercent) : null,
+    actionability: candidate?.actionability || "insufficient_data",
+    source: "arbitration_unavailable",
+    disagreementWithAgent: false,
+    verificationVerdict: verification?.verdict || "weak",
+    verificationConfidenceScore: Number(verification?.confidenceScore || 0),
+    mlCandidate: null,
+    agentSuggestion: null,
+    notes: ["arbitration_unavailable"],
+    decidedAt: new Date().toISOString(),
+  };
 }
 
 async function generateFallbackAdvisory({ userId, lat, lon, formInput, prediction, environment, verification = null }) {
@@ -540,10 +753,18 @@ router.post("/species", authRequired, async (req, res) => {
       });
       advisoryFallbackUsed = true;
     }
+    const finalRecommendation = await arbitrateFinalRecommendation({
+      lat,
+      lon,
+      prediction,
+      verification,
+      fallbackAdvisory,
+    }).catch(() => fallbackFinalRecommendation(prediction, verification));
 
     const out = {
       ...prediction,
       verification,
+      finalRecommendation,
       advisoryFallbackUsed,
       fallbackAdvisory,
     };
@@ -602,12 +823,20 @@ router.post("/species/advisory", authRequired, async (req, res) => {
       environment,
       verification,
     });
+    const finalRecommendation = await arbitrateFinalRecommendation({
+      lat,
+      lon,
+      prediction,
+      verification,
+      fallbackAdvisory: advisory,
+    }).catch(() => fallbackFinalRecommendation(prediction, verification));
 
     return res.json({
       input: { lat, lon },
       formInput,
       prediction,
       verification,
+      finalRecommendation,
       environment,
       advisory,
       generatedAt: new Date().toISOString(),
@@ -634,6 +863,20 @@ router.get("/submissions/me", authRequired, async (req, res) => {
       createdAt: s.createdAt,
       bestSpecies: s.prediction?.bestSpecies || null,
       topCandidate: topScoredSpecies(s.prediction || null),
+      finalRecommendation: s.prediction?.finalRecommendation
+        ? {
+            speciesId: s.prediction.finalRecommendation.speciesId || null,
+            displayName: s.prediction.finalRecommendation.displayName || "",
+            canonicalName: s.prediction.finalRecommendation.canonicalName || "",
+            probabilityPercent: Number.isFinite(Number(s.prediction.finalRecommendation.probabilityPercent))
+              ? Number(s.prediction.finalRecommendation.probabilityPercent)
+              : null,
+            actionability: s.prediction.finalRecommendation.actionability || "insufficient_data",
+            source: s.prediction.finalRecommendation.source || "unknown",
+            disagreementWithAgent: Boolean(s.prediction.finalRecommendation.disagreementWithAgent),
+            verificationVerdict: s.prediction.finalRecommendation.verificationVerdict || "unknown",
+          }
+        : null,
       verification: s.prediction?.verification
         ? {
             verdict: s.prediction.verification.verdict || "unknown",

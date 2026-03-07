@@ -221,7 +221,10 @@ export default function PredictPage() {
     const completenessInputs = [coords, season, depth, temperatureC, salinityPpt].filter(Boolean).length;
     const completeness = Math.min(1, completenessInputs / 5);
 
-    const liveScore = lastPrediction?.bestSpecies?.probabilityPercent ?? null;
+    const liveScore =
+      lastPrediction?.finalRecommendation?.probabilityPercent ??
+      lastPrediction?.bestSpecies?.probabilityPercent ??
+      null;
     let heuristic = 55;
     const temp = Number(temperatureC);
     const sal = Number(salinityPpt);
@@ -240,7 +243,7 @@ export default function PredictPage() {
       species: recommendedSpecies(
         score,
         season,
-        lastPrediction?.bestSpecies?.displayName || undefined,
+        lastPrediction?.finalRecommendation?.displayName || lastPrediction?.bestSpecies?.displayName || undefined,
         Boolean(lastPrediction),
       ),
     };
