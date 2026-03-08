@@ -2,9 +2,11 @@ import DashboardLayout from "@/components/DashboardLayout";
 import { motion } from "framer-motion";
 import { Award, AlertTriangle, CloudRain, Wind, ChevronDown, Download, MapPin, Database, ShieldCheck } from "lucide-react";
 import { Button } from "@/components/ui/button";
+import FallbackAdvisoryCard from "@/components/FallbackAdvisoryCard";
 import { useState } from "react";
 import { Link, useLocation } from "react-router-dom";
 import type { SpeciesPredictionResponse } from "@/lib/api";
+import { sanitizeAdvisoryText } from "@/lib/advisory";
 
 const risks = [
   { label: "Cyclone Risk", value: "Low", icon: Wind, color: "text-ocean-500" },
@@ -71,22 +73,6 @@ function reasonText(reason: string): string {
     default:
       return reason.replace(/_/g, " ");
   }
-}
-
-function sanitizeAdvisoryText(text: string): string {
-  return String(text || "")
-    .replace(/\r\n/g, "\n")
-    .split("\n")
-    .filter((line) => {
-      const t = line.trim();
-      if (!t) return true;
-      if (/^[-•]?\s*ask\s*["']?e["']?\s*$/i.test(t)) return false;
-      if (/^[-•]?\s*ask\s*["']?expand["']?.*$/i.test(t)) return false;
-      return true;
-    })
-    .join("\n")
-    .replace(/\n{3,}/g, "\n\n")
-    .trim();
 }
 
 function splitModelRelease(modelRelease: string): { primary: string; secondary: string | null } {
@@ -352,10 +338,7 @@ export default function ResultsPage() {
                 </p>
               )}
               {fallbackAnswer && (
-                <div className="mb-3 rounded-xl border border-cyan-200 bg-cyan-50 p-3">
-                  <p className="text-xs font-semibold uppercase tracking-wide text-cyan-800">Fallback Advisory</p>
-                  <p className="mt-1 whitespace-pre-line text-sm text-cyan-900">{fallbackAnswer}</p>
-                </div>
+                <FallbackAdvisoryCard text={fallbackAnswer} className="mb-3" />
               )}
               <button
                 onClick={() => setShowWhy(!showWhy)}
@@ -407,3 +390,4 @@ export default function ResultsPage() {
     </DashboardLayout>
   );
 }
+

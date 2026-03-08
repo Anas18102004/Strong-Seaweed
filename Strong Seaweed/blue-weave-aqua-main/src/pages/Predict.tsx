@@ -1,10 +1,12 @@
 import DashboardLayout from "@/components/DashboardLayout";
+import FallbackAdvisoryCard from "@/components/FallbackAdvisoryCard";
 import { motion } from "framer-motion";
 import { Button } from "@/components/ui/button";
 import { useEffect, useMemo, useRef, useState } from "react";
 import { ArrowRight, ChevronDown, MapPin, Calendar, Ruler, Thermometer, Droplets, Radar, LocateFixed, ShieldCheck, ExternalLink } from "lucide-react";
 import { useNavigate } from "react-router-dom";
 import { api, SpeciesPredictionResponse } from "@/lib/api";
+import { sanitizeAdvisoryText } from "@/lib/advisory";
 import { useAuth } from "@/context/AuthContext";
 import { CircleMarker, MapContainer, TileLayer, useMapEvents } from "react-leaflet";
 import "leaflet/dist/leaflet.css";
@@ -86,22 +88,6 @@ function normalizeReason(value?: string | null) {
   const raw = String(value || "").trim();
   if (!raw) return "No reason provided";
   return raw.replace(/_/g, " ");
-}
-
-function sanitizeAdvisoryText(text?: string | null) {
-  return String(text || "")
-    .replace(/\r\n/g, "\n")
-    .split("\n")
-    .filter((line) => {
-      const t = String(line || "").trim();
-      if (!t) return true;
-      if (/^[-•]?\s*ask\s*["']?e["']?\s*$/i.test(t)) return false;
-      if (/^[-•]?\s*ask\s*["']?expand["']?.*$/i.test(t)) return false;
-      return true;
-    })
-    .join("\n")
-    .replace(/\n{3,}/g, "\n\n")
-    .trim();
 }
 
 function splitModelRelease(modelRelease?: string | null): { primary: string; secondary: string | null } {
@@ -629,10 +615,11 @@ export default function PredictPage() {
                 )}
 
                 {lastPrediction.fallbackAdvisory?.answer && (
-                  <div className="mt-4 rounded-xl border border-cyan-200/25 bg-cyan-400/10 p-3">
-                    <p className="text-xs uppercase tracking-[0.12em] text-cyan-100">Advisory Fallback</p>
-                    <p className="mt-1 whitespace-pre-line text-sm text-cyan-50">{sanitizeAdvisoryText(lastPrediction.fallbackAdvisory.answer)}</p>
-                  </div>
+                  <FallbackAdvisoryCard
+                    text={sanitizeAdvisoryText(lastPrediction.fallbackAdvisory.answer)}
+                    variant="dark"
+                    className="mt-4"
+                  />
                 )}
               </motion.div>
             )}
@@ -642,3 +629,4 @@ export default function PredictPage() {
     </DashboardLayout>
   );
 }
+

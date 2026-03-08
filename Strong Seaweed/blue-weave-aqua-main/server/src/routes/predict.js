@@ -679,15 +679,14 @@ function sanitizeAdvisoryAnswer(rawAnswer = "") {
   const cleaned = lines.filter((line) => {
     const t = String(line || "").trim();
     if (!t) return true;
-    if (/^[-•]?\s*ask\s*["']?e["']?\s*$/i.test(t)) return false;
-    if (/^[-•]?\s*ask\s*["']?expand["']?.*$/i.test(t)) return false;
-    if (/^[-•]?\s*ask\s+for\s+expand/i.test(t)) return false;
+    if (/^[-*]?\s*ask\s*["']?e["']?\s*$/i.test(t)) return false;
+    if (/^[-*]?\s*ask\s*["']?expand["']?.*$/i.test(t)) return false;
+    if (/^[-*]?\s*ask\s+for\s+expand/i.test(t)) return false;
     return true;
   });
   const normalized = cleaned.join("\n").replace(/\n{3,}/g, "\n\n").trim();
   return normalized || "Advisory is temporarily unavailable. Please retry.";
 }
-
 function fallbackFinalRecommendation(prediction, verification) {
   const candidate = primaryModelCandidate(prediction);
   const selectionDiagnostics = prediction?.selectionDiagnostics || null;
@@ -1050,3 +1049,4 @@ router.get("/submissions/me", authRequired, async (req, res) => {
 });
 
 export default router;
+
