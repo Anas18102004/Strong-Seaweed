@@ -6,6 +6,18 @@ import { PredictionSubmission } from "../models/PredictionSubmission.js";
 
 const router = express.Router();
 
+function envNumber(name, fallback) {
+  const n = Number(process.env?.[name]);
+  return Number.isFinite(n) ? n : fallback;
+}
+
+const ARB_MODEL_STRONG_PROB = envNumber("ARB_MODEL_STRONG_PROB", 70);
+const ARB_MODEL_MIN_RECOMMENDED_PROB = envNumber("ARB_MODEL_MIN_RECOMMENDED_PROB", 60);
+const ARB_LOW_CONF_PROB = envNumber("ARB_LOW_CONF_PROB", 35);
+const ARB_AGENT_OVERRIDE_MIN_DELTA = envNumber("ARB_AGENT_OVERRIDE_MIN_DELTA", 0.45);
+const ARB_AGENT_OVERRIDE_MIN_PROB_DELTA = envNumber("ARB_AGENT_OVERRIDE_MIN_PROB_DELTA", 10);
+const ARB_POLICY_VERSION = "v2_model_led_consensus";
+
 function toOptionalNumber(v) {
   if (v === "" || v === null || v === undefined) return null;
   const n = Number(v);
@@ -325,12 +337,20 @@ async function verifyCandidateEvidence({ lat, lon, prediction, candidate }) {
       (scoreMap[occSupport] || 0.4)
     ).toFixed(2)
   );
-  const verdict = confidenceScore >= 3.2 ? "strong" : confidenceScore >= 2.2 ? "moderate" : "weak";
+  let verdict = confidenceScore >= 3.2 ? "strong" : confidenceScore >= 2.2 ? "moderate" : "weak";
 
   const notes = [];
   notes.push(`model=${modelSupport}`);
   notes.push(`copernicus=${copSupport}`);
   notes.push(`occurrence=${occSupport}`);
+  const actionability = String(candidate?.actionability || "insufficient_data");
+  if (verdict === "strong" && actionability !== "recommended") {
+    const bothExternalStrong = occSupport === "strong" && copSupport === "strong";
+    if (!bothExternalStrong) {
+      verdict = "moderate";
+      notes.push("verdict_capped_non_recommended_candidate");
+    }
+  }
   if (Number.isFinite(Number(candidate?.probabilityPercent))) notes.push(`model_score=${candidate.probabilityPercent}%`);
   if (obis?.recordCount !== undefined) notes.push(`occurrence_records=${obis.recordCount}`);
   if (obis?.nearestKm !== null && obis?.nearestKm !== undefined) notes.push(`occurrence_nearest_km=${obis.nearestKm}`);
@@ -447,8 +467,60 @@ function recommendationScore(candidate = null, verification = null) {
   return Number((pTerm * 1.6 + actionBonus + verdictBonus + occ * 0.25 + cop * 0.2).toFixed(3));
 }
 
+function consensusTier({
+  candidate = null,
+  verification = null,
+  tieDetected = false,
+  disagreementWithAgent = false,
+  source = "model_verification",
+}) {
+  if (!candidate) return "insufficient";
+  if (source === "agent_verified_override") return "agent_override_pilot";
+  if (tieDetected) return "tie_guardrail";
+  if (disagreementWithAgent) return "model_agent_conflict";
+
+  const prob = Number(candidate?.probabilityPercent);
+  const verdict = String(verification?.verdict || "weak").toLowerCase();
+  const occ = String(verification?.evidence?.occurrenceSupport || "unknown").toLowerCase();
+  const cop = String(verification?.evidence?.copernicusSupport || "unknown").toLowerCase();
+
+  const strongEvidence = verdict === "strong" && occ !== "weak" && cop !== "weak";
+  if (strongEvidence && Number.isFinite(prob) && prob >= ARB_MODEL_STRONG_PROB) return "strong_consensus";
+
+  const moderateEvidence = verdict === "strong" || verdict === "moderate";
+  if (moderateEvidence && Number.isFinite(prob) && prob >= ARB_MODEL_MIN_RECOMMENDED_PROB) return "model_supported";
+
+  if (!Number.isFinite(prob) || prob < ARB_LOW_CONF_PROB || verdict === "weak") return "low_confidence";
+  return "pilot_consensus";
+}
+
+function enforceActionability({
+  baseActionability = "insufficient_data",
+  candidate = null,
+  verification = null,
+  tier = "low_confidence",
+  source = "model_verification",
+}) {
+  let out = String(baseActionability || "insufficient_data");
+  const prob = Number(candidate?.probabilityPercent);
+  const verdict = String(verification?.verdict || "weak").toLowerCase();
+
+  if (tier === "strong_consensus" && out === "recommended") out = "recommended";
+  else if (tier === "model_supported" && out === "recommended") out = "test_pilot_only";
+  else if (["tie_guardrail", "model_agent_conflict", "agent_override_pilot", "pilot_consensus"].includes(tier)) out = "test_pilot_only";
+  else if (tier === "low_confidence") out = Number.isFinite(prob) && prob < ARB_LOW_CONF_PROB ? "not_recommended" : "test_pilot_only";
+
+  if (source === "agent_verified_override" && out === "recommended") out = "test_pilot_only";
+  if (verdict === "weak" && out === "recommended") out = "test_pilot_only";
+  return out;
+}
+
 async function arbitrateFinalRecommendation({ lat, lon, prediction, verification, fallbackAdvisory = null }) {
   const modelCandidate = primaryModelCandidate(prediction);
+  const selectionDiagnostics = prediction?.selectionDiagnostics || null;
+  const baseSelectionReason = String(selectionDiagnostics?.selectionReason || "model_ranked");
+  const tieResolved = Boolean(selectionDiagnostics?.tieResolved);
+  const tieDetected = Boolean(selectionDiagnostics?.tieDetected);
   if (!modelCandidate) {
     return {
       speciesId: "insufficient_data",
@@ -458,6 +530,13 @@ async function arbitrateFinalRecommendation({ lat, lon, prediction, verification
       actionability: "insufficient_data",
       source: "no_candidate",
       disagreementWithAgent: false,
+      selectionReason: "no_candidate",
+      tieResolved: false,
+      tieDetected: false,
+      consensusTier: "insufficient",
+      conflictDetected: false,
+      conflictStatus: "none",
+      arbitrationPolicyVersion: ARB_POLICY_VERSION,
       verificationVerdict: "weak",
       verificationConfidenceScore: 0,
       mlCandidate: null,
@@ -475,6 +554,8 @@ async function arbitrateFinalRecommendation({ lat, lon, prediction, verification
   let chosenVerification = modelVerification;
   let source = "model_verification";
   let disagreementWithAgent = false;
+  let conflictStatus = "none";
+  let selectionReason = baseSelectionReason;
   let agentSuggestion = null;
   const notes = [];
 
@@ -500,27 +581,48 @@ async function arbitrateFinalRecommendation({ lat, lon, prediction, verification
 
       const modelProb = Number(modelCandidate?.probabilityPercent);
       const agentProb = Number(agentCandidate?.probabilityPercent);
-      const overrideAllowed =
-        String(agentVerification?.verdict || "weak") === "strong" ||
-        (agentScore >= modelScore + 0.35 &&
-          (String(agentVerification?.verdict || "weak") === "moderate" ||
-            (Number.isFinite(agentProb) && Number.isFinite(modelProb) && agentProb >= modelProb + 8)));
+      const modelVerdict = String(modelVerification?.verdict || "weak").toLowerCase();
+      const agentVerdict = String(agentVerification?.verdict || "weak").toLowerCase();
+      const modelWeak = modelVerdict === "weak" || !Number.isFinite(modelProb) || modelProb < ARB_LOW_CONF_PROB || tieDetected;
+      const agentStrong = agentVerdict === "strong";
+      const scoreAdvantage = agentScore >= modelScore + ARB_AGENT_OVERRIDE_MIN_DELTA;
+      const probAdvantage =
+        Number.isFinite(agentProb) && Number.isFinite(modelProb) && agentProb >= modelProb + ARB_AGENT_OVERRIDE_MIN_PROB_DELTA;
+      const overrideAllowed = modelWeak && agentStrong && (scoreAdvantage || probAdvantage);
 
       if (overrideAllowed) {
         chosen = agentCandidate;
         chosenVerification = agentVerification;
         source = "agent_verified_override";
+        selectionReason = "agent_verified_override";
+        conflictStatus = "disagree_agent_override";
         notes.push("override=agent");
       } else {
         source = "model_retained_agent_conflict";
+        selectionReason = "model_retained_agent_conflict";
+        conflictStatus = "disagree_model_retained";
         notes.push("override=model");
       }
     }
   }
 
-  let actionability = String(chosen?.actionability || "insufficient_data");
-  if (source === "agent_verified_override" && actionability === "not_recommended") actionability = "test_pilot_only";
-  if (String(chosenVerification?.verdict || "weak") === "weak" && actionability === "recommended") actionability = "test_pilot_only";
+  if (!disagreementWithAgent) conflictStatus = "agree_or_no_agent";
+
+  const tier = consensusTier({
+    candidate: chosen,
+    verification: chosenVerification,
+    tieDetected,
+    disagreementWithAgent,
+    source,
+  });
+  const actionability = enforceActionability({
+    baseActionability: String(chosen?.actionability || "insufficient_data"),
+    candidate: chosen,
+    verification: chosenVerification,
+    tier,
+    source,
+  });
+  notes.push(`consensus_tier=${tier}`);
 
   return {
     speciesId: chosen?.speciesId || "insufficient_data",
@@ -530,6 +632,13 @@ async function arbitrateFinalRecommendation({ lat, lon, prediction, verification
     actionability,
     source,
     disagreementWithAgent,
+    selectionReason,
+    tieResolved,
+    tieDetected,
+    consensusTier: tier,
+    conflictDetected: disagreementWithAgent,
+    conflictStatus,
+    arbitrationPolicyVersion: ARB_POLICY_VERSION,
     verificationVerdict: chosenVerification?.verdict || "weak",
     verificationConfidenceScore: Number(chosenVerification?.confidenceScore || 0),
     mlCandidate: {
@@ -566,14 +675,36 @@ function deterministicAdvisoryText(prediction, environment) {
 
 function fallbackFinalRecommendation(prediction, verification) {
   const candidate = primaryModelCandidate(prediction);
+  const selectionDiagnostics = prediction?.selectionDiagnostics || null;
+  const tieDetected = Boolean(selectionDiagnostics?.tieDetected);
+  const tier = consensusTier({
+    candidate,
+    verification,
+    tieDetected,
+    disagreementWithAgent: false,
+    source: "arbitration_unavailable",
+  });
   return {
     speciesId: candidate?.speciesId || "insufficient_data",
     displayName: candidate?.displayName || "Insufficient data for species recommendation",
     canonicalName: candidate?.canonicalName || candidate?.displayName || "Insufficient data for species recommendation",
     probabilityPercent: Number.isFinite(Number(candidate?.probabilityPercent)) ? Number(candidate.probabilityPercent) : null,
-    actionability: candidate?.actionability || "insufficient_data",
+    actionability: enforceActionability({
+      baseActionability: candidate?.actionability || "insufficient_data",
+      candidate,
+      verification,
+      tier,
+      source: "arbitration_unavailable",
+    }),
     source: "arbitration_unavailable",
     disagreementWithAgent: false,
+    selectionReason: String(selectionDiagnostics?.selectionReason || "arbitration_unavailable"),
+    tieResolved: Boolean(selectionDiagnostics?.tieResolved),
+    tieDetected,
+    consensusTier: tier,
+    conflictDetected: false,
+    conflictStatus: "none",
+    arbitrationPolicyVersion: ARB_POLICY_VERSION,
     verificationVerdict: verification?.verdict || "weak",
     verificationConfidenceScore: Number(verification?.confidenceScore || 0),
     mlCandidate: null,
@@ -874,6 +1005,13 @@ router.get("/submissions/me", authRequired, async (req, res) => {
             actionability: s.prediction.finalRecommendation.actionability || "insufficient_data",
             source: s.prediction.finalRecommendation.source || "unknown",
             disagreementWithAgent: Boolean(s.prediction.finalRecommendation.disagreementWithAgent),
+            selectionReason: s.prediction.finalRecommendation.selectionReason || "unknown",
+            tieResolved: Boolean(s.prediction.finalRecommendation.tieResolved),
+            tieDetected: Boolean(s.prediction.finalRecommendation.tieDetected),
+            consensusTier: s.prediction.finalRecommendation.consensusTier || "unknown",
+            conflictDetected: Boolean(s.prediction.finalRecommendation.conflictDetected),
+            conflictStatus: s.prediction.finalRecommendation.conflictStatus || "none",
+            arbitrationPolicyVersion: s.prediction.finalRecommendation.arbitrationPolicyVersion || "unknown",
             verificationVerdict: s.prediction.finalRecommendation.verificationVerdict || "unknown",
           }
         : null,

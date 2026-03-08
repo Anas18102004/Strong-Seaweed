@@ -96,6 +96,20 @@ export type SpeciesScore = {
   confidenceBand?: "high" | "medium" | "low" | "unknown";
   thresholdPercent?: number | null;
   marginToThresholdPercent?: number | null;
+  rankScore?: number | null;
+  envSupportScore?: number | null;
+};
+
+export type SelectionDiagnostics = {
+  rankScore?: number | null;
+  tieDetected?: boolean;
+  tieResolved?: boolean;
+  tieGapPercent?: number | null;
+  tieCandidates?: string[];
+  selectionReason?: string;
+  envSupportBySpecies?: Record<string, number>;
+  priorSupportBySpecies?: Record<string, number>;
+  rankScoreBySpecies?: Record<string, number>;
 };
 
 export type AdvisoryFallbackSummary = {
@@ -151,6 +165,13 @@ export type FinalRecommendation = {
   actionability: "recommended" | "test_pilot_only" | "not_recommended" | "insufficient_data";
   source: string;
   disagreementWithAgent: boolean;
+  selectionReason?: string;
+  tieResolved?: boolean;
+  tieDetected?: boolean;
+  consensusTier?: string;
+  conflictDetected?: boolean;
+  conflictStatus?: string;
+  arbitrationPolicyVersion?: string;
   verificationVerdict: string;
   verificationConfidenceScore: number;
   mlCandidate?: {
@@ -180,6 +201,13 @@ export type FinalRecommendationSummary = {
   actionability: "recommended" | "test_pilot_only" | "not_recommended" | "insufficient_data";
   source: string;
   disagreementWithAgent: boolean;
+  selectionReason?: string;
+  tieResolved?: boolean;
+  tieDetected?: boolean;
+  consensusTier?: string;
+  conflictDetected?: boolean;
+  conflictStatus?: string;
+  arbitrationPolicyVersion?: string;
   verificationVerdict: string;
 };
 
@@ -193,6 +221,7 @@ export type SpeciesPredictionResponse = {
   warnings: string[];
   verification?: PredictionVerification | null;
   finalRecommendation?: FinalRecommendation | null;
+  selectionDiagnostics?: SelectionDiagnostics | null;
   advisoryFallbackUsed?: boolean;
   fallbackAdvisory?: AdvisoryFallbackDetail | null;
 };

@@ -7,6 +7,7 @@ import joblib
 import numpy as np
 import pandas as pd
 from sklearn.isotonic import IsotonicRegression
+from sklearn.linear_model import LogisticRegression
 from sklearn.metrics import average_precision_score, brier_score_loss, precision_recall_curve, roc_auc_score
 from xgboost import XGBClassifier
 
@@ -24,6 +25,11 @@ def parse_args() -> argparse.Namespace:
     p.add_argument("--min_positive", type=int, default=20)
     p.add_argument("--min_total_rows", type=int, default=200)
     p.add_argument("--seed", type=int, default=42)
+    p.add_argument("--calibration_method", type=str, default="sigmoid", choices=["isotonic", "sigmoid"])
+    p.add_argument("--min_precision", type=float, default=0.75)
+    p.add_argument("--min_recall", type=float, default=0.40)
+    p.add_argument("--min_threshold", type=float, default=0.5)
+    p.add_argument("--max_threshold", type=float, default=0.95)
     return p.parse_args()
 
 
@@ -54,6 +60,7 @@ def pick_threshold(
     y_true: np.ndarray,
     y_prob: np.ndarray,
     min_precision: float = 0.75,
+    min_recall: float = 0.40,
     min_threshold: float = 0.5,
     max_threshold: float = 0.95,
 ) -> dict:
@@ -62,6 +69,7 @@ def pick_threshold(
     recall = recall[:-1]
     valid = np.where(
         (precision >= min_precision)
+        & (recall >= min_recall)
         & (thresholds >= min_threshold)
         & (thresholds <= max_threshold)
     )[0]
@@ -78,7 +86,24 @@ def pick_threshold(
     return {"threshold": float(thresholds[i]), "precision": float(precision[i]), "recall": float(recall[i])}
 
 
-def train_one(df: pd.DataFrame, seed: int):
+class SigmoidCalibrator:
+    def __init__(self, model: LogisticRegression):
+        self.model = model
+
+    def predict(self, p_raw: np.ndarray) -> np.ndarray:
+        x = np.asarray(p_raw, dtype=np.float32).reshape(-1, 1)
+        return self.model.predict_proba(x)[:, 1]
+
+
+def train_one(
+    df: pd.DataFrame,
+    seed: int,
+    calibration_method: str,
+    min_precision: float,
+    min_recall: float,
+    min_threshold: float,
+    max_threshold: float,
+):
     drop_cols = {
         "label",
         "label_weight",
@@ -140,10 +165,22 @@ def train_one(df: pd.DataFrame, seed: int):
     good = ~np.isnan(oof_raw)
     y_oof = y[good]
     p_oof = oof_raw[good]
-    calibrator = IsotonicRegression(out_of_bounds="clip")
-    calibrator.fit(p_oof, y_oof)
+    if calibration_method == "sigmoid":
+        lr = LogisticRegression(solver="lbfgs", max_iter=1000, random_state=seed)
+        lr.fit(p_oof.reshape(-1, 1), y_oof)
+        calibrator = SigmoidCalibrator(lr)
+    else:
+        calibrator = IsotonicRegression(out_of_bounds="clip")
+        calibrator.fit(p_oof, y_oof)
     p_cal = np.clip(calibrator.predict(p_oof), 0.0, 1.0)
-    thr = pick_threshold(y_oof, p_cal, min_precision=0.75, min_threshold=0.5)
+    thr = pick_threshold(
+        y_oof,
+        p_cal,
+        min_precision=min_precision,
+        min_recall=min_recall,
+        min_threshold=min_threshold,
+        max_threshold=max_threshold,
+    )
 
     pos_full = int(y.sum())
     neg_full = int(len(y) - pos_full)
@@ -184,6 +221,13 @@ def train_one(df: pd.DataFrame, seed: int):
         "oof_ap_calibrated": float(average_precision_score(y_oof, p_cal)),
         "oof_brier_raw": float(brier_score_loss(y_oof, np.clip(p_oof, 0.0, 1.0))),
         "oof_brier_calibrated": float(brier_score_loss(y_oof, p_cal)),
+        "calibration_method": calibration_method,
+        "threshold_policy": {
+            "min_precision": float(min_precision),
+            "min_recall": float(min_recall),
+            "min_threshold": float(min_threshold),
+            "max_threshold": float(max_threshold),
+        },
         "threshold": thr,
     }
     return final_model, calibrator, feat_cols, metrics
@@ -225,7 +269,15 @@ def main() -> None:
 
         log(f"[TRAIN] {species_id}: rows={len(df)} pos={pos}")
         try:
-            model, calibrator, feat_cols, metrics = train_one(df, args.seed)
+            model, calibrator, feat_cols, metrics = train_one(
+                df,
+                args.seed,
+                calibration_method=args.calibration_method,
+                min_precision=args.min_precision,
+                min_recall=args.min_recall,
+                min_threshold=args.min_threshold,
+                max_threshold=args.max_threshold,
+            )
         except Exception as e:
             log(f"[FAIL] {species_id}: {e}")
             summary["species"].append({"species_id": species_id, "status": "failed", "error": str(e)})

@@ -113,9 +113,10 @@ jobs:
           MONGODB_URI: ${{ secrets.MONGODB_URI }}
           JWT_SECRET: ${{ secrets.JWT_SECRET }}
           CORS_ORIGINS: ${{ secrets.CORS_ORIGINS }}
+          MODEL_API_ENV_B64: ${{ secrets.MODEL_API_ENV_B64 }}
           SERVICE: ${{ (github.event_name == 'push' && 'all') || github.event.inputs.service || 'all' }}
         run: |
-          ssh -i ~/.ssh/deploy_key "${AWS_USER}@${AWS_HOST}" "DEPLOY_PATH='${DEPLOY_PATH}' SERVICE='${SERVICE}' MONGODB_URI='${MONGODB_URI}' JWT_SECRET='${JWT_SECRET}' CORS_ORIGINS='${CORS_ORIGINS}' bash -s" << 'EOF'
+          ssh -i ~/.ssh/deploy_key "${AWS_USER}@${AWS_HOST}" "DEPLOY_PATH='${DEPLOY_PATH}' SERVICE='${SERVICE}' MONGODB_URI='${MONGODB_URI}' JWT_SECRET='${JWT_SECRET}' CORS_ORIGINS='${CORS_ORIGINS}' MODEL_API_ENV_B64='${MODEL_API_ENV_B64}' bash -s" << 'EOF'
             set -euo pipefail
             DEPLOY_ROOT="${DEPLOY_PATH:-}"
             if [[ -z "${DEPLOY_ROOT}" || ! -d "${DEPLOY_ROOT}" ]]; then
@@ -277,6 +278,18 @@ jobs:
 
             if [[ "${SERVICE}" == "ml-apis" || "${SERVICE}" == "all" ]]; then
               echo "Provisioning akuara-model-api systemd unit..."
+              if [[ -n "${MODEL_API_ENV_B64:-}" ]]; then
+                echo "Writing /etc/default/akuara-model-api from MODEL_API_ENV_B64"
+                printf '%s' "${MODEL_API_ENV_B64}" | base64 -d | sudo tee /etc/default/akuara-model-api >/dev/null
+              else
+                echo "MODEL_API_ENV_B64 not set; ensuring baseline /etc/default/akuara-model-api defaults"
+                sudo touch /etc/default/akuara-model-api
+                sudo grep -q '^TIE_GAP_PERCENT=' /etc/default/akuara-model-api || echo 'TIE_GAP_PERCENT=1.0' | sudo tee -a /etc/default/akuara-model-api >/dev/null
+                sudo grep -q '^RANK_WEIGHT_PROB=' /etc/default/akuara-model-api || echo 'RANK_WEIGHT_PROB=0.70' | sudo tee -a /etc/default/akuara-model-api >/dev/null
+                sudo grep -q '^RANK_WEIGHT_MARGIN=' /etc/default/akuara-model-api || echo 'RANK_WEIGHT_MARGIN=0.20' | sudo tee -a /etc/default/akuara-model-api >/dev/null
+                sudo grep -q '^RANK_WEIGHT_ENV=' /etc/default/akuara-model-api || echo 'RANK_WEIGHT_ENV=0.10' | sudo tee -a /etc/default/akuara-model-api >/dev/null
+                sudo grep -q '^TIE_FORCE_PILOT_ONLY=' /etc/default/akuara-model-api || echo 'TIE_FORCE_PILOT_ONLY=true' | sudo tee -a /etc/default/akuara-model-api >/dev/null
+              fi
               {
                 echo "[Unit]"
                 echo "Description=Akuara Species Model API"
@@ -286,6 +299,7 @@ jobs:
                 echo "Type=simple"
                 echo "User=ubuntu"
                 echo "WorkingDirectory=/home/ubuntu/strongseaweed_root/Strong-Seaweed-main"
+                echo "EnvironmentFile=-/etc/default/akuara-model-api"
                 echo "ExecStart=/home/ubuntu/strongseaweed_root/Strong-Seaweed-main/.venv_model_api/bin/python /home/ubuntu/strongseaweed_root/Strong-Seaweed-main/serve_species_api.py"
                 echo "Restart=always"
                 echo "RestartSec=3"
@@ -461,3 +475,43 @@ jobs:
               test -f /var/www/blueweave/index.html
             fi
           EOF
+
+      - name: Post-deploy live benchmark gate
+        if: ${{ github.event_name == 'push' || github.event.inputs.service == 'ml-apis' || github.event.inputs.service == 'all' }}
+        env:
+          EVAL_EMAIL: ${{ secrets.EVAL_EMAIL }}
+          EVAL_PASSWORD: ${{ secrets.EVAL_PASSWORD }}
+          EVAL_BASE_HOST: ${{ vars.FRONTEND_HOST }}
+        run: |
+          set -euo pipefail
+          if [[ -z "${EVAL_EMAIL:-}" || -z "${EVAL_PASSWORD:-}" ]]; then
+            echo "::error::Missing EVAL_EMAIL or EVAL_PASSWORD for live benchmark gate"
+            exit 1
+          fi
+          BASE_HOST="${EVAL_BASE_HOST:-akuara.publicvm.com}"
+          python -m pip install --upgrade pip
+          python -m pip install requests
+          python "Strong Seaweed/Strong-Seaweed-main/evaluate_live_system.py" \
+            --base_host "${BASE_HOST}" \
+            --email "${EVAL_EMAIL}" \
+            --password "${EVAL_PASSWORD}" \
+            --out_json "$RUNNER_TEMP/live_system_eval.json"
+          python - <<'PY'
+import json
+import os
+from pathlib import Path
+path = Path(os.environ["RUNNER_TEMP"]) / "live_system_eval.json"
+out = json.loads(path.read_text(encoding="utf-8"))
+m = out.get("metrics", {})
+checks = {
+  "coverage_rate": float(m.get("coverage_rate", 0.0)) >= 0.95,
+  "top1_agreement_external": float(m.get("top1_agreement_external", 0.0)) >= 0.80,
+  "high_conf_mismatch_rate": float(m.get("high_conf_mismatch_rate", 1.0)) <= 0.05,
+  "tie_rate": float(m.get("tie_rate", 1.0)) <= 0.10,
+  "recommended_when_tie_rate": float(m.get("recommended_when_tie_rate", 1.0)) <= 0.02,
+}
+failed = [k for k, ok in checks.items() if not ok]
+print("Benchmark metrics:", json.dumps(m, indent=2))
+if failed:
+  raise SystemExit(f"Benchmark gate failed: {', '.join(failed)}")
+PY

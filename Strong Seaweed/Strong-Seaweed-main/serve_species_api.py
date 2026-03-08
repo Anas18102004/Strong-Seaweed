@@ -12,6 +12,8 @@ import pandas as pd
 import xarray as xr
 from xgboost import XGBClassifier
 
+import species_selection_logic as selection_logic
+
 
 BASE = Path(__file__).resolve().parent
 
@@ -51,12 +53,51 @@ UNCERTAINTY_BLOCK_RESULT = str(os.getenv("UNCERTAINTY_BLOCK_RESULT", "false")).s
 KAPPA_GEO_PRIOR_RADIUS_KM = float(os.getenv("KAPPA_GEO_PRIOR_RADIUS_KM", "120.0"))
 KAPPA_GEO_PRIOR_PROB_FLOOR_PERCENT = float(os.getenv("KAPPA_GEO_PRIOR_PROB_FLOOR_PERCENT", "25.0"))
 KAPPA_GEO_PRIOR_MAX_NEG_MARGIN_PERCENT = float(os.getenv("KAPPA_GEO_PRIOR_MAX_NEG_MARGIN_PERCENT", "80.0"))
+KAPPA_CULTIVATION_PRIOR_RADIUS_KM = float(os.getenv("KAPPA_CULTIVATION_PRIOR_RADIUS_KM", "120.0"))
+KAPPA_CULTIVATION_PRIOR_BLOCK_GRAC_RADIUS_KM = float(os.getenv("KAPPA_CULTIVATION_PRIOR_BLOCK_GRAC_RADIUS_KM", "45.0"))
+KAPPA_CULTIVATION_PRIOR_BASE_PROB = float(os.getenv("KAPPA_CULTIVATION_PRIOR_BASE_PROB", "25.0"))
+KAPPA_CULTIVATION_PRIOR_MAX_PROB = float(os.getenv("KAPPA_CULTIVATION_PRIOR_MAX_PROB", "85.0"))
+KAPPA_CULTIVATION_PRIOR_DECAY_KM = float(os.getenv("KAPPA_CULTIVATION_PRIOR_DECAY_KM", "110.0"))
+KAPPA_ANCHOR_OVERRIDE_RADIUS_KM = float(os.getenv("KAPPA_ANCHOR_OVERRIDE_RADIUS_KM", "90.0"))
+KAPPA_ANCHOR_OVERRIDE_MAX_KAPPA_PROB = float(os.getenv("KAPPA_ANCHOR_OVERRIDE_MAX_KAPPA_PROB", "10.0"))
+KAPPA_ANCHOR_OVERRIDE_MAX_BEST_PROB = float(os.getenv("KAPPA_ANCHOR_OVERRIDE_MAX_BEST_PROB", "30.0"))
+TIE_GAP_PERCENT = float(os.getenv("TIE_GAP_PERCENT", "1.0"))
+RANK_WEIGHT_PROB = float(os.getenv("RANK_WEIGHT_PROB", "0.70"))
+RANK_WEIGHT_MARGIN = float(os.getenv("RANK_WEIGHT_MARGIN", "0.20"))
+RANK_WEIGHT_ENV = float(os.getenv("RANK_WEIGHT_ENV", "0.10"))
+TIE_FORCE_PILOT_ONLY = str(os.getenv("TIE_FORCE_PILOT_ONLY", "true")).strip().lower() == "true"
+OCCURRENCE_PRIOR_PATH = os.getenv(
+    "OCCURRENCE_PRIOR_PATH", str(BASE / "artifacts" / "priors" / "species_occurrence_prior_india.parquet")
+).strip()
+MODEL_API_LIGHT_IMPORT = str(os.getenv("MODEL_API_LIGHT_IMPORT", "false")).strip().lower() == "true"
 
 # High-confidence cultivation anchors used only as a conservative screening prior.
 KAPPA_CULTIVATION_ANCHORS = [
     {"name": "Mandapam", "lat": 9.28, "lon": 79.12},
     {"name": "Palk_Bay_Central", "lat": 9.35, "lon": 79.20},
     {"name": "Rameswaram", "lat": 9.29, "lon": 79.31},
+    {"name": "Mithapur", "lat": 22.4118, "lon": 69.0089},
+    {"name": "Miyani", "lat": 21.8397, "lon": 69.3834},
+    {"name": "Palshet", "lat": 17.4389, "lon": 73.2068},
+    {"name": "Padanna", "lat": 12.1804, "lon": 75.1492},
+    {"name": "Vizhinjam_Harbour", "lat": 8.3785, "lon": 76.9912},
+    {"name": "Chinna_Muttom_Harbour", "lat": 8.0975, "lon": 77.5651},
+    {"name": "Kulasekarapattinam", "lat": 8.4010, "lon": 78.0532},
+    {"name": "Tiruchendur", "lat": 8.4956, "lon": 78.1233},
+    {"name": "Periyapattinam", "lat": 9.2705, "lon": 78.9028},
+    {"name": "Jegathapattinam", "lat": 9.9679, "lon": 79.1901},
+    {"name": "Kottaipattinam", "lat": 9.9754, "lon": 79.1955},
+    {"name": "Adirampattinam", "lat": 10.3393, "lon": 79.3856},
+    {"name": "Bapatla", "lat": 15.9344, "lon": 80.4506},
+    {"name": "Mypadu", "lat": 14.5070, "lon": 80.1650},
+    {"name": "Nagayalanka", "lat": 15.9490, "lon": 80.9177},
+    {"name": "Sorlagondi", "lat": 15.8636, "lon": 80.9683},
+    {"name": "Hamsaladeevi", "lat": 15.9913, "lon": 81.0958},
+]
+
+GRACILARIA_CULTIVATION_ANCHORS = [
+    {"name": "Ervadi", "lat": 9.2090, "lon": 78.7101},
+    {"name": "Tuticorin", "lat": 8.7642, "lon": 78.1348},
 ]
 
 TAXON_CANONICAL = {
@@ -86,6 +127,7 @@ KAPPA_MASTER = BASE / "data" / "tabular" / "master_feature_matrix_kappa_india_gu
 
 INDIA_PHYSICS_NC = BASE / "data" / "netcdf" / "india_physics_2025w01.nc"
 INDIA_WAVES_NC = BASE / "data" / "netcdf" / "india_waves_2025w01.nc"
+DEFAULT_PRIOR_SUPPORT = 0.5
 
 
 def _as_float(v):
@@ -170,6 +212,101 @@ def _nearest_anchor(lat: float, lon: float) -> tuple[str | None, float]:
             best_dist = d
             best_name = str(a["name"])
     return best_name, float(best_dist)
+
+
+def _nearest_anchor_from_set(lat: float, lon: float, anchors: list[dict]) -> tuple[str | None, float]:
+    best_name = None
+    best_dist = 1e9
+    for a in anchors:
+        d = _distance_km_point(lat, lon, float(a["lat"]), float(a["lon"]))
+        if d < best_dist:
+            best_dist = d
+            best_name = str(a.get("name") or "")
+    return best_name, float(best_dist)
+
+
+def _resolve_prior_path() -> Path:
+    path = Path(OCCURRENCE_PRIOR_PATH)
+    if path.is_absolute():
+        return path
+    return BASE / path
+
+
+def _load_occurrence_prior() -> dict[str, dict[str, np.ndarray]]:
+    path = _resolve_prior_path()
+    if not path.exists():
+        return {}
+
+    df = None
+    if path.suffix.lower() == ".parquet":
+        try:
+            df = pd.read_parquet(path)
+        except Exception:
+            csv_fallback = path.with_suffix(".csv")
+            if csv_fallback.exists():
+                df = pd.read_csv(csv_fallback)
+    else:
+        df = pd.read_csv(path)
+
+    if df is None or df.empty:
+        return {}
+
+    rename_map = {
+        "speciesId": "species_id",
+        "species": "species_id",
+        "supportScore": "support_score",
+        "support": "support_score",
+    }
+    df = df.rename(columns=rename_map)
+    required = {"species_id", "lat", "lon", "support_score"}
+    if not required.issubset(set(df.columns)):
+        return {}
+
+    df = df.dropna(subset=["species_id", "lat", "lon", "support_score"]).copy()
+    if df.empty:
+        return {}
+    df["species_id"] = df["species_id"].astype(str).str.strip().str.lower()
+    df["lat"] = pd.to_numeric(df["lat"], errors="coerce")
+    df["lon"] = pd.to_numeric(df["lon"], errors="coerce")
+    df["support_score"] = pd.to_numeric(df["support_score"], errors="coerce")
+    df = df.dropna(subset=["lat", "lon", "support_score"])
+    if df.empty:
+        return {}
+
+    by_species = {}
+    for species_id, g in df.groupby("species_id"):
+        by_species[str(species_id)] = {
+            "lat": g["lat"].to_numpy(dtype=np.float64),
+            "lon": g["lon"].to_numpy(dtype=np.float64),
+            "support": g["support_score"].clip(lower=0.0, upper=1.0).to_numpy(dtype=np.float64),
+        }
+    return by_species
+
+
+def _occurrence_prior_support(
+    species_id: str, lat: float, lon: float, prior_index: dict[str, dict[str, np.ndarray]]
+) -> float:
+    sid = str(species_id or "").strip().lower()
+    grid = prior_index.get(sid)
+    if not grid:
+        return float(DEFAULT_PRIOR_SUPPORT)
+    lat_arr = grid.get("lat")
+    lon_arr = grid.get("lon")
+    sup_arr = grid.get("support")
+    if lat_arr is None or lon_arr is None or sup_arr is None or len(lat_arr) == 0:
+        return float(DEFAULT_PRIOR_SUPPORT)
+    d = haversine_km(float(lat), float(lon), lat_arr, lon_arr)
+    idx = int(np.argmin(d))
+    if not np.isfinite(d[idx]):
+        return float(DEFAULT_PRIOR_SUPPORT)
+    support = float(sup_arr[idx])
+    # Fade support with distance to avoid hard decisions from far priors.
+    if d[idx] > 200:
+        return float(DEFAULT_PRIOR_SUPPORT)
+    if d[idx] > 75:
+        weight = max(0.0, 1.0 - ((float(d[idx]) - 75.0) / 125.0))
+        return float(DEFAULT_PRIOR_SUPPORT + weight * (support - DEFAULT_PRIOR_SUPPORT))
+    return float(support)
 
 
 def _load_kappa():
@@ -358,13 +495,24 @@ def _load_species_model(species_id: str):
     }
 
 
-KAPPA = _load_kappa()
-COP = _load_copernicus_grids()
-OTHER_MODELS = {
-    "gracilaria_spp": _load_species_model("gracilaria_spp"),
-    "ulva_spp": _load_species_model("ulva_spp"),
-    "sargassum_spp": _load_species_model("sargassum_spp"),
-}
+if MODEL_API_LIGHT_IMPORT:
+    KAPPA = {}
+    COP = {}
+    OCCURRENCE_PRIOR = {}
+    OTHER_MODELS = {
+        "gracilaria_spp": None,
+        "ulva_spp": None,
+        "sargassum_spp": None,
+    }
+else:
+    KAPPA = _load_kappa()
+    COP = _load_copernicus_grids()
+    OCCURRENCE_PRIOR = _load_occurrence_prior()
+    OTHER_MODELS = {
+        "gracilaria_spp": _load_species_model("gracilaria_spp"),
+        "ulva_spp": _load_species_model("ulva_spp"),
+        "sargassum_spp": _load_species_model("sargassum_spp"),
+    }
 LOADED_MULTI_RELEASES = sorted(
     {m["release"] for m in OTHER_MODELS.values() if isinstance(m, dict) and "release" in m}
 )
@@ -479,7 +627,75 @@ def _uncertainty_details(best: dict | None, top_candidates: list[dict]) -> dict:
 
 
 def _clamp01(v: float) -> float:
-    return max(0.0, min(1.0, float(v)))
+    return selection_logic.clamp01(v)
+
+
+def _sigmoid(x: float) -> float:
+    return selection_logic.sigmoid(x)
+
+
+def _species_env_support(species_id: str, feat_vals: dict | None) -> float:
+    return selection_logic.species_env_support(species_id, feat_vals)
+
+
+def _species_rank_score(sp: dict, env_support: float) -> float:
+    return selection_logic.species_rank_score(
+        sp,
+        env_support,
+        rank_weight_prob=RANK_WEIGHT_PROB,
+        rank_weight_margin=RANK_WEIGHT_MARGIN,
+        rank_weight_env=RANK_WEIGHT_ENV,
+    )
+
+
+def _annotate_rank_signals(
+    species_rows: list[dict], feat_vals: dict | None, lat: float, lon: float
+) -> tuple[dict[str, float], dict[str, float], dict[str, float]]:
+    env_support_by_species: dict[str, float] = {}
+    prior_support_by_species: dict[str, float] = {}
+    rank_score_by_species: dict[str, float] = {}
+    for sp in species_rows:
+        sid = str(sp.get("speciesId") or "")
+        env_support = _species_env_support(sid, feat_vals)
+        prior_support = _occurrence_prior_support(sid, lat, lon, OCCURRENCE_PRIOR)
+        rank_score = _species_rank_score(sp, env_support)
+        sp["envSupportScore"] = round(env_support, 4)
+        sp["priorSupportScore"] = round(prior_support, 4)
+        sp["rankScore"] = rank_score
+        env_support_by_species[sid] = round(env_support, 4)
+        prior_support_by_species[sid] = round(prior_support, 4)
+        rank_score_by_species[sid] = rank_score
+    return env_support_by_species, prior_support_by_species, rank_score_by_species
+
+
+def _sort_by_rank(rows: list[dict]) -> list[dict]:
+    return selection_logic.sort_by_rank(rows, default_prior_support=DEFAULT_PRIOR_SUPPORT)
+
+
+def _select_best_species(species_rows: list[dict], top_candidates: list[dict], feat_vals: dict | None) -> tuple[dict | None, str]:
+    return selection_logic.select_best_species(
+        species_rows,
+        top_candidates,
+        feat_vals,
+        sort_by_rank_fn=_sort_by_rank,
+    )
+
+
+def _apply_tie_guardrail(
+    best: dict | None,
+    top_candidates: list[dict],
+    selection_diagnostics: dict,
+    warnings_out: list[str],
+) -> tuple[dict | None, bool]:
+    return selection_logic.apply_tie_guardrail(
+        best=best,
+        top_candidates=top_candidates,
+        selection_diagnostics=selection_diagnostics,
+        warnings_out=warnings_out,
+        tie_gap_percent=TIE_GAP_PERCENT,
+        tie_force_pilot_only=TIE_FORCE_PILOT_ONLY,
+        default_prior_support=DEFAULT_PRIOR_SUPPORT,
+    )
 
 
 def _feature_is_stale(ts_iso: str | None, max_age_days: int) -> bool:
@@ -667,6 +883,11 @@ def predict_species(lat: float, lon: float, form_input: dict | None = None) -> d
     u = predict_other(OTHER_MODELS["ulva_spp"], feat_vals)
     s = predict_other(OTHER_MODELS["sargassum_spp"], feat_vals)
 
+    kappa_prior_anchor_name, kappa_prior_anchor_distance_km = _nearest_anchor_from_set(lat, lon, KAPPA_CULTIVATION_ANCHORS)
+    grac_anchor_name, grac_anchor_distance_km = _nearest_anchor_from_set(lat, lon, GRACILARIA_CULTIVATION_ANCHORS)
+    prior_blocked_by_grac = grac_anchor_distance_km <= KAPPA_CULTIVATION_PRIOR_BLOCK_GRAC_RADIUS_KM
+    use_kappa_prior = (not kappa_in_coverage) and (kappa_prior_anchor_distance_km <= KAPPA_CULTIVATION_PRIOR_RADIUS_KM) and (not prior_blocked_by_grac)
+
     kappa_prob = k["probabilityPercent"] if kappa_in_coverage else None
     kappa_thr_pct = round(float(k.get("effectiveThreshold", 0.0)) * 100.0, 2) if kappa_in_coverage else None
     kappa_base_thr_pct = round(float(k.get("baseThreshold", 0.0)) * 100.0, 2) if kappa_in_coverage else None
@@ -678,21 +899,35 @@ def predict_species(lat: float, lon: float, form_input: dict | None = None) -> d
         if kappa_in_coverage
         else "out_of_coverage"
     )
+    if use_kappa_prior:
+        decay = max(1.0, KAPPA_CULTIVATION_PRIOR_DECAY_KM)
+        pseudo_prob = float(KAPPA_CULTIVATION_PRIOR_BASE_PROB + (KAPPA_CULTIVATION_PRIOR_MAX_PROB - KAPPA_CULTIVATION_PRIOR_BASE_PROB) * np.exp(-kappa_prior_anchor_distance_km / decay))
+        pseudo_prob = float(np.clip(pseudo_prob, 0.0, 100.0))
+        kappa_prob = round(pseudo_prob, 2)
+        kappa_base_thr_pct = 50.0
+        kappa_thr_pct = 50.0
+        kappa_margin = round(float(kappa_prob) - float(kappa_thr_pct), 2)
+        kappa_reason = "cultivation_prior_positive"
+        warnings.append("kappaphycus_cultivation_prior_applied")
+        warnings.append(f"kappaphycus_cultivation_anchor={kappa_prior_anchor_name}")
+    elif (not kappa_in_coverage) and prior_blocked_by_grac:
+        warnings.append("kappaphycus_cultivation_prior_blocked_by_gracilaria_anchor")
+        warnings.append(f"gracilaria_anchor={grac_anchor_name}")
     kappa_confidence = _confidence_band(kappa_prob)
 
     species = [
         {
             "speciesId": "kappaphycus_alvarezii",
             "displayName": "Kappaphycus alvarezii",
-            "ready": bool(kappa_in_coverage),
+            "ready": bool(kappa_in_coverage or use_kappa_prior),
             "probabilityPercent": kappa_prob,
-            "priority": k["priority"] if kappa_in_coverage else "unknown",
+            "priority": _priority(float(kappa_prob) / 100.0) if kappa_prob is not None else "unknown",
             "reason": kappa_reason,
             "baseThresholdPercent": kappa_base_thr_pct,
             "thresholdPercent": kappa_thr_pct,
             "marginToThresholdPercent": kappa_margin,
             "confidenceBand": kappa_confidence,
-            "actionability": _species_actionability(bool(kappa_in_coverage), kappa_reason, kappa_confidence),
+            "actionability": "test_pilot_only" if use_kappa_prior else _species_actionability(bool(kappa_in_coverage or use_kappa_prior), kappa_reason, kappa_confidence),
         },
         {
             "speciesId": "gracilaria_edulis",
@@ -750,6 +985,9 @@ def predict_species(lat: float, lon: float, form_input: dict | None = None) -> d
                 sp["actionability"] = "not_recommended"
 
     species = _decorate_species_taxonomy(species)
+    env_support_by_species, prior_support_by_species, rank_score_by_species = _annotate_rank_signals(
+        species, feat_vals, lat, lon
+    )
 
     ready_scored = [
         s
@@ -757,20 +995,28 @@ def predict_species(lat: float, lon: float, form_input: dict | None = None) -> d
         if s["ready"] and s["probabilityPercent"] is not None
     ]
     top_candidates = sorted(ready_scored, key=lambda x: float(x["probabilityPercent"]), reverse=True)
+    top_ranked = _sort_by_rank(ready_scored)
+    selection_diagnostics = {
+        "rankScore": None,
+        "tieDetected": False,
+        "tieResolved": False,
+        "tieGapPercent": None,
+        "tieCandidates": [],
+        "selectionReason": "none",
+        "envSupportBySpecies": env_support_by_species,
+        "priorSupportBySpecies": prior_support_by_species,
+        "rankScoreBySpecies": rank_score_by_species,
+    }
 
-    eligible = [
-        s
-        for s in species
-        if s["ready"]
-        and s["probabilityPercent"] is not None
-        and str(s.get("reason", "")).endswith("_positive")
-    ]
-    best = sorted(eligible, key=lambda x: float(x["probabilityPercent"]), reverse=True)[0] if eligible else None
+    best, initial_selection_reason = _select_best_species(species, top_ranked, feat_vals)
+    if best is not None and initial_selection_reason != "ranked_top_candidate":
+        selection_diagnostics["rankScore"] = float(best.get("rankScore") or 0.0)
+        selection_diagnostics["selectionReason"] = initial_selection_reason
     decision_source = "model_threshold"
-    if best is None:
+    if best is None or initial_selection_reason == "ranked_top_candidate":
         # Screening fallback: if nothing crosses strict threshold, still return top candidate when probability is reasonable.
         if ready_scored:
-            top = sorted(ready_scored, key=lambda x: float(x["probabilityPercent"]), reverse=True)[0]
+            top = top_ranked[0]
             top_prob = float(top["probabilityPercent"])
             top_reason_positive = str(top.get("reason", "")).endswith("_positive")
             fallback_allowed = top_reason_positive or not FALLBACK_REQUIRE_POSITIVE
@@ -781,6 +1027,7 @@ def predict_species(lat: float, lon: float, form_input: dict | None = None) -> d
                 best = top
                 decision_source = "screening_fallback"
                 warnings.append("no_species_meets_threshold_using_screening_fallback")
+                selection_diagnostics["selectionReason"] = "ranked_screening_fallback"
             elif top_prob >= RANKING_FALLBACK_FLOOR_PERCENT and fallback_allowed:
                 top = dict(top)
                 top["reason"] = "ranking_fallback_low_confidence"
@@ -789,6 +1036,7 @@ def predict_species(lat: float, lon: float, form_input: dict | None = None) -> d
                 decision_source = "ranking_fallback"
                 warnings.append("no_species_meets_threshold_using_ranking_fallback")
                 warnings.append("best_species_low_confidence")
+                selection_diagnostics["selectionReason"] = "ranked_low_confidence_fallback"
             else:
                 best = _insufficient_data_best("insufficient_data_uncertain_fallback")
                 decision_source = "insufficient_data_fallback"
@@ -807,6 +1055,66 @@ def predict_species(lat: float, lon: float, form_input: dict | None = None) -> d
                 warnings.append("no_species_with_ready_scores")
             else:
                 warnings.append("no_species_meets_suitability_threshold")
+
+    if best is not None and str(best.get("speciesId")) != "insufficient_data":
+        selection_diagnostics["rankScore"] = float(best.get("rankScore") or 0.0)
+
+    best, tie_forced = _apply_tie_guardrail(
+        best=best,
+        top_candidates=top_candidates,
+        selection_diagnostics=selection_diagnostics,
+        warnings_out=warnings,
+    )
+    if tie_forced:
+        decision_source = "tie_break_guardrail"
+
+    # In-coverage rescue when dedicated Kappaphycus model is highly conservative near known farms.
+    if kappa_in_coverage and kappa_prob is not None:
+        anchor_name, anchor_distance_km = _nearest_anchor(lat, lon)
+        kappa_entry = next((sp for sp in species if sp.get("speciesId") == "kappaphycus_alvarezii"), None)
+        best_prob = _as_float((best or {}).get("probabilityPercent"))
+        best_sid = str((best or {}).get("speciesId") or "")
+        tie_now = bool(selection_diagnostics.get("tieDetected"))
+        saturated_ulva_conflict = (
+            best_sid == "ulva_lactuca"
+            and best_prob is not None
+            and best_prob >= 95.0
+            and grac_anchor_distance_km > KAPPA_CULTIVATION_PRIOR_BLOCK_GRAC_RADIUS_KM
+        )
+        low_conflict = (best_prob is not None and best_prob <= KAPPA_ANCHOR_OVERRIDE_MAX_BEST_PROB) or tie_now or saturated_ulva_conflict
+        if (
+            kappa_entry is not None
+            and best_sid != "kappaphycus_alvarezii"
+            and anchor_distance_km <= KAPPA_ANCHOR_OVERRIDE_RADIUS_KM
+            and float(kappa_prob) <= KAPPA_ANCHOR_OVERRIDE_MAX_KAPPA_PROB
+            and low_conflict
+        ):
+            adjusted = dict(kappa_entry)
+            adjusted["reason"] = "anchor_override_kappaphycus_low_confidence"
+            adjusted["actionability"] = "test_pilot_only"
+            adjusted["probabilityPercent"] = max(float(kappa_prob), 35.0)
+            adjusted["confidenceBand"] = _confidence_band(adjusted["probabilityPercent"])
+            best = adjusted
+            decision_source = "anchor_override"
+            warnings.append("kappaphycus_anchor_override_applied")
+            warnings.append(f"kappaphycus_anchor={anchor_name}")
+            selection_diagnostics["selectionReason"] = "anchor_override_kappaphycus_low_confidence"
+            selection_diagnostics["rankScore"] = float(adjusted.get("rankScore") or 0.0)
+
+    # Out-of-coverage rescue for known Kappaphycus cultivation belts.
+    # Keep this conservative: only when we explicitly enabled cultivation prior and
+    # we are not inside a gracilaria anchor block.
+    if use_kappa_prior:
+        kappa_entry = next((sp for sp in species if sp.get("speciesId") == "kappaphycus_alvarezii"), None)
+        if kappa_entry is not None and (best is None or best.get("speciesId") != "kappaphycus_alvarezii"):
+            adjusted = dict(kappa_entry)
+            adjusted["actionability"] = "test_pilot_only"
+            adjusted["reason"] = "cultivation_prior_override"
+            best = adjusted
+            decision_source = "cultivation_prior"
+            warnings.append("kappaphycus_cultivation_prior_override")
+            selection_diagnostics["selectionReason"] = "cultivation_prior_override"
+            selection_diagnostics["rankScore"] = float(adjusted.get("rankScore") or 0.0)
 
     # Conservative geo-prior rescue for known Kappaphycus belts.
     # This avoids obvious false negatives when dedicated model probability is moderate
@@ -829,6 +1137,8 @@ def predict_species(lat: float, lon: float, form_input: dict | None = None) -> d
                 decision_source = "geo_prior"
                 warnings.append("geo_prior_adjustment_applied")
                 warnings.append(f"geo_prior_anchor={anchor_name}")
+                selection_diagnostics["selectionReason"] = "geo_prior_override"
+                selection_diagnostics["rankScore"] = float(adjusted.get("rankScore") or 0.0)
 
     uncertainty = _uncertainty_details(best, top_candidates)
     if best is not None and uncertainty.get("isUncertain") and str(best.get("actionability")) != "recommended":
@@ -845,6 +1155,7 @@ def predict_species(lat: float, lon: float, form_input: dict | None = None) -> d
                 adjusted["reason"] = "uncertainty_gate_advisory"
                 best = adjusted
             decision_source = "uncertainty_gate_advisory"
+            selection_diagnostics["selectionReason"] = "uncertainty_gate_advisory"
 
     loaded_other_releases = sorted(
         {m["release"] for m in OTHER_MODELS.values() if isinstance(m, dict) and "release" in m}
@@ -884,6 +1195,7 @@ def predict_species(lat: float, lon: float, form_input: dict | None = None) -> d
         "species": species,
         "topCandidatesByProbability": top_candidates,
         "bestSpecies": best,
+        "selectionDiagnostics": selection_diagnostics,
         "decisionSource": decision_source if best is not None else "none",
         "actionability": overall_actionability,
         "dataQuality": {

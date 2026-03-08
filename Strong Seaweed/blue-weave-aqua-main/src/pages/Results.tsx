@@ -212,6 +212,10 @@ export default function ResultsPage() {
               {finalRecommendation && (
                 <p className="mb-3 text-xs text-muted-foreground">
                   Decision source: {finalRecommendation.source.replace(/_/g, " ")}
+                  {finalRecommendation.selectionReason ? ` | ${finalRecommendation.selectionReason.replace(/_/g, " ")}` : ""}
+                  {finalRecommendation.consensusTier ? ` | ${finalRecommendation.consensusTier.replace(/_/g, " ")}` : ""}
+                  {finalRecommendation.tieResolved ? " | tie resolved with guardrail" : ""}
+                  {finalRecommendation.tieDetected && !finalRecommendation.tieResolved ? " | tie detected" : ""}
                   {finalRecommendation.disagreementWithAgent ? " | model and advisory conflict auto-resolved by verification" : ""}.
                 </p>
               )}
