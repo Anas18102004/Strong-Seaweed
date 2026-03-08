@@ -497,21 +497,21 @@ jobs:
             --password "${EVAL_PASSWORD}" \
             --out_json "$RUNNER_TEMP/live_system_eval.json"
           python - <<'PY'
-import json
-import os
-from pathlib import Path
-path = Path(os.environ["RUNNER_TEMP"]) / "live_system_eval.json"
-out = json.loads(path.read_text(encoding="utf-8"))
-m = out.get("metrics", {})
-checks = {
-  "coverage_rate": float(m.get("coverage_rate", 0.0)) >= 0.95,
-  "top1_agreement_external": float(m.get("top1_agreement_external", 0.0)) >= 0.80,
-  "high_conf_mismatch_rate": float(m.get("high_conf_mismatch_rate", 1.0)) <= 0.05,
-  "tie_rate": float(m.get("tie_rate", 1.0)) <= 0.10,
-  "recommended_when_tie_rate": float(m.get("recommended_when_tie_rate", 1.0)) <= 0.02,
-}
-failed = [k for k, ok in checks.items() if not ok]
-print("Benchmark metrics:", json.dumps(m, indent=2))
-if failed:
-  raise SystemExit(f"Benchmark gate failed: {', '.join(failed)}")
-PY
+          import json
+          import os
+          from pathlib import Path
+          path = Path(os.environ["RUNNER_TEMP"]) / "live_system_eval.json"
+          out = json.loads(path.read_text(encoding="utf-8"))
+          m = out.get("metrics", {})
+          checks = {
+            "coverage_rate": float(m.get("coverage_rate", 0.0)) >= 0.95,
+            "top1_agreement_external": float(m.get("top1_agreement_external", 0.0)) >= 0.80,
+            "high_conf_mismatch_rate": float(m.get("high_conf_mismatch_rate", 1.0)) <= 0.05,
+            "tie_rate": float(m.get("tie_rate", 1.0)) <= 0.10,
+            "recommended_when_tie_rate": float(m.get("recommended_when_tie_rate", 1.0)) <= 0.02,
+          }
+          failed = [k for k, ok in checks.items() if not ok]
+          print("Benchmark metrics:", json.dumps(m, indent=2))
+          if failed:
+            raise SystemExit(f"Benchmark gate failed: {', '.join(failed)}")
+          PY
