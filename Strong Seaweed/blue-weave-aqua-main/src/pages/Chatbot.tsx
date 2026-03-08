@@ -921,6 +921,8 @@ export default function Chatbot() {
     setVoiceError("");
     setLiveTranscript("Starting voice channel...");
     scheduleVoiceResume(180, 10);
+    // Intentional: helpers use refs and remain behaviorally stable for this lifecycle trigger.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [voiceMode, voiceSupported]);
 
   useEffect(() => {

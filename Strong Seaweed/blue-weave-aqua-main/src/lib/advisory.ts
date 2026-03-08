@@ -24,7 +24,7 @@ const SECTION_PATTERNS = {
 
 function stripListPrefix(line: string): string {
   return String(line || "")
-    .replace(/^(\d+[\).\s-]+|[-*]\s+)/, "")
+    .replace(/^(\d+[).\s-]+|[-*]\s+)/, "")
     .trim();
 }
 
@@ -128,7 +128,7 @@ export function parseFallbackAdvisory(text?: string | null): ParsedAdvisory {
     if (matched) continue;
 
     const listItem = stripListPrefix(line);
-    const hasBulletPrefix = /^(\d+[\).\s-]+|[-*]\s+)/.test(line);
+    const hasBulletPrefix = /^(\d+[).\s-]+|[-*]\s+)/.test(line);
 
     if (activeList) {
       if (hasBulletPrefix || parsed[activeList].length === 0) {
