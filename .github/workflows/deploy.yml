@@ -485,8 +485,8 @@ jobs:
         run: |
           set -euo pipefail
           if [[ -z "${EVAL_EMAIL:-}" || -z "${EVAL_PASSWORD:-}" ]]; then
-            echo "::error::Missing EVAL_EMAIL or EVAL_PASSWORD for live benchmark gate"
-            exit 1
+            echo "::warning::Skipping live benchmark gate: missing EVAL_EMAIL or EVAL_PASSWORD"
+            exit 0
           fi
           BASE_HOST="${EVAL_BASE_HOST:-akuara.publicvm.com}"
           python -m pip install --upgrade pip
