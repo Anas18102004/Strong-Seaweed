@@ -1,7 +1,7 @@
 import { createElement, useEffect } from "react";
 
 const SCRIPT_SRC = "https://unpkg.com/@elevenlabs/convai-widget-embed";
-const AGENT_ID = "agent_6901kk6n1rbxfcas4vg04hrz4s1z";
+const AGENT_ID = "agent_1301kk6s7tw0e2mvvxhpwjeh6p9f";
 
 function ensureWidgetScript() {
   const found = document.querySelector(`script[src="${SCRIPT_SRC}"]`);
