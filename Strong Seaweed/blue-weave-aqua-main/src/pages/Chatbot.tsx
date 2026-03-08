@@ -96,6 +96,30 @@ const locationToCoords: Record<string, { lat: number; lon: number }> = {
   Kollam: { lat: 8.9, lon: 76.6 },
 };
 
+const locationPresets = Object.keys(locationToCoords);
+const speciesPresets = ["Kappaphycus", "Gracilaria", "Sargassum", "Ulva", "Any"];
+const seasonPresets = ["Current", "Pre-Monsoon", "Monsoon", "Post-Monsoon", "Winter", "Any"];
+
+function resolveContextCoords(input: string): { lat: number; lon: number } | undefined {
+  const raw = String(input || "").trim();
+  if (!raw) return undefined;
+
+  const direct = locationToCoords[raw];
+  if (direct) return direct;
+
+  const lower = raw.toLowerCase();
+  const byName = Object.entries(locationToCoords).find(([name]) => name.toLowerCase() === lower)?.[1];
+  if (byName) return byName;
+
+  const match = raw.match(/(-?\d+(?:\.\d+)?)\s*[, ]\s*(-?\d+(?:\.\d+)?)/);
+  if (!match) return undefined;
+  const lat = Number(match[1]);
+  const lon = Number(match[2]);
+  if (!Number.isFinite(lat) || !Number.isFinite(lon)) return undefined;
+  if (lat < -90 || lat > 90 || lon < -180 || lon > 180) return undefined;
+  return { lat, lon };
+}
+
 function renderInline(text: string) {
   const parts = text.split(/(\*\*[^*]+\*\*)/g);
   return parts.map((part, idx) => {
@@ -636,7 +660,7 @@ export default function Chatbot() {
     const base = String(text || input || "").trim();
     const msg = base;
     if (!msg.trim()) return;
-    const selectedCoords = locationToCoords[contextLocation];
+    const selectedCoords = resolveContextCoords(contextLocation);
     const aiContext = {
       mode: inputMode,
       locationName: contextLocation,
@@ -708,7 +732,7 @@ export default function Chatbot() {
       const message = err instanceof Error ? err.message : "Chat request failed.";
       if (mode === "voice") {
         try {
-          const selectedCoords = locationToCoords[contextLocation];
+          const selectedCoords = resolveContextCoords(contextLocation);
           const aiContext = {
             mode: inputMode,
             locationName: contextLocation,
@@ -1269,36 +1293,45 @@ export default function Chatbot() {
                   <span className="ml-auto text-[11px] text-slate-500">Structured prompt mode</span>
                 </div>
                 <div className="grid gap-2 px-3 py-2 sm:grid-cols-3">
-                  <select
+                  <input
                     value={contextLocation}
                     onChange={(e) => setContextLocation(e.target.value)}
                     className="h-9 rounded-lg border border-[#c6dbea] bg-white px-2 text-xs text-slate-700 outline-none focus:border-cyan-300"
                     aria-label="Context location"
-                  >
-                    <option>Gulf of Mannar</option>
-                    <option>Palk Bay</option>
-                    <option>Saurashtra Coast</option>
-                  </select>
-                  <select
+                    list="context-location-options"
+                    placeholder="Any location or lat,lon"
+                  />
+                  <datalist id="context-location-options">
+                    {locationPresets.map((name) => (
+                      <option key={name} value={name} />
+                    ))}
+                  </datalist>
+                  <input
                     value={contextSpecies}
                     onChange={(e) => setContextSpecies(e.target.value)}
                     className="h-9 rounded-lg border border-[#c6dbea] bg-white px-2 text-xs text-slate-700 outline-none focus:border-cyan-300"
                     aria-label="Context species"
-                  >
-                    <option>Kappaphycus</option>
-                    <option>Gracilaria</option>
-                    <option>Sargassum</option>
-                  </select>
-                  <select
+                    list="context-species-options"
+                    placeholder="Any species"
+                  />
+                  <datalist id="context-species-options">
+                    {speciesPresets.map((name) => (
+                      <option key={name} value={name} />
+                    ))}
+                  </datalist>
+                  <input
                     value={contextSeason}
                     onChange={(e) => setContextSeason(e.target.value)}
                     className="h-9 rounded-lg border border-[#c6dbea] bg-white px-2 text-xs text-slate-700 outline-none focus:border-cyan-300"
                     aria-label="Context season"
-                  >
-                    <option>Current</option>
-                    <option>Monsoon</option>
-                    <option>Post-Monsoon</option>
-                  </select>
+                    list="context-season-options"
+                    placeholder="Any season/time"
+                  />
+                  <datalist id="context-season-options">
+                    {seasonPresets.map((name) => (
+                      <option key={name} value={name} />
+                    ))}
+                  </datalist>
                 </div>
                 <div className="flex items-center gap-2 sm:gap-3 p-2.5">
                   <button
