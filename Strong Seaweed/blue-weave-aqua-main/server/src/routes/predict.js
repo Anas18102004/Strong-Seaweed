@@ -139,19 +139,74 @@ function shouldGenerateFallbackAdvisory(prediction) {
   return false;
 }
 
+function normalizeActionability(actionability, fallback = "test_pilot_only") {
+  const key = String(actionability || "").toLowerCase();
+  if (key === "recommended" || key === "test_pilot_only" || key === "not_recommended") return key;
+  return fallback;
+}
+
 function topScoredSpecies(prediction) {
   const list = Array.isArray(prediction?.species) ? prediction.species : [];
-  return (
-    list
-      .filter((s) => Number.isFinite(Number(s?.probabilityPercent)))
-      .sort((a, b) => Number(b?.probabilityPercent || 0) - Number(a?.probabilityPercent || 0))[0] || null
-  );
+  const scored = list
+    .filter((s) => Number.isFinite(Number(s?.probabilityPercent)))
+    .sort((a, b) => Number(b?.probabilityPercent || 0) - Number(a?.probabilityPercent || 0));
+  return scored[0] || list[0] || null;
+}
+
+function normalizeCandidate(candidate) {
+  if (!candidate) return null;
+  return {
+    ...candidate,
+    actionability: normalizeActionability(candidate?.actionability),
+  };
+}
+
+function synthesizePilotCandidate(prediction) {
+  const seed = topScoredSpecies(prediction) || {};
+  const displayName = String(seed?.displayName || "Pilot candidate");
+  const canonicalName = String(seed?.canonicalName || displayName);
+  const speciesId = String(seed?.speciesId || "pilot_candidate");
+  const probabilityPercent = Number.isFinite(Number(seed?.probabilityPercent)) ? Number(seed.probabilityPercent) : 0;
+  return {
+    ...seed,
+    speciesId,
+    displayName,
+    canonicalName,
+    probabilityPercent,
+    actionability: "test_pilot_only",
+    reason: String(seed?.reason || "fallback_pilot_candidate"),
+    ready: seed?.ready !== false,
+  };
+}
+
+function normalizePredictionForAlwaysAnswer(prediction) {
+  const rows = Array.isArray(prediction?.species) ? prediction.species : [];
+  const normalizedSpecies = rows.map((row) => ({
+    ...row,
+    actionability: normalizeActionability(row?.actionability),
+  }));
+
+  const normalizedBest = normalizeCandidate(prediction?.bestSpecies);
+  let bestSpecies = normalizedBest;
+
+  if (!bestSpecies || String(bestSpecies?.speciesId || "").toLowerCase() === "insufficient_data") {
+    const top = topScoredSpecies({ ...prediction, species: normalizedSpecies });
+    bestSpecies = top ? normalizeCandidate(top) : null;
+  }
+  if (!bestSpecies) bestSpecies = synthesizePilotCandidate({ ...prediction, species: normalizedSpecies });
+
+  return {
+    ...prediction,
+    species: normalizedSpecies,
+    bestSpecies,
+  };
 }
 
 function primaryModelCandidate(prediction) {
-  const best = prediction?.bestSpecies || null;
-  const top = topScoredSpecies(prediction);
-  return best?.speciesId === "insufficient_data" ? top : best || top;
+  const best = normalizeCandidate(prediction?.bestSpecies);
+  const top = normalizeCandidate(topScoredSpecies(prediction));
+  if (best && String(best?.speciesId || "").toLowerCase() !== "insufficient_data") return best;
+  return top || synthesizePilotCandidate(prediction);
 }
 
 function toRadians(x) {
@@ -343,7 +398,7 @@ async function verifyCandidateEvidence({ lat, lon, prediction, candidate }) {
   notes.push(`model=${modelSupport}`);
   notes.push(`copernicus=${copSupport}`);
   notes.push(`occurrence=${occSupport}`);
-  const actionability = String(candidate?.actionability || "insufficient_data");
+  const actionability = normalizeActionability(candidate?.actionability);
   if (verdict === "strong" && actionability !== "recommended") {
     const bothExternalStrong = occSupport === "strong" && copSupport === "strong";
     if (!bothExternalStrong) {
@@ -451,7 +506,7 @@ function supportScore(label = "unknown") {
 function recommendationScore(candidate = null, verification = null) {
   const p = Number(candidate?.probabilityPercent);
   const pTerm = Number.isFinite(p) ? p / 100 : 0;
-  const action = String(candidate?.actionability || "insufficient_data").toLowerCase();
+  const action = normalizeActionability(candidate?.actionability);
   const actionBonus =
     action === "recommended"
       ? 0.35
@@ -459,7 +514,7 @@ function recommendationScore(candidate = null, verification = null) {
       ? 0.15
       : action === "not_recommended"
       ? -0.05
-      : -0.25;
+      : 0.1;
   const verdict = String(verification?.verdict || "weak").toLowerCase();
   const verdictBonus = verdict === "strong" ? 0.45 : verdict === "moderate" ? 0.25 : 0.05;
   const occ = supportScore(verification?.evidence?.occurrenceSupport);
@@ -495,13 +550,13 @@ function consensusTier({
 }
 
 function enforceActionability({
-  baseActionability = "insufficient_data",
+  baseActionability = "test_pilot_only",
   candidate = null,
   verification = null,
   tier = "low_confidence",
   source = "model_verification",
 }) {
-  let out = String(baseActionability || "insufficient_data");
+  let out = normalizeActionability(baseActionability);
   const prob = Number(candidate?.probabilityPercent);
   const verdict = String(verification?.verdict || "weak").toLowerCase();
 
@@ -522,18 +577,19 @@ async function arbitrateFinalRecommendation({ lat, lon, prediction, verification
   const tieResolved = Boolean(selectionDiagnostics?.tieResolved);
   const tieDetected = Boolean(selectionDiagnostics?.tieDetected);
   if (!modelCandidate) {
+    const fallbackCandidate = synthesizePilotCandidate(prediction);
     return {
-      speciesId: "insufficient_data",
-      displayName: "Insufficient data for species recommendation",
-      canonicalName: "Insufficient data for species recommendation",
-      probabilityPercent: null,
-      actionability: "insufficient_data",
-      source: "no_candidate",
+      speciesId: fallbackCandidate.speciesId,
+      displayName: fallbackCandidate.displayName,
+      canonicalName: fallbackCandidate.canonicalName || fallbackCandidate.displayName,
+      probabilityPercent: fallbackCandidate.probabilityPercent,
+      actionability: "test_pilot_only",
+      source: "no_candidate_fallback",
       disagreementWithAgent: false,
-      selectionReason: "no_candidate",
+      selectionReason: "no_candidate_fallback",
       tieResolved: false,
       tieDetected: false,
-      consensusTier: "insufficient",
+      consensusTier: "pilot_consensus",
       conflictDetected: false,
       conflictStatus: "none",
       arbitrationPolicyVersion: ARB_POLICY_VERSION,
@@ -541,7 +597,7 @@ async function arbitrateFinalRecommendation({ lat, lon, prediction, verification
       verificationConfidenceScore: 0,
       mlCandidate: null,
       agentSuggestion: null,
-      notes: ["no_candidate_available"],
+      notes: ["no_candidate_available", "always_answer_policy_applied"],
       decidedAt: new Date().toISOString(),
     };
   }
@@ -616,7 +672,7 @@ async function arbitrateFinalRecommendation({ lat, lon, prediction, verification
     source,
   });
   const actionability = enforceActionability({
-    baseActionability: String(chosen?.actionability || "insufficient_data"),
+    baseActionability: String(chosen?.actionability || "test_pilot_only"),
     candidate: chosen,
     verification: chosenVerification,
     tier,
@@ -625,9 +681,9 @@ async function arbitrateFinalRecommendation({ lat, lon, prediction, verification
   notes.push(`consensus_tier=${tier}`);
 
   return {
-    speciesId: chosen?.speciesId || "insufficient_data",
-    displayName: chosen?.displayName || "Insufficient data for species recommendation",
-    canonicalName: chosen?.canonicalName || chosen?.displayName || "Insufficient data for species recommendation",
+    speciesId: chosen?.speciesId || modelCandidate?.speciesId || "pilot_candidate",
+    displayName: chosen?.displayName || modelCandidate?.displayName || "Pilot candidate",
+    canonicalName: chosen?.canonicalName || chosen?.displayName || modelCandidate?.canonicalName || modelCandidate?.displayName || "Pilot candidate",
     probabilityPercent: Number.isFinite(Number(chosen?.probabilityPercent)) ? Number(chosen.probabilityPercent) : null,
     actionability,
     source,
@@ -688,7 +744,7 @@ function sanitizeAdvisoryAnswer(rawAnswer = "") {
   return normalized || "Advisory is temporarily unavailable. Please retry.";
 }
 function fallbackFinalRecommendation(prediction, verification) {
-  const candidate = primaryModelCandidate(prediction);
+  const candidate = primaryModelCandidate(prediction) || synthesizePilotCandidate(prediction);
   const selectionDiagnostics = prediction?.selectionDiagnostics || null;
   const tieDetected = Boolean(selectionDiagnostics?.tieDetected);
   const tier = consensusTier({
@@ -699,12 +755,12 @@ function fallbackFinalRecommendation(prediction, verification) {
     source: "arbitration_unavailable",
   });
   return {
-    speciesId: candidate?.speciesId || "insufficient_data",
-    displayName: candidate?.displayName || "Insufficient data for species recommendation",
-    canonicalName: candidate?.canonicalName || candidate?.displayName || "Insufficient data for species recommendation",
+    speciesId: candidate?.speciesId || "pilot_candidate",
+    displayName: candidate?.displayName || "Pilot candidate",
+    canonicalName: candidate?.canonicalName || candidate?.displayName || "Pilot candidate",
     probabilityPercent: Number.isFinite(Number(candidate?.probabilityPercent)) ? Number(candidate.probabilityPercent) : null,
     actionability: enforceActionability({
-      baseActionability: candidate?.actionability || "insufficient_data",
+      baseActionability: candidate?.actionability || "test_pilot_only",
       candidate,
       verification,
       tier,
@@ -861,7 +917,8 @@ router.post("/species", authRequired, async (req, res) => {
 
   try {
     const formInput = normalizeFormInput(req.body?.formInput);
-    const prediction = await predictSpeciesAtPoint(lat, lon, formInput);
+    const rawPrediction = await predictSpeciesAtPoint(lat, lon, formInput);
+    const prediction = normalizePredictionForAlwaysAnswer(rawPrediction);
     const verification = await verifyPredictionEvidence({ lat, lon, prediction }).catch(() => ({
       verdict: "weak",
       confidenceScore: 0,
@@ -937,7 +994,8 @@ router.post("/species/advisory", authRequired, async (req, res) => {
 
   try {
     const formInput = normalizeFormInput(req.body?.formInput);
-    const prediction = await predictSpeciesAtPoint(lat, lon, formInput);
+    const rawPrediction = await predictSpeciesAtPoint(lat, lon, formInput);
+    const prediction = normalizePredictionForAlwaysAnswer(rawPrediction);
     const verification = await verifyPredictionEvidence({ lat, lon, prediction }).catch(() => ({
       verdict: "weak",
       confidenceScore: 0,
@@ -1016,7 +1074,7 @@ router.get("/submissions/me", authRequired, async (req, res) => {
             probabilityPercent: Number.isFinite(Number(s.prediction.finalRecommendation.probabilityPercent))
               ? Number(s.prediction.finalRecommendation.probabilityPercent)
               : null,
-            actionability: s.prediction.finalRecommendation.actionability || "insufficient_data",
+            actionability: normalizeActionability(s.prediction.finalRecommendation.actionability || "test_pilot_only"),
             source: s.prediction.finalRecommendation.source || "unknown",
             disagreementWithAgent: Boolean(s.prediction.finalRecommendation.disagreementWithAgent),
             selectionReason: s.prediction.finalRecommendation.selectionReason || "unknown",

@@ -25,11 +25,8 @@ function quarterLabel(month: number) {
 
 function effectiveSubmissionSpecies(row: PredictionSubmissionItem) {
   const final = row.finalRecommendation;
-  if (final && final.speciesId && final.speciesId !== "insufficient_data") {
+  if (final && final.speciesId) {
     return final;
-  }
-  if (row.bestSpecies?.actionability === "insufficient_data" && row.topCandidate) {
-    return row.topCandidate;
   }
   return row.bestSpecies || row.topCandidate || null;
 }

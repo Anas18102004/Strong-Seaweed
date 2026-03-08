@@ -4,6 +4,7 @@ import { Bell, LogOut, LayoutDashboard, FlaskConical, MapPin, Brain, MessageSqua
 import { useAuth } from "@/context/AuthContext";
 import { useLocation, useNavigate } from "react-router-dom";
 import { NavLink } from "@/components/NavLink";
+import ElevenLabsConvaiWidget from "@/components/ElevenLabsConvaiWidget";
 
 const mobileNavItems = [
   { title: "Home", url: "/dashboard", icon: LayoutDashboard },
@@ -118,6 +119,7 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
           })}
         </div>
       </nav>
+      <ElevenLabsConvaiWidget />
     </SidebarProvider>
   );
 }

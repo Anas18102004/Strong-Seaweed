@@ -77,11 +77,11 @@ function recommendedSpecies(score: number, season: string, liveName?: string, ha
 }
 
 function actionabilityLabel(value?: string | null) {
-  const v = String(value || "insufficient_data").toLowerCase();
+  const v = String(value || "test_pilot_only").toLowerCase();
   if (v === "recommended") return "Recommended";
   if (v === "test_pilot_only") return "Pilot Only";
   if (v === "not_recommended") return "Not Recommended";
-  return "Insufficient Data";
+  return "Pilot Only";
 }
 
 function normalizeReason(value?: string | null) {
@@ -283,9 +283,9 @@ export default function PredictPage() {
       .sort((a, b) => Number(b?.probabilityPercent || 0) - Number(a?.probabilityPercent || 0));
     const topScored = scored[0] || null;
     const chosen =
-      lastPrediction.finalRecommendation && lastPrediction.finalRecommendation.speciesId !== "insufficient_data"
+      lastPrediction.finalRecommendation
         ? lastPrediction.finalRecommendation
-        : lastPrediction.bestSpecies && lastPrediction.bestSpecies.speciesId !== "insufficient_data"
+        : lastPrediction.bestSpecies
         ? lastPrediction.bestSpecies
         : topScored;
     const chosenId = chosen?.speciesId || topScored?.speciesId || "";

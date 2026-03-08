@@ -8,11 +8,8 @@ import { useEffect, useMemo, useState } from "react";
 
 function effectiveSpecies(row: PredictionSubmissionItem) {
   const final = row.finalRecommendation;
-  if (final && final.speciesId && final.speciesId !== "insufficient_data") {
+  if (final && final.speciesId) {
     return final;
-  }
-  if (row.bestSpecies?.actionability === "insufficient_data" && row.topCandidate) {
-    return row.topCandidate;
   }
   return row.bestSpecies || row.topCandidate || null;
 }
@@ -189,16 +186,14 @@ export default function Reports() {
           <div className="grid gap-2.5">
             {submissions.slice(0, 12).map((s) => {
               const species = effectiveSpecies(s);
-              const actionability = species?.actionability || "insufficient_data";
+              const actionability = species?.actionability || "test_pilot_only";
               const statusText =
                 actionability === "recommended"
                   ? "Recommended species"
                   : actionability === "test_pilot_only"
                   ? "Pilot-only candidate"
-                  : actionability === "insufficient_data" && s.fallbackAdvisory
+                  : s.fallbackAdvisory
                   ? "AI fallback advisory available"
-                  : actionability === "insufficient_data"
-                  ? "Insufficient data"
                   : "No cultivation recommendation";
 
               return (

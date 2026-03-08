@@ -35,11 +35,8 @@ function regionName(s: PredictionSubmissionItem) {
 
 function effectiveSubmissionSpecies(s: PredictionSubmissionItem) {
   const final = s.finalRecommendation;
-  if (final && final.speciesId && final.speciesId !== "insufficient_data") {
+  if (final && final.speciesId) {
     return final;
-  }
-  if (s.bestSpecies?.actionability === "insufficient_data" && s.topCandidate) {
-    return s.topCandidate;
   }
   return s.bestSpecies || s.topCandidate || null;
 }
@@ -78,7 +75,7 @@ export default function SiteIntelligence() {
       by[key] = by[key] || { scores: [], species: {}, recommendedCount: 0 };
       const chosen = effectiveSubmissionSpecies(r);
       const p = chosen?.probabilityPercent;
-      const actionability = chosen?.actionability || "insufficient_data";
+      const actionability = chosen?.actionability || "test_pilot_only";
       const isCultivationReady = actionability === "recommended";
       if (isCultivationReady && typeof p === "number") by[key].scores.push(p);
       if (isCultivationReady) {

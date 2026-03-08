@@ -112,14 +112,14 @@ function toReportMarkdown(prediction: SpeciesPredictionResponse) {
   } else if (prediction.bestSpecies) {
     lines.push(`- Species: ${prediction.bestSpecies.displayName}`);
     lines.push(`- Probability: ${prediction.bestSpecies.probabilityPercent ?? "n/a"}%`);
-    lines.push(`- Actionability: ${prediction.bestSpecies.actionability || "insufficient_data"}`);
+    lines.push(`- Actionability: ${prediction.bestSpecies.actionability || "test_pilot_only"}`);
   } else {
     lines.push("- No recommendation available.");
   }
   lines.push("");
   lines.push("## Species Scores");
   for (const s of prediction.species || []) {
-    lines.push(`- ${s.displayName}: ${s.probabilityPercent ?? "n/a"}% | ${s.actionability || "insufficient_data"} | ${s.reason}`);
+    lines.push(`- ${s.displayName}: ${s.probabilityPercent ?? "n/a"}% | ${s.actionability || "test_pilot_only"} | ${s.reason}`);
   }
   if (Array.isArray(prediction.warnings) && prediction.warnings.length > 0) {
     lines.push("");
@@ -155,10 +155,7 @@ export default function ResultsPage() {
 
   const colorByIndex = ["#0077FF", "#00A8E8", "#00C6FF", "#7DD6FF"];
   const finalRecommendation = prediction.finalRecommendation || null;
-  const preferredSpeciesId =
-    finalRecommendation && finalRecommendation.speciesId !== "insufficient_data"
-      ? finalRecommendation.speciesId
-      : prediction.bestSpecies?.speciesId;
+  const preferredSpeciesId = finalRecommendation?.speciesId || prediction.bestSpecies?.speciesId;
   const speciesResults = prediction.species.map((species, idx) => ({
     name: species.displayName,
     score: species.probabilityPercent == null ? null : Math.round(species.probabilityPercent),
@@ -167,20 +164,17 @@ export default function ResultsPage() {
     pending: !species.ready || species.probabilityPercent == null,
     reason: species.reason,
     badge: modelBadgeFromReason(species.reason, !species.ready || species.probabilityPercent == null),
-    actionability: species.actionability || "insufficient_data",
+    actionability: species.actionability || "test_pilot_only",
   }));
 
   const scoredByRank = speciesResults
     .filter((item): item is (typeof speciesResults)[number] & { score: number } => typeof item.score === "number")
     .sort((a, b) => b.score - a.score);
   const modelBest = speciesResults.find((item) => item.best) ?? scoredByRank[0] ?? speciesResults[0];
-  const hasInsufficientData =
-    (finalRecommendation?.actionability || prediction.bestSpecies?.actionability || "insufficient_data") ===
-    "insufficient_data";
-  const best = hasInsufficientData ? scoredByRank[0] ?? modelBest : modelBest;
-  const bestActionability = best?.actionability || finalRecommendation?.actionability || "insufficient_data";
-  const bestIsRecommended = bestActionability === "recommended" && !hasInsufficientData;
-  const bestIsPilot = bestActionability === "test_pilot_only" || hasInsufficientData;
+  const best = modelBest;
+  const bestActionability = best?.actionability || finalRecommendation?.actionability || "test_pilot_only";
+  const bestIsRecommended = bestActionability === "recommended";
+  const bestIsPilot = bestActionability === "test_pilot_only";
   const bestHasScore = typeof best?.score === "number";
   const bestScoreText =
     typeof best?.score === "number"
