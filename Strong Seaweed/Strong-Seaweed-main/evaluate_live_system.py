@@ -99,13 +99,16 @@ SPECIES_QUERY = {
 
 def obis_top_species(session: requests.Session, lat: float, lon: float) -> tuple[str | None, int]:
     species_counts: dict[str, int] = {}
+    lat1, lat2 = lat - 1.0, lat + 1.0
+    lon1, lon2 = lon - 1.0, lon + 1.0
+    geometry = (
+        f"POLYGON(({lon1} {lat1}, {lon2} {lat1}, {lon2} {lat2}, "
+        f"{lon1} {lat2}, {lon1} {lat1}))"
+    )
     for sid, sci_name in SPECIES_QUERY.items():
-        lat1, lat2 = lat - 1.0, lat + 1.0
-        lon1, lon2 = lon - 1.0, lon + 1.0
         params = {
             "scientificname": sci_name,
-            "decimalLatitude": f"{lat1},{lat2}",
-            "decimalLongitude": f"{lon1},{lon2}",
+            "geometry": geometry,
             "size": 1,
         }
         try:

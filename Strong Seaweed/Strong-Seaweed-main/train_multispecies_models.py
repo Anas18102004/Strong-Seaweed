@@ -11,6 +11,7 @@ from sklearn.linear_model import LogisticRegression
 from sklearn.metrics import average_precision_score, brier_score_loss, precision_recall_curve, roc_auc_score
 from xgboost import XGBClassifier
 
+from calibration_utils import SigmoidCalibrator
 from project_paths import TABULAR_DIR, ensure_dirs
 
 
@@ -84,15 +85,6 @@ def pick_threshold(
             # If everything falls outside the bounded window, use the most conservative threshold available.
             i = int(np.argmax(thresholds))
     return {"threshold": float(thresholds[i]), "precision": float(precision[i]), "recall": float(recall[i])}
-
-
-class SigmoidCalibrator:
-    def __init__(self, model: LogisticRegression):
-        self.model = model
-
-    def predict(self, p_raw: np.ndarray) -> np.ndarray:
-        x = np.asarray(p_raw, dtype=np.float32).reshape(-1, 1)
-        return self.model.predict_proba(x)[:, 1]
 
 
 def train_one(

@@ -772,6 +772,14 @@ def extract_runtime_features(lat: float, lon: float, user_inputs: dict | None = 
         if not np.isfinite(v):
             v = float(COP.get("_feature_medians", {}).get(k, 0.0))
         vals[k] = v
+    nearest_cell = COP["so_mean"].sel(latitude=sample_lat, longitude=sample_lon, method="nearest")
+    nearest_lat = float(nearest_cell["latitude"].values)
+    nearest_lon = float(nearest_cell["longitude"].values)
+    diagnostics["nearestGrid"] = {
+        "lat": nearest_lat,
+        "lon": nearest_lon,
+        "distance_km": float(_distance_km_point(lat, lon, nearest_lat, nearest_lon)),
+    }
     if isinstance(user_inputs, dict):
         override_diag = _apply_overrides_to_vector(list(vals.keys()), user_inputs, vals, "user_override")
         diagnostics["applied"] = override_diag.get("applied", [])
@@ -1176,6 +1184,10 @@ def predict_species(lat: float, lon: float, form_input: dict | None = None) -> d
         warnings.append("environmental_features_stale")
 
     copernicus_context = _copernicus_context(feat_vals, proxy_override_diag)
+    proxy_nearest_grid = proxy_override_diag.get("nearestGrid")
+    response_nearest_grid = k.get("nearestGrid")
+    if not kappa_in_coverage and isinstance(proxy_nearest_grid, dict):
+        response_nearest_grid = proxy_nearest_grid
 
     overall_actionability = "insufficient_data"
     if best is not None:
@@ -1190,7 +1202,11 @@ def predict_species(lat: float, lon: float, form_input: dict | None = None) -> d
         "decisionPolicyVersion": "v5_always_answer_advisory",
         "modelRelease": f"{KAPPA['release']}+{multi_release_name}",
         "featureTimestamp": COP.get("feature_timestamp"),
-        "nearestGrid": k["nearestGrid"],
+        "nearestGrid": response_nearest_grid,
+        "nearestGridByModel": {
+            "kappaphycus": k.get("nearestGrid"),
+            "proxy": proxy_nearest_grid,
+        },
         "copernicusContext": copernicus_context,
         "species": species,
         "topCandidatesByProbability": top_candidates,

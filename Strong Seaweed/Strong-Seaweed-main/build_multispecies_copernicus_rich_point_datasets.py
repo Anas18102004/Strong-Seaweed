@@ -17,6 +17,9 @@ def parse_args() -> argparse.Namespace:
     p.add_argument("--bg_ratio", type=int, default=8)
     p.add_argument("--min_neg_abs", type=int, default=1200)
     p.add_argument("--seed", type=int, default=42)
+    p.add_argument("--negative_sampling_method", type=str, default="region_balanced", choices=["uniform", "region_balanced"])
+    p.add_argument("--neg_grid_deg", type=float, default=2.0)
+    p.add_argument("--max_neg_per_cell", type=int, default=250)
     p.add_argument("--out_prefix", type=str, default="multispecies_cop_india_v3_rich")
     return p.parse_args()
 
@@ -112,17 +115,80 @@ def grid_points_dataframe(grids: dict[str, xr.DataArray]) -> pd.DataFrame:
     return out
 
 
-def sample_negatives(pool: pd.DataFrame, pos: pd.DataFrame, n_target: int, seed: int) -> pd.DataFrame:
-    if n_target <= 0 or pool.empty:
+def _exclude_positive_overlap(pool: pd.DataFrame, pos: pd.DataFrame) -> pd.DataFrame:
+    if pool.empty:
         return pool.iloc[0:0].copy()
+    if pos.empty:
+        return pool.copy()
     pos_keys = set(zip(pos["lon"].round(4), pos["lat"].round(4)))
     mask = ~pool[["lon", "lat"]].round(4).apply(tuple, axis=1).isin(pos_keys)
-    pool = pool[mask].copy()
+    return pool[mask].copy()
+
+
+def sample_negatives_uniform(pool: pd.DataFrame, pos: pd.DataFrame, n_target: int, seed: int) -> pd.DataFrame:
+    if n_target <= 0 or pool.empty:
+        return pool.iloc[0:0].copy()
+    pool = _exclude_positive_overlap(pool, pos)
     if pool.empty:
         return pool
     n = min(n_target, len(pool))
     idx = np.random.default_rng(seed).choice(pool.index.to_numpy(), size=n, replace=False)
     return pool.loc[idx].copy().reset_index(drop=True)
+
+
+def sample_negatives_region_balanced(
+    pool: pd.DataFrame,
+    pos: pd.DataFrame,
+    n_target: int,
+    seed: int,
+    grid_deg: float,
+    max_per_cell: int,
+) -> pd.DataFrame:
+    if n_target <= 0 or pool.empty:
+        return pool.iloc[0:0].copy()
+    pool = _exclude_positive_overlap(pool, pos)
+    if pool.empty:
+        return pool
+    rng = np.random.default_rng(seed)
+    deg = float(grid_deg) if float(grid_deg) > 0 else 2.0
+    pool = pool.copy()
+    pool["lon_cell"] = np.floor(pool["lon"] / deg).astype(int)
+    pool["lat_cell"] = np.floor(pool["lat"] / deg).astype(int)
+    pool["cell_id"] = pool["lon_cell"].astype(str) + "_" + pool["lat_cell"].astype(str)
+    groups = list(pool.groupby("cell_id", sort=False))
+    if not groups:
+        return pool.iloc[0:0].copy()
+
+    n_cells = max(1, len(groups))
+    per_cell = int(np.ceil(float(n_target) / float(n_cells)))
+    per_cell = max(1, min(per_cell, int(max_per_cell)))
+
+    picked_idx: list[int] = []
+    for _, g in groups:
+        k = min(len(g), per_cell)
+        if k <= 0:
+            continue
+        chosen = rng.choice(g.index.to_numpy(), size=k, replace=False)
+        picked_idx.extend(chosen.tolist())
+
+    if not picked_idx:
+        return pool.iloc[0:0].copy()
+
+    picked = pool.loc[picked_idx].copy()
+    if len(picked) > n_target:
+        keep_idx = rng.choice(picked.index.to_numpy(), size=n_target, replace=False)
+        picked = picked.loc[keep_idx].copy()
+    elif len(picked) < n_target:
+        remaining = pool.drop(index=picked.index, errors="ignore")
+        needed = min(n_target - len(picked), len(remaining))
+        if needed > 0:
+            extra_idx = rng.choice(remaining.index.to_numpy(), size=needed, replace=False)
+            picked = pd.concat([picked, remaining.loc[extra_idx]], ignore_index=False)
+
+    return (
+        picked.drop(columns=["lon_cell", "lat_cell", "cell_id"], errors="ignore")
+        .reset_index(drop=True)
+    )
 
 
 def main() -> None:
@@ -145,15 +211,42 @@ def main() -> None:
 
     species_reports = []
     for species_id in sorted(occ["species_id"].unique()):
-        sub = occ[occ["species_id"] == species_id][["lon", "lat"]].drop_duplicates().reset_index(drop=True)
+        sub_cols = ["lon", "lat"]
+        if "label_weight" in occ.columns:
+            sub_cols.append("label_weight")
+        sub = occ[occ["species_id"] == species_id][sub_cols].copy()
+        if "label_weight" in sub.columns:
+            sub["label_weight"] = pd.to_numeric(sub["label_weight"], errors="coerce").fillna(1.0).clip(lower=0.2, upper=2.0)
+            sub = (
+                sub.groupby(["lon", "lat"], as_index=False)["label_weight"]
+                .max()
+                .reset_index(drop=True)
+            )
+        else:
+            sub = sub.drop_duplicates(subset=["lon", "lat"]).reset_index(drop=True)
         pos_feat = extract_features_for_points(sub, grids)
         n_pos = len(pos_feat)
         n_neg_target = max(int(n_pos * int(args.bg_ratio)), int(args.min_neg_abs))
-        neg_feat = sample_negatives(grid_pool, pos_feat[["lon", "lat"]] if n_pos else pos_feat, n_neg_target, args.seed)
+        pos_coords = pos_feat[["lon", "lat"]] if n_pos else pos_feat
+        if args.negative_sampling_method == "region_balanced":
+            neg_feat = sample_negatives_region_balanced(
+                grid_pool,
+                pos_coords,
+                n_neg_target,
+                args.seed,
+                grid_deg=float(args.neg_grid_deg),
+                max_per_cell=int(args.max_neg_per_cell),
+            )
+        else:
+            neg_feat = sample_negatives_uniform(grid_pool, pos_coords, n_neg_target, args.seed)
 
         if n_pos:
+            if "label_weight" in sub.columns:
+                pos_feat = pos_feat.merge(sub[["lon", "lat", "label_weight"]], on=["lon", "lat"], how="left")
+                pos_feat["label_weight"] = pd.to_numeric(pos_feat["label_weight"], errors="coerce").fillna(1.0).clip(lower=0.2, upper=2.0)
+            else:
+                pos_feat["label_weight"] = 1.0
             pos_feat["label"] = 1
-            pos_feat["label_weight"] = 1.0
             pos_feat["sample_type"] = "occurrence_positive"
         if len(neg_feat):
             neg_feat["label"] = 0
@@ -180,6 +273,7 @@ def main() -> None:
                 "negative_rows": int(len(neg_feat)),
                 "total_rows": int(len(ds)),
                 "n_features": int(len([c for c in ds.columns if c not in {'label','label_weight','sample_type','species_id'}])),
+                "negative_sampling_method": args.negative_sampling_method,
                 "output_csv": str(out_csv),
             }
         )

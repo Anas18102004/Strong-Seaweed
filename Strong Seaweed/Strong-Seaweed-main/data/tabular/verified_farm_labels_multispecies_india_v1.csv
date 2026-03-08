@@ -1,0 +1,27 @@
+species_id,lat,lon,source_name,confidence,label_weight,note
+sargassum_spp,22.4678,69.0700,gujarat_west_coast_verified,0.95,1.50,Okha coastal belt
+sargassum_spp,22.2442,68.9685,gujarat_west_coast_verified,0.95,1.50,Dwarka coastal belt
+sargassum_spp,22.4707,69.1370,gujarat_west_coast_verified,0.95,1.45,Bet Dwarka coastal belt
+sargassum_spp,21.6417,69.6293,gujarat_west_coast_verified,0.92,1.40,Porbandar coast
+sargassum_spp,20.9077,70.3673,gujarat_west_coast_verified,0.92,1.40,Veraval coast
+sargassum_spp,20.8685,71.3707,gujarat_west_coast_verified,0.90,1.35,Jafrabad coast
+sargassum_spp,20.7167,70.9833,gujarat_west_coast_verified,0.88,1.30,Diu coast
+sargassum_spp,14.8136,74.1297,karnataka_coast_verified,0.88,1.30,Karwar coast
+sargassum_spp,8.0780,77.5410,tamilnadu_coast_verified,0.85,1.25,Kanyakumari coast
+sargassum_spp,8.1514,77.6664,tamilnadu_coast_verified,0.85,1.25,Chinna Muttom coast
+gracilaria_spp,8.7642,78.1348,tamilnadu_farm_verified,0.95,1.55,Tuticorin culture zone
+gracilaria_spp,9.2090,78.7101,tamilnadu_farm_verified,0.95,1.55,Ervadi culture zone
+gracilaria_spp,9.2833,79.1167,tamilnadu_farm_verified,0.95,1.55,Mandapam farming zone
+gracilaria_spp,9.2900,79.3100,tamilnadu_farm_verified,0.92,1.45,Rameswaram belt
+gracilaria_spp,9.3500,79.2000,tamilnadu_farm_verified,0.90,1.35,Palk Bay central
+gracilaria_spp,9.9600,76.2400,kerala_coast_verified,0.82,1.20,Kochi estuarine coast
+gracilaria_spp,8.8932,76.6141,kerala_coast_verified,0.84,1.20,Kollam coastal belt
+gracilaria_spp,22.4118,69.0089,gujarat_west_coast_verified,0.86,1.25,Mithapur coast
+ulva_spp,18.9750,72.8258,maharashtra_coast_verified,0.85,1.20,Mumbai offshore records
+ulva_spp,22.2167,68.9667,gujarat_west_coast_verified,0.86,1.25,Dwarka nearshore intertidal
+ulva_spp,21.5833,69.6000,gujarat_west_coast_verified,0.84,1.20,Porbandar nearshore intertidal
+ulva_spp,20.9077,70.3673,gujarat_west_coast_verified,0.83,1.20,Veraval nearshore intertidal
+ulva_spp,13.0827,80.2707,tamilnadu_east_coast_verified,0.82,1.15,Chennai coast
+ulva_spp,17.6868,83.2185,andhra_coast_verified,0.82,1.15,Visakhapatnam coast
+ulva_spp,11.6670,92.7500,andaman_verified,0.80,1.10,Port Blair coast
+ulva_spp,10.5700,72.6400,lakshadweep_verified,0.80,1.10,Kavaratti lagoon
