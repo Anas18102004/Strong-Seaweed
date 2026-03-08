@@ -55,11 +55,12 @@ function sanitizeContext(raw = {}) {
   };
 }
 
-function deepgramLanguageForLocale(locale = "en-US") {
+function deepgramLanguageForLocale(locale = "hi-IN") {
   const value = String(locale || "").toLowerCase();
   if (value.startsWith("en")) return "en";
   if (value.startsWith("hi")) return "hi";
-  return "en";
+  if (value.startsWith("gu")) return "gu";
+  return "hi";
 }
 
 async function transcribeWithDeepgram({ audioBase64, mimeType, locale }) {
@@ -291,7 +292,7 @@ router.post("/voice/transcribe", authRequired, async (req, res) => {
   const start = logAiStart("/api/ai/voice/transcribe", req.user?.id);
   const audioBase64 = String(req.body?.audioBase64 || "").trim();
   const mimeType = String(req.body?.mimeType || "audio/webm").trim() || "audio/webm";
-  const locale = String(req.body?.locale || "en-US").trim() || "en-US";
+  const locale = String(req.body?.locale || "hi-IN").trim() || "hi-IN";
 
   if (!audioBase64) {
     logAiEnd("/api/ai/voice/transcribe", req.user?.id, start, false, { error: "audio_missing" });
@@ -324,7 +325,7 @@ router.post("/voice/respond", authRequired, async (req, res) => {
   const start = logAiStart("/api/ai/voice/respond", req.user?.id, { hasSessionId: Boolean(req.body?.sessionId) });
   const question = String(req.body?.question || "").trim();
   const sessionIdInput = String(req.body?.sessionId || "").trim();
-  const locale = String(req.body?.locale || "en-US").trim() || "en-US";
+  const locale = String(req.body?.locale || "hi-IN").trim() || "hi-IN";
   const voiceProfile = String(req.body?.voiceProfile || "female").trim().toLowerCase();
   if (!question) {
     logAiEnd("/api/ai/voice/respond", req.user?.id, start, false, { error: "question_missing" });

@@ -238,7 +238,7 @@ export default function Chatbot() {
   const [voiceError, setVoiceError] = useState("");
   const [liveTranscript, setLiveTranscript] = useState("");
   const [streamingAssistant, setStreamingAssistant] = useState("");
-  const [sttLocale, setSttLocale] = useState("en-IN");
+  const [sttLocale, setSttLocale] = useState("hi-IN");
   const [orbOffset, setOrbOffset] = useState({ x: 0, y: 0 });
 
   const recognitionRef = useRef<BrowserSpeechRecognition | null>(null);
@@ -260,17 +260,19 @@ export default function Chatbot() {
 
   useEffect(() => {
     const browserLang = (navigator.language || "").toLowerCase();
-    if (browserLang.startsWith("en-in") || browserLang.startsWith("hi-in")) {
+    if (browserLang.startsWith("hi")) {
+      setSttLocale("hi-IN");
+      return;
+    }
+    if (browserLang.startsWith("gu")) {
+      setSttLocale("gu-IN");
+      return;
+    }
+    if (browserLang.startsWith("en")) {
       setSttLocale("en-IN");
       return;
     }
-    if (browserLang.startsWith("en-us")) {
-      setSttLocale("en-US");
-      return;
-    }
-    if (browserLang.startsWith("en-gb")) {
-      setSttLocale("en-GB");
-    }
+    setSttLocale("hi-IN");
   }, []);
 
   useEffect(() => {
@@ -302,17 +304,42 @@ export default function Chatbot() {
     listeningRef.current = listening;
   }, [listening]);
 
-  const pickFemaleVoice = () => {
+  const normalizeVoiceLocale = (locale: string) => {
+    const lower = String(locale || "").toLowerCase();
+    if (lower.startsWith("hi")) return "hi-IN";
+    if (lower.startsWith("gu")) return "gu-IN";
+    if (lower.startsWith("en")) return "en-IN";
+    return "hi-IN";
+  };
+
+  const localeVoiceCandidates = (locale: string) => {
+    const normalized = normalizeVoiceLocale(locale).toLowerCase();
+    if (normalized.startsWith("gu")) return ["gu", "hi", "en"];
+    if (normalized.startsWith("hi")) return ["hi", "en"];
+    return ["en", "hi"];
+  };
+
+  const pickFemaleVoice = (locale: string) => {
     if (!("speechSynthesis" in window)) return null;
     const voices = window.speechSynthesis.getVoices();
     if (!voices.length) return null;
-    const byName = voices.find((v) => /(female|woman|samantha|aria|ava|lisa|susan|zira)/i.test(v.name));
+    const langPriority = localeVoiceCandidates(locale);
+    const byName = voices.find((v) => {
+      if (!/(female|woman|samantha|aria|ava|lisa|susan|zira|heera|veena|pooja|kajal|lekha)/i.test(v.name)) {
+        return false;
+      }
+      const lang = String(v.lang || "").toLowerCase();
+      return langPriority.some((prefix) => lang.startsWith(prefix));
+    });
     if (byName) return byName;
-    const byLang = voices.find((v) => /^en[-_]/i.test(v.lang));
+    const byLang = voices.find((v) => {
+      const lang = String(v.lang || "").toLowerCase();
+      return langPriority.some((prefix) => lang.startsWith(prefix));
+    });
     return byLang || voices[0] || null;
   };
 
-  const speak = (text: string) => {
+  const speak = (text: string, locale = sttLocale) => {
     if (!voiceEnabled || !("speechSynthesis" in window)) return;
     const clean = String(text || "").replace(/\s+/g, " ").trim();
     if (!clean) return;
@@ -320,10 +347,10 @@ export default function Chatbot() {
     try {
       window.speechSynthesis.cancel();
       const utterance = new SpeechSynthesisUtterance(clean);
-      utterance.lang = "en-US";
+      utterance.lang = normalizeVoiceLocale(locale);
       utterance.rate = 1.02;
       utterance.pitch = 1.07;
-      const female = pickFemaleVoice();
+      const female = pickFemaleVoice(utterance.lang);
       if (female) utterance.voice = female;
       window.speechSynthesis.speak(utterance);
     } catch {
@@ -512,6 +539,11 @@ export default function Chatbot() {
           setVoiceError("Deepgram STT is not configured on server. Falling back to browser STT.");
           return;
         }
+        if (message.includes("deepgram_http_400") || message.toLowerCase().includes("language")) {
+          deepgramEnabledRef.current = false;
+          setVoiceError(`Deepgram STT does not support ${sttLocale} for this setup. Falling back to browser STT.`);
+          return;
+        }
         setVoiceError(`Deepgram STT failed. ${message}`);
       } finally {
         scheduleVoiceResume(260);
@@ -690,7 +722,7 @@ export default function Chatbot() {
         ]);
 
         const played = playAudioBase64(res.audioBase64, res.audioMime);
-        if (!played) speak(res.ttsText || res.answer);
+        if (!played) speak(res.ttsText || res.answer, sttLocale);
       } else {
         try {
           let built = "";
@@ -757,7 +789,7 @@ export default function Chatbot() {
             },
           ]);
           setVoiceError("Voice pipeline unavailable. Switched to text response with browser female TTS fallback.");
-          speak(fallback.answer);
+          speak(fallback.answer, sttLocale);
           await loadSessions();
           return;
         } catch {
@@ -827,9 +859,9 @@ export default function Chatbot() {
         return;
       }
       if (code === "network") {
-        if (sttLocale !== "en-US") {
-          setSttLocale("en-US");
-          setVoiceError("Speech recognition network error. Switched speech locale to en-US. Press Start Voice again.");
+        if (sttLocale !== "en-IN") {
+          setSttLocale("en-IN");
+          setVoiceError("Speech recognition network error. Switched speech locale to English (India). Press Start Voice again.");
           return;
         }
         setVoiceError("Speech recognition network error. Voice session paused. Use Chrome/Edge over HTTPS and press Start Voice.");
@@ -1026,10 +1058,9 @@ export default function Chatbot() {
                       className="ml-2 bg-transparent outline-none"
                       aria-label="Speech recognition locale"
                     >
-                      <option value="en-IN">English (India)</option>
-                      <option value="en-US">English (US)</option>
-                      <option value="en-GB">English (UK)</option>
                       <option value="hi-IN">Hindi (India)</option>
+                      <option value="gu-IN">Gujarati (India)</option>
+                      <option value="en-IN">English (India)</option>
                     </select>
                   </label>
                 </div>

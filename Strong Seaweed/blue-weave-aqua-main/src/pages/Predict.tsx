@@ -1,8 +1,8 @@
 import DashboardLayout from "@/components/DashboardLayout";
 import { motion } from "framer-motion";
 import { Button } from "@/components/ui/button";
-import { useEffect, useMemo, useState } from "react";
-import { ArrowRight, ChevronDown, MapPin, Calendar, Ruler, Thermometer, Droplets, Radar, LocateFixed, ShieldCheck } from "lucide-react";
+import { useEffect, useMemo, useRef, useState } from "react";
+import { ArrowRight, ChevronDown, MapPin, Calendar, Ruler, Thermometer, Droplets, Radar, LocateFixed, ShieldCheck, ExternalLink } from "lucide-react";
 import { useNavigate } from "react-router-dom";
 import { api, SpeciesPredictionResponse } from "@/lib/api";
 import { useAuth } from "@/context/AuthContext";
@@ -74,6 +74,20 @@ function recommendedSpecies(score: number, season: string, liveName?: string, ha
   return "Ulva lactuca";
 }
 
+function actionabilityLabel(value?: string | null) {
+  const v = String(value || "insufficient_data").toLowerCase();
+  if (v === "recommended") return "Recommended";
+  if (v === "test_pilot_only") return "Pilot Only";
+  if (v === "not_recommended") return "Not Recommended";
+  return "Insufficient Data";
+}
+
+function normalizeReason(value?: string | null) {
+  const raw = String(value || "").trim();
+  if (!raw) return "No reason provided";
+  return raw.replace(/_/g, " ");
+}
+
 function MapClickHandler({ onPick }: { onPick: (lat: number, lon: number) => void }) {
   useMapEvents({
     click: (e) => {
@@ -106,6 +120,7 @@ export default function PredictPage() {
   const [lastPrediction, setLastPrediction] = useState<SpeciesPredictionResponse | null>(null);
   const [lastUpdated, setLastUpdated] = useState<string>("");
   const [envSource, setEnvSource] = useState<string>("");
+  const resultPanelRef = useRef<HTMLDivElement | null>(null);
   const navigate = useNavigate();
   const { token } = useAuth();
 
@@ -209,6 +224,9 @@ export default function PredictPage() {
       const prediction = await api.predictSpecies(coords.lat, coords.lon, token || undefined, formInput);
       setLastPrediction(prediction);
       setLastUpdated(new Date().toLocaleString());
+      window.setTimeout(() => {
+        resultPanelRef.current?.scrollIntoView({ behavior: "smooth", block: "start" });
+      }, 80);
     } catch (err) {
       const msg = err instanceof Error ? err.message : "Prediction failed.";
       setError(msg);
@@ -248,6 +266,22 @@ export default function PredictPage() {
       ),
     };
   }, [coords, season, depth, temperatureC, salinityPpt, lastPrediction]);
+
+  const predictionView = useMemo(() => {
+    if (!lastPrediction) return null;
+    const scored = [...(lastPrediction.species || [])]
+      .filter((item) => Number.isFinite(Number(item?.probabilityPercent)))
+      .sort((a, b) => Number(b?.probabilityPercent || 0) - Number(a?.probabilityPercent || 0));
+    const topScored = scored[0] || null;
+    const chosen =
+      lastPrediction.finalRecommendation && lastPrediction.finalRecommendation.speciesId !== "insufficient_data"
+        ? lastPrediction.finalRecommendation
+        : lastPrediction.bestSpecies && lastPrediction.bestSpecies.speciesId !== "insufficient_data"
+        ? lastPrediction.bestSpecies
+        : topScored;
+    const chosenId = chosen?.speciesId || topScored?.speciesId || "";
+    return { chosen, chosenId };
+  }, [lastPrediction]);
 
   return (
     <DashboardLayout>
@@ -466,6 +500,112 @@ export default function PredictPage() {
                 </div>
               </motion.div>
             </div>
+
+            {lastPrediction && predictionView && (
+              <motion.div
+                ref={resultPanelRef}
+                initial={{ opacity: 0, y: 16 }}
+                animate={{ opacity: 1, y: 0 }}
+                transition={{ delay: 0.12 }}
+                className="mt-6 ocean-glass-card rounded-[22px] p-5 sm:p-6"
+              >
+                <div className="flex flex-wrap items-start justify-between gap-3">
+                  <div>
+                    <p className="text-xs uppercase tracking-[0.14em] text-[#A7CCE4]">Latest Prediction Result</p>
+                    <h2 className="mt-1 text-xl font-semibold text-[#EAF7FF]">
+                      {predictionView.chosen?.displayName || "No clear candidate"}
+                    </h2>
+                    <p className="mt-1 text-sm text-[#CFE8F8]">
+                      Actionability: {actionabilityLabel(predictionView.chosen?.actionability)}
+                      {typeof predictionView.chosen?.probabilityPercent === "number"
+                        ? ` | Score: ${predictionView.chosen.probabilityPercent.toFixed(2)}%`
+                        : ""}
+                    </p>
+                  </div>
+                  <Button
+                    type="button"
+                    onClick={() =>
+                      navigate("/results", {
+                        state: { prediction: lastPrediction, context: { location, season, depth, temperatureC, salinityPpt, advanced } },
+                      })
+                    }
+                    className="rounded-xl bg-white/10 border border-white/20 text-cyan-100 hover:bg-white/15"
+                  >
+                    Open Detailed Result <ExternalLink className="h-4 w-4" />
+                  </Button>
+                </div>
+
+                <div className="mt-4 grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
+                  <div className="rounded-xl border border-white/10 bg-white/[0.04] p-3">
+                    <p className="text-[11px] uppercase text-[#A7CCE4]">Model Release</p>
+                    <p className="mt-1 text-sm text-[#EAF7FF]">{lastPrediction.modelRelease}</p>
+                  </div>
+                  <div className="rounded-xl border border-white/10 bg-white/[0.04] p-3">
+                    <p className="text-[11px] uppercase text-[#A7CCE4]">Source</p>
+                    <p className="mt-1 text-sm text-[#EAF7FF]">{lastPrediction.source}</p>
+                  </div>
+                  <div className="rounded-xl border border-white/10 bg-white/[0.04] p-3">
+                    <p className="text-[11px] uppercase text-[#A7CCE4]">Verification</p>
+                    <p className="mt-1 text-sm text-[#EAF7FF]">
+                      {lastPrediction.verification?.verdict || "unknown"} ({lastPrediction.verification?.confidenceScore ?? 0}%)
+                    </p>
+                  </div>
+                  <div className="rounded-xl border border-white/10 bg-white/[0.04] p-3">
+                    <p className="text-[11px] uppercase text-[#A7CCE4]">Nearest Grid</p>
+                    <p className="mt-1 text-sm text-[#EAF7FF]">
+                      {typeof lastPrediction.nearestGrid?.distance_km === "number"
+                        ? `${lastPrediction.nearestGrid.distance_km.toFixed(2)} km`
+                        : "N/A"}
+                    </p>
+                  </div>
+                </div>
+
+                <div className="mt-4 overflow-hidden rounded-xl border border-white/10">
+                  <div className="grid grid-cols-[minmax(0,1.5fr)_auto_auto] gap-3 bg-white/[0.05] px-4 py-2 text-[11px] uppercase tracking-[0.12em] text-[#A7CCE4]">
+                    <p>Species</p>
+                    <p>Score</p>
+                    <p>Actionability</p>
+                  </div>
+                  <div className="divide-y divide-white/10">
+                    {lastPrediction.species.map((item) => {
+                      const isChosen = item.speciesId === predictionView.chosenId;
+                      return (
+                        <div
+                          key={item.speciesId}
+                          className={`grid grid-cols-[minmax(0,1.5fr)_auto_auto] gap-3 px-4 py-3 ${isChosen ? "bg-cyan-400/10" : "bg-transparent"}`}
+                        >
+                          <div className="min-w-0">
+                            <p className="truncate text-sm font-medium text-[#EAF7FF]">
+                              {item.displayName}
+                              {isChosen ? " (selected)" : ""}
+                            </p>
+                            <p className="mt-0.5 text-xs text-[#C2DEEF]">{normalizeReason(item.reason)}</p>
+                          </div>
+                          <p className="text-sm text-[#EAF7FF]">
+                            {typeof item.probabilityPercent === "number" ? `${item.probabilityPercent.toFixed(2)}%` : "N/A"}
+                          </p>
+                          <p className="text-sm text-[#EAF7FF]">{actionabilityLabel(item.actionability)}</p>
+                        </div>
+                      );
+                    })}
+                  </div>
+                </div>
+
+                {Array.isArray(lastPrediction.warnings) && lastPrediction.warnings.length > 0 && (
+                  <div className="mt-4 rounded-xl border border-amber-200/25 bg-amber-400/10 p-3">
+                    <p className="text-xs uppercase tracking-[0.12em] text-amber-100">Warnings</p>
+                    <p className="mt-1 text-sm text-amber-50">{lastPrediction.warnings.map((w) => normalizeReason(w)).join(" | ")}</p>
+                  </div>
+                )}
+
+                {lastPrediction.fallbackAdvisory?.answer && (
+                  <div className="mt-4 rounded-xl border border-cyan-200/25 bg-cyan-400/10 p-3">
+                    <p className="text-xs uppercase tracking-[0.12em] text-cyan-100">Advisory Fallback</p>
+                    <p className="mt-1 whitespace-pre-line text-sm text-cyan-50">{lastPrediction.fallbackAdvisory.answer}</p>
+                  </div>
+                )}
+              </motion.div>
+            )}
           </div>
         </div>
       </div>

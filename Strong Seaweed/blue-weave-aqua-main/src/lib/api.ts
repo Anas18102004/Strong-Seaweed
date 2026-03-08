@@ -532,7 +532,7 @@ export const api = {
     question: string,
     token?: string,
     sessionId?: string,
-    locale = "en-US",
+    locale = "hi-IN",
     voiceProfile: VoiceProfile = "female",
     context?: AiContextInput,
   ) =>
@@ -548,7 +548,7 @@ export const api = {
   voiceTranscribe: (
     audioBase64: string,
     mimeType = "audio/webm",
-    locale = "en-US",
+    locale = "hi-IN",
     token?: string,
   ) =>
     request<VoiceTranscribeResponse>(

@@ -57,11 +57,25 @@ const CACHE_MAX_ITEMS = 1000;
 const aiCache = new Map();
 const DEFAULT_VOICE_MIME = "audio/mpeg";
 const TTS_PROVIDER_BROWSER = "browser";
+const TTS_PROVIDER_DEEPGRAM = "deepgram";
 const TTS_PROVIDER_ELEVENLABS = "elevenlabs";
 const MAX_UI_ANSWER_CHARS = 1200;
 
 function normalize(text = "") {
   return String(text || "").trim().toLowerCase();
+}
+
+function normalizeVoiceLocale(locale = "hi-IN") {
+  const raw = String(locale || "").trim();
+  if (!raw) return "hi-IN";
+  return raw;
+}
+
+function voiceLanguageGroup(locale = "hi-IN") {
+  const lower = normalizeVoiceLocale(locale).toLowerCase();
+  if (lower.startsWith("hi")) return "hi";
+  if (lower.startsWith("gu")) return "gu";
+  return "en";
 }
 
 function stableStringify(value) {
@@ -404,6 +418,28 @@ function normalizeElevenLabsError(err) {
   return raw || "ElevenLabs TTS failed.";
 }
 
+function normalizeDeepgramError(err) {
+  const raw = err instanceof Error ? err.message : String(err || "");
+  const lower = raw.toLowerCase();
+  if (lower.includes("401") || lower.includes("invalid token") || lower.includes("unauthorized")) {
+    return "Deepgram API key is invalid. Check DEEPGRAM_API_KEY in server/.env.";
+  }
+  if (lower.includes("model") && lower.includes("not")) {
+    return "Deepgram TTS model is invalid. Check DEEPGRAM_TTS_MODEL settings.";
+  }
+  return raw || "Deepgram TTS failed.";
+}
+
+function resolveDeepgramTtsModel(voiceProfile = "default", locale = "hi-IN") {
+  const lang = voiceLanguageGroup(locale);
+  if (lang === "hi") return config.deepgramTtsModelHi || "";
+  if (lang === "gu") return config.deepgramTtsModelGu || "";
+  const profile = String(voiceProfile || "default").toLowerCase();
+  if (profile === "female") return config.deepgramTtsModelFemale || config.deepgramTtsModel || "";
+  if (profile === "male") return config.deepgramTtsModelMale || config.deepgramTtsModel || "";
+  return config.deepgramTtsModel || config.deepgramTtsModelFemale || config.deepgramTtsModelMale || "";
+}
+
 function resolveVoiceId(voiceProfile = "default") {
   const profile = String(voiceProfile || "default").toLowerCase();
   if (profile === "female" && config.elevenLabsVoiceIdFemale) return config.elevenLabsVoiceIdFemale;
@@ -413,8 +449,56 @@ function resolveVoiceId(voiceProfile = "default") {
 
 function activeTtsProvider() {
   const provider = String(config.voiceTtsProvider || "").toLowerCase();
+  if (provider === TTS_PROVIDER_DEEPGRAM) return TTS_PROVIDER_DEEPGRAM;
   if (provider === TTS_PROVIDER_ELEVENLABS) return TTS_PROVIDER_ELEVENLABS;
   return TTS_PROVIDER_BROWSER;
+}
+
+function strictVoiceEnabledForProvider(provider = activeTtsProvider()) {
+  if (provider === TTS_PROVIDER_DEEPGRAM) return Boolean(config.deepgramTtsStrictVoice);
+  if (provider === TTS_PROVIDER_ELEVENLABS) return Boolean(config.elevenLabsStrictVoice);
+  return false;
+}
+
+async function generateDeepgramAudio(ttsText, voiceProfile = "default", locale = "hi-IN") {
+  if (activeTtsProvider() !== TTS_PROVIDER_DEEPGRAM) {
+    return null;
+  }
+  const text = String(ttsText || "").slice(0, 2500);
+  const model = resolveDeepgramTtsModel(voiceProfile, locale);
+  if (!config.deepgramApiKey || !model) {
+    console.warn(
+      `[aiService][deepgram-tts] skipped keyConfigured=${Boolean(config.deepgramApiKey)} modelConfigured=${Boolean(model)} voiceProfile=${voiceProfile} locale=${normalizeVoiceLocale(locale)}`,
+    );
+    return null;
+  }
+  const base = String(config.deepgramTtsApiUrl || "https://api.deepgram.com/v1/speak").replace(/\/+$/, "");
+  const url = `${base}?model=${encodeURIComponent(model)}&encoding=mp3`;
+  console.info(
+    `[aiService][deepgram-tts] start voiceProfile=${voiceProfile} locale=${normalizeVoiceLocale(locale)} model=${model} chars=${text.length}`,
+  );
+  const { buffer, contentType } = await fetchBuffer(
+    url,
+    {
+      method: "POST",
+      headers: {
+        Authorization: `Token ${config.deepgramApiKey}`,
+        "Content-Type": "application/json",
+        Accept: DEFAULT_VOICE_MIME,
+      },
+      body: JSON.stringify({ text }),
+    },
+    Math.max(5000, Math.min(config.aiTimeoutMs, 15000)),
+  );
+  console.info(
+    `[aiService][deepgram-tts] success voiceProfile=${voiceProfile} locale=${normalizeVoiceLocale(locale)} model=${model} bytes=${buffer.length} mime=${contentType}`,
+  );
+  return {
+    audioBase64: buffer.toString("base64"),
+    audioMime: contentType || DEFAULT_VOICE_MIME,
+    voiceProvider: "deepgram",
+    voiceProfile,
+  };
 }
 
 async function generateElevenLabsAudio(ttsText, voiceProfile = "default") {
@@ -466,30 +550,60 @@ async function generateElevenLabsAudio(ttsText, voiceProfile = "default") {
   };
 }
 
-async function attachElevenLabsOrThrow(out, voiceProfile) {
+async function attachTtsOrThrow(out, voiceProfile, locale = "hi-IN") {
+  const provider = activeTtsProvider();
   let tts = null;
-  try {
-    tts = await generateElevenLabsAudio(out.ttsText, voiceProfile);
-  } catch (err) {
-    const msg = normalizeElevenLabsError(err);
-    throw new Error(msg);
-  }
-  if (tts) {
-    Object.assign(out, tts);
+
+  if (provider === TTS_PROVIDER_DEEPGRAM) {
+    try {
+      tts = await generateDeepgramAudio(out.ttsText, voiceProfile, locale);
+    } catch (err) {
+      throw new Error(normalizeDeepgramError(err));
+    }
+    if (tts) {
+      Object.assign(out, tts);
+      return out;
+    }
+    if (strictVoiceEnabledForProvider(provider)) {
+      const model = resolveDeepgramTtsModel(voiceProfile, locale);
+      if (!config.deepgramApiKey) {
+        throw new Error("DEEPGRAM_TTS_STRICT_VOICE is enabled but DEEPGRAM_API_KEY is missing.");
+      }
+      if (!model) {
+        throw new Error(
+          `DEEPGRAM_TTS_STRICT_VOICE is enabled but no Deepgram TTS model is configured for locale '${normalizeVoiceLocale(locale)}' and profile '${voiceProfile}'.`,
+        );
+      }
+      throw new Error("DEEPGRAM_TTS_STRICT_VOICE is enabled but Deepgram TTS failed.");
+    }
     return out;
   }
-  if (config.elevenLabsStrictVoice && activeTtsProvider() === TTS_PROVIDER_ELEVENLABS) {
-    const voiceId = resolveVoiceId(voiceProfile);
-    if (!config.elevenLabsApiKey) {
-      throw new Error("ELEVENLABS_STRICT_VOICE is enabled but ELEVENLABS_API_KEY is missing.");
+
+  if (provider === TTS_PROVIDER_ELEVENLABS) {
+    try {
+      tts = await generateElevenLabsAudio(out.ttsText, voiceProfile);
+    } catch (err) {
+      throw new Error(normalizeElevenLabsError(err));
     }
-    if (!voiceId) {
-      throw new Error(
-        `ELEVENLABS_STRICT_VOICE is enabled but no voice id is configured for profile '${voiceProfile}'.`,
-      );
+    if (tts) {
+      Object.assign(out, tts);
+      return out;
     }
-    throw new Error("ELEVENLABS_STRICT_VOICE is enabled but ElevenLabs TTS failed.");
+    if (strictVoiceEnabledForProvider(provider)) {
+      const voiceId = resolveVoiceId(voiceProfile);
+      if (!config.elevenLabsApiKey) {
+        throw new Error("ELEVENLABS_STRICT_VOICE is enabled but ELEVENLABS_API_KEY is missing.");
+      }
+      if (!voiceId) {
+        throw new Error(
+          `ELEVENLABS_STRICT_VOICE is enabled but no voice id is configured for profile '${voiceProfile}'.`,
+        );
+      }
+      throw new Error("ELEVENLABS_STRICT_VOICE is enabled but ElevenLabs TTS failed.");
+    }
+    return out;
   }
+
   return out;
 }
 
@@ -617,9 +731,9 @@ export async function runVoice(question, context = {}) {
       voiceProfile: String(context?.voiceProfile || "female").toLowerCase(),
     };
     try {
-      await attachElevenLabsOrThrow(voiceOut, voiceOut.voiceProfile);
+      await attachTtsOrThrow(voiceOut, voiceOut.voiceProfile, String(context?.locale || "hi-IN"));
     } catch (err) {
-      if (config.elevenLabsStrictVoice) throw err;
+      if (strictVoiceEnabledForProvider()) throw err;
     }
     const cacheSafe = { ...voiceOut };
     delete cacheSafe.audioBase64;
@@ -634,7 +748,7 @@ export async function runVoice(question, context = {}) {
       question,
       routedAgent,
       context,
-      locale: String(context?.locale || "en-US"),
+      locale: String(context?.locale || "hi-IN"),
     });
     if (tried.ok) {
       const out = {
@@ -649,14 +763,14 @@ export async function runVoice(question, context = {}) {
         voiceProfile,
       };
       try {
-        await attachElevenLabsOrThrow(out, voiceProfile);
+        await attachTtsOrThrow(out, voiceProfile, String(context?.locale || "hi-IN"));
       } catch (err) {
         console.error(
-          `[aiService][elevenlabs] strict-mode provider-response attach failed voiceProfile=${voiceProfile}: ${
+          `[aiService][tts] strict-mode provider-response attach failed voiceProfile=${voiceProfile}: ${
             err instanceof Error ? err.message : "unknown_error"
           }`,
         );
-        if (config.elevenLabsStrictVoice) throw err;
+        if (strictVoiceEnabledForProvider()) throw err;
         // voice synthesis fallback handled client-side when not strict.
       }
       const cacheSafe = { ...out };
@@ -673,14 +787,14 @@ export async function runVoice(question, context = {}) {
     voiceProfile,
   };
   try {
-    await attachElevenLabsOrThrow(fallback, voiceProfile);
+    await attachTtsOrThrow(fallback, voiceProfile, String(context?.locale || "hi-IN"));
   } catch (err) {
     console.error(
-      `[aiService][elevenlabs] strict-mode fallback attach failed voiceProfile=${voiceProfile}: ${
+      `[aiService][tts] strict-mode fallback attach failed voiceProfile=${voiceProfile}: ${
         err instanceof Error ? err.message : "unknown_error"
       }`,
     );
-    if (config.elevenLabsStrictVoice) throw err;
+    if (strictVoiceEnabledForProvider()) throw err;
     // voice synthesis fallback handled client-side when not strict.
   }
   const cacheSafe = { ...fallback };
@@ -723,6 +837,15 @@ export async function getAiStatus() {
       sttProvider: config.deepgramApiKey ? "deepgram" : "browser",
       deepgramConfigured: Boolean(config.deepgramApiKey),
       deepgramModel: config.deepgramSttModel,
+      deepgramTtsConfigured: Boolean(config.deepgramApiKey && resolveDeepgramTtsModel("female", "en-IN")),
+      deepgramTtsHindiConfigured: Boolean(config.deepgramApiKey && resolveDeepgramTtsModel("female", "hi-IN")),
+      deepgramTtsGujaratiConfigured: Boolean(config.deepgramApiKey && resolveDeepgramTtsModel("female", "gu-IN")),
+      deepgramTtsModel: config.deepgramTtsModel,
+      deepgramTtsModelHi: config.deepgramTtsModelHi,
+      deepgramTtsModelGu: config.deepgramTtsModelGu,
+      deepgramTtsModelFemale: config.deepgramTtsModelFemale,
+      deepgramTtsModelMale: config.deepgramTtsModelMale,
+      deepgramTtsStrictVoice: config.deepgramTtsStrictVoice,
       elevenLabsConfigured: Boolean(config.elevenLabsApiKey && resolveVoiceId("female")),
       elevenLabsFemaleConfigured: Boolean(config.elevenLabsApiKey && resolveVoiceId("female")),
       elevenLabsMaleConfigured: Boolean(config.elevenLabsApiKey && resolveVoiceId("male")),
