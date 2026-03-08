@@ -88,6 +88,29 @@ function normalizeReason(value?: string | null) {
   return raw.replace(/_/g, " ");
 }
 
+function sanitizeAdvisoryText(text?: string | null) {
+  return String(text || "")
+    .replace(/\r\n/g, "\n")
+    .split("\n")
+    .filter((line) => {
+      const t = String(line || "").trim();
+      if (!t) return true;
+      if (/^[-•]?\s*ask\s*["']?e["']?\s*$/i.test(t)) return false;
+      if (/^[-•]?\s*ask\s*["']?expand["']?.*$/i.test(t)) return false;
+      return true;
+    })
+    .join("\n")
+    .replace(/\n{3,}/g, "\n\n")
+    .trim();
+}
+
+function splitModelRelease(modelRelease?: string | null): { primary: string; secondary: string | null } {
+  const text = String(modelRelease || "").trim();
+  if (!text) return { primary: "v2.0 marine-core", secondary: null };
+  const [first, ...rest] = text.split("+");
+  return { primary: first || "v2.0 marine-core", secondary: rest.length ? rest.join("+") : null };
+}
+
 function MapClickHandler({ onPick }: { onPick: (lat: number, lon: number) => void }) {
   useMapEvents({
     click: (e) => {
@@ -282,6 +305,7 @@ export default function PredictPage() {
     const chosenId = chosen?.speciesId || topScored?.speciesId || "";
     return { chosen, chosenId };
   }, [lastPrediction]);
+  const modelReleaseInfo = useMemo(() => splitModelRelease(lastPrediction?.modelRelease), [lastPrediction?.modelRelease]);
 
   return (
     <DashboardLayout>
@@ -299,8 +323,11 @@ export default function PredictPage() {
                 </p>
                 <div className="ocean-header-line" />
               </div>
-              <div className="ocean-glass-card rounded-xl px-3 py-2 text-xs text-[#EAF7FF]">
-                <p>Model version: {lastPrediction?.modelRelease || "v2.0 marine-core"}</p>
+                <div className="ocean-glass-card rounded-xl px-3 py-2 text-xs text-[#EAF7FF]">
+                <p className="truncate" title={modelReleaseInfo.primary}>Model version: {modelReleaseInfo.primary}</p>
+                {modelReleaseInfo.secondary ? (
+                  <p className="mt-1 truncate" title={modelReleaseInfo.secondary}>Multi release: {modelReleaseInfo.secondary}</p>
+                ) : null}
                 <p className="mt-1">Data source: {lastPrediction?.source || "Hybrid climate + hydro layers"}</p>
                 <p className="mt-1">Last updated: {lastUpdated || "Just now"}</p>
               </div>
@@ -536,21 +563,24 @@ export default function PredictPage() {
                 </div>
 
                 <div className="mt-4 grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
-                  <div className="rounded-xl border border-white/10 bg-white/[0.04] p-3">
+                  <div className="min-w-0 rounded-xl border border-white/10 bg-white/[0.04] p-3">
                     <p className="text-[11px] uppercase text-[#A7CCE4]">Model Release</p>
-                    <p className="mt-1 text-sm text-[#EAF7FF]">{lastPrediction.modelRelease}</p>
+                    <p className="mt-1 truncate text-[13px] leading-snug text-[#EAF7FF]" title={modelReleaseInfo.primary}>{modelReleaseInfo.primary}</p>
+                    {modelReleaseInfo.secondary ? (
+                      <p className="mt-0.5 truncate text-[12px] leading-snug text-[#D3EDFF]" title={modelReleaseInfo.secondary}>+ {modelReleaseInfo.secondary}</p>
+                    ) : null}
                   </div>
-                  <div className="rounded-xl border border-white/10 bg-white/[0.04] p-3">
+                  <div className="min-w-0 rounded-xl border border-white/10 bg-white/[0.04] p-3">
                     <p className="text-[11px] uppercase text-[#A7CCE4]">Source</p>
-                    <p className="mt-1 text-sm text-[#EAF7FF]">{lastPrediction.source}</p>
+                    <p className="mt-1 break-words text-sm leading-snug text-[#EAF7FF]">{lastPrediction.source}</p>
                   </div>
-                  <div className="rounded-xl border border-white/10 bg-white/[0.04] p-3">
+                  <div className="min-w-0 rounded-xl border border-white/10 bg-white/[0.04] p-3">
                     <p className="text-[11px] uppercase text-[#A7CCE4]">Verification</p>
-                    <p className="mt-1 text-sm text-[#EAF7FF]">
+                    <p className="mt-1 break-words text-sm leading-snug text-[#EAF7FF]">
                       {lastPrediction.verification?.verdict || "unknown"} ({lastPrediction.verification?.confidenceScore ?? 0}%)
                     </p>
                   </div>
-                  <div className="rounded-xl border border-white/10 bg-white/[0.04] p-3">
+                  <div className="min-w-0 rounded-xl border border-white/10 bg-white/[0.04] p-3">
                     <p className="text-[11px] uppercase text-[#A7CCE4]">Nearest Grid</p>
                     <p className="mt-1 text-sm text-[#EAF7FF]">
                       {typeof lastPrediction.nearestGrid?.distance_km === "number"
@@ -601,7 +631,7 @@ export default function PredictPage() {
                 {lastPrediction.fallbackAdvisory?.answer && (
                   <div className="mt-4 rounded-xl border border-cyan-200/25 bg-cyan-400/10 p-3">
                     <p className="text-xs uppercase tracking-[0.12em] text-cyan-100">Advisory Fallback</p>
-                    <p className="mt-1 whitespace-pre-line text-sm text-cyan-50">{lastPrediction.fallbackAdvisory.answer}</p>
+                    <p className="mt-1 whitespace-pre-line text-sm text-cyan-50">{sanitizeAdvisoryText(lastPrediction.fallbackAdvisory.answer)}</p>
                   </div>
                 )}
               </motion.div>

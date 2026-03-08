@@ -73,6 +73,81 @@ function reasonText(reason: string): string {
   }
 }
 
+function sanitizeAdvisoryText(text: string): string {
+  return String(text || "")
+    .replace(/\r\n/g, "\n")
+    .split("\n")
+    .filter((line) => {
+      const t = line.trim();
+      if (!t) return true;
+      if (/^[-•]?\s*ask\s*["']?e["']?\s*$/i.test(t)) return false;
+      if (/^[-•]?\s*ask\s*["']?expand["']?.*$/i.test(t)) return false;
+      return true;
+    })
+    .join("\n")
+    .replace(/\n{3,}/g, "\n\n")
+    .trim();
+}
+
+function splitModelRelease(modelRelease: string): { primary: string; secondary: string | null } {
+  const text = String(modelRelease || "").trim();
+  if (!text) return { primary: "unknown", secondary: null };
+  const [first, ...rest] = text.split("+");
+  return { primary: first || "unknown", secondary: rest.length ? rest.join("+") : null };
+}
+
+function downloadTextFile(content: string, fileName: string) {
+  const blob = new Blob([content], { type: "text/plain;charset=utf-8" });
+  const url = URL.createObjectURL(blob);
+  const link = document.createElement("a");
+  link.href = url;
+  link.download = fileName;
+  link.click();
+  URL.revokeObjectURL(url);
+}
+
+function toReportMarkdown(prediction: SpeciesPredictionResponse) {
+  const lines: string[] = [];
+  lines.push("# Akuara Prediction Report");
+  lines.push("");
+  lines.push(`Generated: ${new Date().toISOString()}`);
+  lines.push(`Location: ${prediction.input.lat}, ${prediction.input.lon}`);
+  lines.push(`Model release: ${prediction.modelRelease}`);
+  lines.push(`Source: ${prediction.source}`);
+  lines.push("");
+  lines.push("## Final Recommendation");
+  const final = prediction.finalRecommendation;
+  if (final) {
+    lines.push(`- Species: ${final.displayName}`);
+    lines.push(`- Probability: ${final.probabilityPercent ?? "n/a"}%`);
+    lines.push(`- Actionability: ${final.actionability}`);
+    lines.push(`- Decision source: ${final.source}`);
+    lines.push(`- Verification: ${final.verificationVerdict} (${final.verificationConfidenceScore}%)`);
+  } else if (prediction.bestSpecies) {
+    lines.push(`- Species: ${prediction.bestSpecies.displayName}`);
+    lines.push(`- Probability: ${prediction.bestSpecies.probabilityPercent ?? "n/a"}%`);
+    lines.push(`- Actionability: ${prediction.bestSpecies.actionability || "insufficient_data"}`);
+  } else {
+    lines.push("- No recommendation available.");
+  }
+  lines.push("");
+  lines.push("## Species Scores");
+  for (const s of prediction.species || []) {
+    lines.push(`- ${s.displayName}: ${s.probabilityPercent ?? "n/a"}% | ${s.actionability || "insufficient_data"} | ${s.reason}`);
+  }
+  if (Array.isArray(prediction.warnings) && prediction.warnings.length > 0) {
+    lines.push("");
+    lines.push("## Warnings");
+    for (const w of prediction.warnings) lines.push(`- ${w}`);
+  }
+  if (prediction.fallbackAdvisory?.answer) {
+    lines.push("");
+    lines.push("## Fallback Advisory");
+    lines.push(sanitizeAdvisoryText(prediction.fallbackAdvisory.answer));
+  }
+  return lines.join("\n");
+}
+
 export default function ResultsPage() {
   const [showWhy, setShowWhy] = useState(false);
   const routerLocation = useLocation();
@@ -129,6 +204,14 @@ export default function ResultsPage() {
       : 0;
   const topSpeciesLabel = best?.name || "No clear candidate";
   const coordText = `${prediction.input.lat.toFixed(4)}, ${prediction.input.lon.toFixed(4)}`;
+  const modelReleaseInfo = splitModelRelease(prediction.modelRelease);
+  const fallbackAnswer = sanitizeAdvisoryText(prediction.fallbackAdvisory?.answer || "");
+
+  const handleExportReport = () => {
+    const slug = `${prediction.input.lat.toFixed(4)}_${prediction.input.lon.toFixed(4)}`.replace(/[^\d_.-]/g, "_");
+    const fileName = `akuara_report_${slug}_${new Date().toISOString().slice(0, 10)}.md`;
+    downloadTextFile(toReportMarkdown(prediction), fileName);
+  };
 
   return (
     <DashboardLayout>
@@ -159,9 +242,19 @@ export default function ResultsPage() {
               </div>
               <div className="rounded-xl border border-white/20 bg-white/10 px-3 py-2">
                 <p className="text-[11px] uppercase tracking-[0.12em] text-cyan-100/85">Model Release</p>
-                <p className="mt-1 inline-flex items-center gap-1 text-sm font-semibold text-white">
-                  <Database className="h-3.5 w-3.5" /> {prediction.modelRelease}
-                </p>
+                <div className="mt-1 flex min-w-0 items-start gap-1 text-sm font-semibold text-white">
+                  <Database className="mt-0.5 h-3.5 w-3.5 shrink-0" />
+                  <div className="min-w-0">
+                    <p className="truncate text-[13px] leading-snug" title={modelReleaseInfo.primary}>
+                      {modelReleaseInfo.primary}
+                    </p>
+                    {modelReleaseInfo.secondary ? (
+                      <p className="truncate text-[12px] leading-snug text-cyan-100/90" title={modelReleaseInfo.secondary}>
+                        + {modelReleaseInfo.secondary}
+                      </p>
+                    ) : null}
+                  </div>
+                </div>
               </div>
             </div>
           </div>
@@ -258,10 +351,10 @@ export default function ResultsPage() {
                   {finalRecommendation.disagreementWithAgent ? " | model and advisory conflict auto-resolved by verification" : ""}.
                 </p>
               )}
-              {prediction.fallbackAdvisory?.answer && (
+              {fallbackAnswer && (
                 <div className="mb-3 rounded-xl border border-cyan-200 bg-cyan-50 p-3">
                   <p className="text-xs font-semibold uppercase tracking-wide text-cyan-800">Fallback Advisory</p>
-                  <p className="mt-1 whitespace-pre-line text-sm text-cyan-900">{prediction.fallbackAdvisory.answer}</p>
+                  <p className="mt-1 whitespace-pre-line text-sm text-cyan-900">{fallbackAnswer}</p>
                 </div>
               )}
               <button
@@ -302,7 +395,11 @@ export default function ResultsPage() {
         </div>
 
         <div className="flex justify-end">
-          <Button size="lg" className="rounded-xl bg-gradient-to-r from-[#1da1f2] to-[#0ea5e9] text-white shadow-[0_18px_30px_-20px_rgba(14,126,187,0.8)] hover:opacity-95">
+          <Button
+            size="lg"
+            onClick={handleExportReport}
+            className="rounded-xl bg-gradient-to-r from-[#1da1f2] to-[#0ea5e9] text-white shadow-[0_18px_30px_-20px_rgba(14,126,187,0.8)] hover:opacity-95"
+          >
             <Download className="w-4 h-4" /> Export Report
           </Button>
         </div>

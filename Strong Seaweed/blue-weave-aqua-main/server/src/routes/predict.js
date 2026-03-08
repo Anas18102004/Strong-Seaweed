@@ -673,6 +673,21 @@ function deterministicAdvisoryText(prediction, environment) {
   ].join("\n");
 }
 
+function sanitizeAdvisoryAnswer(rawAnswer = "") {
+  const text = String(rawAnswer || "").replace(/\r\n/g, "\n");
+  const lines = text.split("\n");
+  const cleaned = lines.filter((line) => {
+    const t = String(line || "").trim();
+    if (!t) return true;
+    if (/^[-•]?\s*ask\s*["']?e["']?\s*$/i.test(t)) return false;
+    if (/^[-•]?\s*ask\s*["']?expand["']?.*$/i.test(t)) return false;
+    if (/^[-•]?\s*ask\s+for\s+expand/i.test(t)) return false;
+    return true;
+  });
+  const normalized = cleaned.join("\n").replace(/\n{3,}/g, "\n\n").trim();
+  return normalized || "Advisory is temporarily unavailable. Please retry.";
+}
+
 function fallbackFinalRecommendation(prediction, verification) {
   const candidate = primaryModelCandidate(prediction);
   const selectionDiagnostics = prediction?.selectionDiagnostics || null;
@@ -733,7 +748,7 @@ async function generateFallbackAdvisory({ userId, lat, lon, formInput, predictio
         verification,
       },
     });
-    const answer = String(aiOut?.answer || "").trim();
+    const answer = sanitizeAdvisoryAnswer(aiOut?.answer || "");
     const unusable = !answer || /live ai model is unavailable/i.test(answer);
     if (unusable) throw new Error("ai_advisory_unavailable");
     return {
@@ -746,7 +761,7 @@ async function generateFallbackAdvisory({ userId, lat, lon, formInput, predictio
     };
   } catch {
     return {
-      answer: deterministicAdvisoryText(prediction, environment),
+      answer: sanitizeAdvisoryAnswer(deterministicAdvisoryText(prediction, environment)),
       model: "deterministic-fallback",
       provider: "rule-fallback",
       status: "fallback",
