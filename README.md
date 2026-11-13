@@ -96,21 +96,29 @@ The master feature matrix encompasses physical oceanographic variables governing
 
 ```
 Strong-Seaweed/
-├── train_xgboost_model.py          # Core XGBoost training with 5-fold Spatial Group CV
-├── train_realtime_production.py    # Production training harness with release tagging
-├── score_realtime_production.py    # Real-time spatial scoring & raster generation
-├── production_gate_check.py        # Automated CI gate verifying release performance
-├── threshold_sweep_report.py       # Operating threshold precision/recall sweep
-├── build_feature_matrix.py         # 23-D spatial join and raster sampling engine
-├── download_copernicus_data.py     # Copernicus Marine API NetCDF ingestion client
-├── docs/
-│   ├── MODEL_CARD_v1.0.md          # Formal model card and validation metadata
-│   ├── RELEASES.md                 # Semantic versioning and artifact freezing policy
-│   └── PROJECT_STRUCTURE.md        # File organization and data directory layout
-├── releases/                       # Versioned frozen release artifacts (v1.0, v1.1)
-├── requirements.txt                # Pinned dependencies
-├── .gitignore                      # Exclusion rules for large rasters and NetCDFs
-└── README.md                       # System architecture and technical documentation
+├── run_verified_pack_to_gate.py        # Master end-to-end pipeline execution runner
+├── production_gate_check.py            # Automated CI gate verifying release performance
+├── project_paths.py                    # Unified spatial path & directory resolver
+├── train_xgboost_model.py              # Core XGBoost training with 5-fold Spatial Group CV
+├── train_realtime_production.py        # Production training harness with release tagging
+├── score_realtime_production.py        # Real-time spatial scoring & raster generation
+├── threshold_sweep_report.py           # Operating threshold precision/recall sweep
+├── build_feature_matrix.py             # 23-D spatial join and raster sampling engine
+├── download_copernicus_data.py         # Copernicus Marine API NetCDF ingestion client
+├── align_to_depth_grid.py              # ETOPO bathymetry alignment & depth normalization
+├── build_cyclone_exposure.py           # Extreme wave & cyclone exposure risk indexing
+├── mine_hard_negatives.py              # High-salinity / unsuitable regime negative mining
+├── data/                               # Copernicus NetCDF series, rasters, and occurrence CSVs
+├── models/                             # Trained XGBoost models & serialized pipelines
+├── artifacts/                          # Diagnostic reports, SHAP metrics, and test outputs
+├── docs/                               # Formal model cards and validation audit reports
+│   └── MODEL_CARD_v1.0.md              # Complete empirical Model Card (ROC-AUC 0.9288)
+├── releases/                           # Semantic versioned frozen deployment checkpoints
+├── PROJECT_STRUCTURE.md                # Detailed project architecture & directory specification
+├── RELEASES.md                         # Release history, version tags, and performance milestones
+├── requirements.txt                    # Pinned Python dependencies (xarray, netcdf4, xgboost)
+├── .gitignore                          # Strict exclusions for bytecode, NetCDFs, and rasters
+└── README.md                           # System architecture and technical documentation
 ```
 
 ---
